@@ -1,0 +1,18 @@
+TAB,GROUP,NAME,DISPLAY NAME,DATA TYPE,UNIT,SHOW,USE,VALUE,MIN,MAX,DESCRIPTION,ORDER
+OPTION,PATH,RecipePath,Recipe Path,STRING,,1,1,.\Config\RECIPE,0,0,Recipe storage path,10
+OPTION,PATH,ScriptPath,Script Path,STRING,,1,1,.\Runtime\Script,0,0,Generated script path,11
+INTERFACE,HOST,HostIp,Host IP,STRING,,1,1,192.168.0.10,0,0,Host communication IP,10
+INTERFACE,HOST,Port,Host Port,INT,,1,1,5000,1,65535,Host communication port,11
+INTERFACE,HOST,Timeout,Message Timeout,INT,ms,1,1,3000,100,60000,Message timeout,12
+INTERFACE,HOST,Retry,Retry Count,INT,count,1,1,3,0,10,Retry count,13
+IO,OUTPUT,OutputOnDelay,Output ON Delay,INT,ms,1,1,50,0,10000,Output ON delay,10
+IO,OUTPUT,OutputOffDelay,Output OFF Delay,INT,ms,1,1,50,0,10000,Output OFF delay,11
+IO,INPUT,InputStableTime,Input Stable Time,INT,ms,1,1,20,0,10000,Input debounce time,20
+MOTOR,AXIS,GXSpeed,GX Speed,DOUBLE,mm/s,1,1,100,0,5000,GX axis speed,10
+MOTOR,AXIS,GYSpeed,GY Speed,DOUBLE,mm/s,1,1,100,0,5000,GY axis speed,11
+MOTOR,AXIS,MoveTimeout,Move Timeout,INT,ms,1,1,10000,100,120000,Axis movement timeout,20
+POSITION,STAGE,CenterX,Center X,DOUBLE,mm,1,1,0.000,-500,500,Center position X,10
+POSITION,STAGE,CenterY,Center Y,DOUBLE,mm,1,1,0.000,-500,500,Center position Y,11
+POSITION,STAGE,SafeZ,Safe Z,DOUBLE,mm,1,1,5.000,0,100,Safe height before movement,20
+ALARM,ALARM,ResetTimeout,Reset Timeout,INT,ms,1,1,5000,100,60000,Alarm reset timeout,10
+ALARM,BUZZER,BuzzerAutoOff,Buzzer Auto Off,BOOL,,1,1,false,0,1,Use automatic buzzer off,20

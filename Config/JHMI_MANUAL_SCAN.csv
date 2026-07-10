@@ -1,0 +1,6 @@
+NAME,DISPLAY NAME,DATA TYPE,UNIT,SHOW,USE,VALUE,MIN,MAX,DESCRIPTION,ORDER
+ShapeSize,Shape Size,DOUBLE,mm,1,1,0.350,0.001,100.000,Shape scan size,10
+OffsetX,Offset X,DOUBLE,mm,1,1,0.000,-500.000,500.000,Shape scan offset X,20
+OffsetY,Offset Y,DOUBLE,mm,1,1,0.000,-500.000,500.000,Shape scan offset Y,30
+Direction,Direction,STRING,,1,1,CW,0,0,Scan direction,40
+ShapeName,Shape Name,STRING,,1,1,Circle,0,0,Shape type,50
