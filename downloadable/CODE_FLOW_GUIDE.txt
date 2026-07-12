@@ -1,0 +1,824 @@
+﻿A3 LD Process SW 전체 코드 흐름 입문 가이드
+작성 기준: 현재 프로젝트 최상단 코드 기준
+
+이 문서는 이 프로젝트를 처음 보는 사람이 "어디서부터 읽어야 하는지", "코드가 어떤 순서로 동작하는지", "각 폴더와 클래스가 어떤 책임을 가지는지"를 빠르게 파악하도록 만든 설명서입니다.
+
+
+1. 프로젝트를 한 문장으로 이해하기
+================================
+
+이 프로젝트는 Laser Drilling 장비를 위한 WPF 기반 공정 제어/모니터링 소프트웨어입니다.
+
+큰 흐름은 다음과 같습니다.
+
+1) Config CSV 파일에서 장비, 모션축, IO, 레시피, 설정값을 읽는다.
+2) 읽은 설정을 바탕으로 InterfaceManager, MotionManager, StationManager 등을 구성한다.
+3) WPF UI가 메뉴별 화면을 띄우고, 사용자가 레시피/설정/모니터/수동/자동 공정을 조작한다.
+4) 자동 공정 시작 시 레시피를 공정 계획으로 변환한다.
+5) 인터락과 장비 상태를 확인한다.
+6) Automation1용 공정 스크립트 파일을 만든다.
+7) 현재 코드에서는 실제 장비 실행 대신 simulation 흐름으로 공정 완료 상태와 로그를 만든다.
+
+
+2. 솔루션 전체 구조
+==================
+
+솔루션 파일:
+
+Drilling.sln
+
+프로젝트는 3개입니다.
+
+Drilling.UI
+    WPF 화면, 메뉴 ViewModel, 사용자 명령 처리 계층입니다.
+    사용자가 보는 화면 대부분은 이 프로젝트에 있습니다.
+
+Drilling.File
+    CSV, 설정 파일, 레시피 파일, 제품 이력 파일, Automation1 스크립트 파일을 읽고 쓰는 계층입니다.
+    파일 포맷을 Common의 데이터 모델로 변환합니다.
+
+Drilling.Common
+    핵심 도메인 계층입니다.
+    장비 통신, 모션 제어, 공정 상태, 제품 추적, 알람, 인터락, 레시피/설정 manager 인터페이스와 데이터 구조가 여기에 있습니다.
+
+의존 관계:
+
+Drilling.UI
+    -> Drilling.Common
+    -> Drilling.File
+
+Drilling.File
+    -> Drilling.Common
+
+Drilling.Common
+    -> 외부 DLL/System.IO.Ports/ACS.SPiiPlusNET7.dll
+
+즉 UI는 Common과 File을 모두 알고 있지만, Common은 UI를 모릅니다.
+이 구조 때문에 Common은 장비/공정 로직을 담당하고, File은 저장소 역할, UI는 화면 역할로 나뉩니다.
+
+
+3. 처음 코드를 읽는 추천 순서
+============================
+
+처음부터 모든 파일을 읽으려고 하면 양이 많습니다. 아래 순서대로 읽는 것이 좋습니다.
+
+1) Drilling.UI/CAppStartup.cs
+    앱이 시작될 때 어떤 객체들을 만드는지 알 수 있습니다.
+    이 파일이 전체 object graph의 시작점입니다.
+
+2) Drilling.Common/Managers/CManager.cs
+    전체 manager를 조립하는 중심 클래스입니다.
+    Config 검증, interface/motion/station/product/recipe/setting manager 생성 과정을 볼 수 있습니다.
+
+3) Drilling.UI/CRootView.cs
+    WPF 화면의 root view model입니다.
+    화면 메뉴가 어떻게 구성되고, Start/Stop/Head 선택 같은 사용자 명령이 어디로 흐르는지 알 수 있습니다.
+
+4) Drilling.Common/Station/CStationManager.cs
+    공정에서 쓰이는 주요 데이터 record와 station interface가 정의되어 있습니다.
+
+5) Drilling.Common/Station/CStationProcess.cs
+    자동 공정의 핵심 흐름입니다.
+    PrepareProcessPlan, Start, Stop, Reset, BuildAutomationScript, CompleteProcess가 여기에 있습니다.
+
+6) Drilling.Common/Interface/CInterfaceManager.cs
+    장비 통신 등록, 연결, 명령 실행, 장비별 상태 조회 구조를 볼 수 있습니다.
+
+7) Drilling.Common/Motion/CMotionManager.cs
+    모션축, IO, motion controller dispatch 구조를 볼 수 있습니다.
+
+8) Drilling.File/JHMI/*.cs
+    Config CSV가 어떤 데이터 구조로 변환되는지 확인할 수 있습니다.
+
+9) Drilling.UI/Menu/Menus/*.cs
+    각 화면의 표시 데이터가 어떻게 만들어지는지 확인할 수 있습니다.
+
+
+4. 실행 시작 흐름
+================
+
+실행 흐름은 다음 순서로 이어집니다.
+
+App.xaml / CApp.xaml.cs
+    -> CAppStartup.CreateMainViewModel()
+        -> Config 경로 탐색
+        -> 파일 adapter 생성
+        -> CManager 생성
+        -> CManager.Initialize() 비동기 실행
+        -> CRootView 생성
+        -> WPF 화면 DataContext로 사용
+
+CAppStartup.CreateMainViewModel()에서 만드는 주요 파일 adapter:
+
+CJhmiRecipeFile
+    Config/JHMI_RCP.csv와 Config/RECIPE/*.csv를 읽고 저장합니다.
+
+CSettingFile
+    Config/JHMI_SETTING.csv와 Config/Setting/Setting.csv를 읽고 저장합니다.
+
+CManualScanFile
+    Config/JHMI_MANUAL_SCAN.csv와 Config/Manual/*.scan을 읽고 저장합니다.
+
+CInterfaceFile
+    Config/JHMI_INTERFACE.csv를 읽고 ST_INTERFACE_DATA 목록으로 변환합니다.
+
+CBETFile
+    Config/JHMI_BET.csv와 Config/BET/BET.csv를 읽고 저장합니다.
+
+CPowerMeterFile
+    Config/JHMI_POWERMETER.csv와 Config/PowerMeter/*.pwm을 읽고 저장합니다.
+
+CMotorFile
+    Config/JHMI_MOTOR.csv를 읽고 ST_MOTOR_DATA 목록으로 변환합니다.
+
+CIoFile
+    Config/JHMI_IO.csv를 읽고 ST_IO_DATA 목록으로 변환합니다.
+
+CProductFile
+    Data/Product 아래 active product와 history CSV를 읽고 저장합니다.
+
+CLogManager
+    Log/Recipe, Log/Setting, Log/Interface, Log/Station, Log/Product 아래 trace log를 기록하고 읽습니다.
+
+CAutomation1ScriptFile
+    Data/Script/PROCESS.ascript를 생성합니다.
+
+CConfigStructureFile
+    Config 폴더와 필수 CSV 헤더가 정상인지 검증합니다.
+
+
+5. CManager가 하는 일
+====================
+
+CManager는 전체 프로그램의 조립자입니다.
+
+생성자에서 하는 일:
+
+1) Config root 존재 확인
+2) Config 구조 검증
+3) CInterfaceManager 생성
+4) JHMI_INTERFACE.csv 로드
+5) interface device 등록
+6) JHMI_MOTOR.csv 로드
+7) JHMI_IO.csv 로드
+8) CMotionManager 생성
+9) CProductManager 생성
+10) active product 로드
+11) CStationManager 생성
+12) CRecipeManager 생성
+13) CSettingManager 생성
+14) startup step/status 기록
+
+CManager가 외부로 제공하는 주요 객체:
+
+Station()
+    IStationManager 반환
+
+Recipe()
+    IRecipeManager 반환
+
+Setting()
+    ISettingManager 반환
+
+Product()
+    IProductManager 반환
+
+Interface()
+    IInterfaceManager 반환
+
+Motion()
+    IMotionManager 반환
+
+Alarm()
+    CAlarmManager 반환
+
+InterLock()
+    CInterLockManager 반환
+
+ManualScanFile()
+    IManualScanFile 반환
+
+즉 UI는 CManager를 직접 오래 붙잡지 않고, 필요한 manager/interface를 받아서 사용합니다.
+
+
+6. UI 구조
+=========
+
+UI의 중심은 CRootView입니다.
+
+CRootView가 들고 있는 주요 상태:
+
+_stationManager
+    자동 공정 시작/중지/상태 조회에 사용합니다.
+
+_interfaceManager
+    장비 통신 상태, 레이저/칠러/BET/power meter 상태 조회에 사용합니다.
+
+_motionManager
+    모션축 상태, IO 상태 조회에 사용합니다.
+
+_alarmManager
+    현재 장비 상태와 인터락 결과로 알람 목록을 만듭니다.
+
+_interLockManager
+    인터락 평가에 사용합니다.
+
+_recipeManager
+    레시피 목록/저장/삭제에 사용합니다.
+
+_menus
+    EN_MENU별 메뉴 view model dictionary입니다.
+
+_selectedHeadNo
+    현재 선택된 head 번호입니다.
+
+_selectedRecipeId
+    현재 선택된 recipe id입니다.
+
+_selectedSettingTab / _selectedSettingGroup
+    설정 화면에서 선택 중인 tab/group입니다.
+
+_selectedMonitorTab
+    monitor 화면에서 선택 중인 tab입니다.
+
+_pmLockStatus
+    PM lock 상태입니다.
+
+화면 메뉴:
+
+CMenuMain
+    자동 공정 메인 화면입니다.
+    station status, process preview, sequence, interlock, script lifecycle 등을 표시합니다.
+
+CMenuManual
+    수동 scan setting 파일 목록과 수동 파라미터를 표시/편집합니다.
+
+CMenuRecipe
+    recipe 목록, recipe parameter, 변경 이력, save/delete/create 동작을 담당합니다.
+
+CMenuSetting
+    system setting과 interface setting을 표시/편집합니다.
+
+CMenuAlarm
+    현재 알람, 알람 상세, history, trend를 표시합니다.
+
+CMenuMonitor
+    IO, MOTOR, LASER, CHILLER, ATTENUATOR, BET, POWER METER, PRODUCT 상태를 모니터링합니다.
+
+CMenuPm
+    PM lock 화면입니다.
+
+CMenuExit
+    종료 화면입니다.
+
+중요한 패턴:
+
+각 메뉴 class는 IMenu.Build()를 구현합니다.
+Build()는 화면에 표시할 CScreenViewModel을 만듭니다.
+Common 도메인 record를 그대로 WPF에 붙이지 않고, 화면 전용 row record로 변환해서 보여줍니다.
+
+
+7. Config 파일이 코드로 들어오는 흐름
+===================================
+
+Config 파일은 프로그램의 장비 구성과 공정 파라미터 원천입니다.
+
+대표 흐름:
+
+Config/JHMI_INTERFACE.csv
+    -> CInterfaceFile.LoadAll()
+        -> ST_INTERFACE_DATA 목록
+            -> CInterfaceManager.Register()
+                -> CInterfaceDevice 생성
+
+Config/JHMI_MOTOR.csv
+    -> CMotorFile.LoadAll()
+        -> ST_MOTOR_DATA 목록
+            -> CMotionManager
+                -> _axisData, _axes, _controllers 구성
+
+Config/JHMI_IO.csv
+    -> CIoFile.LoadAll()
+        -> ST_IO_DATA 목록
+            -> CMotionManager
+                -> _io 구성
+
+Config/JHMI_RCP.csv + Config/RECIPE/*.csv
+    -> CJhmiRecipeFile.LoadAll()
+        -> ST_RECIPE_DATA 목록
+            -> CRecipeManager
+                -> UI recipe 화면과 process plan 생성에 사용
+
+Config/JHMI_SETTING.csv + Config/Setting/Setting.csv
+    -> CSettingFile.Load()
+        -> ST_SYSTEM_PARAMETER 목록
+            -> CSettingManager
+                -> Setting 화면에 사용
+
+Config/Manual/*.scan
+    -> CManualScanFile.Load()
+        -> ST_MANUAL_SCAN_PARAM
+            -> Manual 화면에 사용
+
+Config/BET/BET.csv
+    -> CBETFile.Load()
+        -> ST_BET_TABLE_DATA 목록
+            -> BET monitor/control에 사용
+
+Config/PowerMeter/*.pwm
+    -> CPowerMeterFile.Load()
+        -> ST_POWER_METER_TABLE_DATA
+            -> Power meter monitor/control에 사용
+
+
+8. 장비 통신 구조
+================
+
+장비 통신은 CInterfaceManager가 중심입니다.
+
+기본 데이터:
+
+ST_INTERFACE_DATA
+    InterfaceType
+    Device
+    Number
+    NickName
+    SystemSection
+    AutoConnection
+    IsSimulation
+    Arguments
+    Extra
+
+등록 흐름:
+
+CInterfaceManager.Register(ST_INTERFACE_DATA)
+    -> CInterfaceConnectOption 생성
+    -> CComm.Create() 호출
+    -> interface type/device에 맞는 IComm 구현체 선택
+    -> CInterfaceDevice 생성
+    -> _devices dictionary에 등록
+
+통신 구현체:
+
+CSocketComm
+    Socket 기반 통신입니다.
+
+CSerialComm
+    SerialPort 기반 통신 base class입니다.
+
+CTalonLaser
+    Talon laser 명령 생성/상태 파싱입니다.
+
+COrionChiller
+    Chiller 명령 생성/상태 파싱입니다.
+
+CConex_AGP
+    Attenuator 명령 생성/상태 파싱입니다.
+
+CBeamExpander
+    BET 명령 생성/상태 파싱입니다.
+
+CPowerMeter
+    Power meter 명령 생성/상태 파싱입니다.
+
+CACSComm
+    ACS controller 통신 구현입니다.
+
+CReadyOnlyComm
+    실제 명령을 보내지 않는 read-only/simulation 성격의 구현입니다.
+
+CInterfaceManager가 제공하는 주요 기능:
+
+Connect / Disconnect / Reconnect
+    장비 연결 관리
+
+ExecuteFunction
+    NickName 또는 module/number 기준으로 명령 실행
+
+GetCommunicationStatus
+    module별 통신 상태 반환
+
+GetInterfaceCommunicationList
+    UI header popup에 보여줄 상세 통신 상태 반환
+
+GetLaserStatus / ExecuteTalonLaserCommand
+    레이저 상태/명령
+
+GetChillerStatus / ExecuteChillerCommand
+    칠러 상태/명령
+
+GetAttenuatorStatus / ExecuteAttenuatorCommand
+    attenuator 상태/명령
+
+GetBETStatus / ExecuteBETCommand
+    BET 상태/명령
+
+GetPowerMeterStatus / ExecutePowerMeterCommand
+    power meter 상태/명령
+
+
+9. 모션 구조
+===========
+
+모션은 CMotionManager가 중심입니다.
+
+입력 데이터:
+
+ST_MOTOR_DATA
+    축 정의입니다.
+    Name, Axis, DevType, DevNo, Scale, MaxVel, Min, Max, Offset, StationName 등 축 구성 정보를 가집니다.
+
+ST_IO_DATA
+    IO 정의입니다.
+    Id, Address, Name, IsOutput, DevType, DevNo, InitialState 등을 가집니다.
+
+CMotionManager 내부 상태:
+
+_motors
+    전체 motor config 목록입니다.
+
+_axisData
+    사용 중인 axis id -> ST_MOTOR_DATA dictionary입니다.
+
+_axes
+    axis id -> 현재 axis 상태 dictionary입니다.
+
+_io
+    IO id/address -> 현재 IO 상태 dictionary입니다.
+
+_controllers
+    controller key -> CMotionController dictionary입니다.
+
+_simulationMode
+    simulation 여부입니다.
+
+motion controller 구현:
+
+CAutomation1Motion
+CACSMotion
+CA3200Motion
+CAjinMotion
+CPmacMotion
+CUmacMotion
+
+명령 흐름:
+
+UI 또는 station
+    -> IMotionManager.Move/ServoOn/Home/SetOutput
+        -> CMotionManager.ExecuteAxisCommand 또는 SetOutput
+            -> axis/io validation
+            -> simulation이면 내부 상태만 변경
+            -> real mode면 해당 CMotionController로 명령 전달
+            -> 내부 상태 업데이트
+
+
+10. 자동 공정 흐름
+=================
+
+자동 공정의 핵심은 CStationProcess입니다.
+
+사용자가 Main 화면에서 Start를 누르면:
+
+CRootView.StartCycle()
+    -> PrepareInitialProcessPlan()
+        -> IRecipeManager.LoadRecipes()
+        -> 선택된 recipe 찾기
+        -> recipe parameter를 Dictionary<string,string>으로 변환
+        -> ST_PROCESS_PLAN 생성
+        -> IStationManager.PrepareProcessPlan()
+    -> IStationManager.Start()
+        -> CStationProcess.Start()
+
+CStationProcess.PrepareProcessPlan()이 하는 일:
+
+1) 이전 process log와 상태 초기화
+2) ST_PROCESS_PLAN을 ST_PROCESS_MODEL로 변환
+3) head별 preview path 생성
+4) product 생성
+5) process snapshot 생성
+6) station state를 ProcessPlanned로 변경
+
+ST_PROCESS_PLAN:
+    ProcessId
+    RecipeId
+    ProductId
+    PanelId
+    LotId
+    CreatedAt
+    Parameters
+
+ST_PROCESS_MODEL:
+    Plan
+    Product
+    Heads
+    Parameters
+    CreatedAt
+
+ST_HEAD_PROCESS_DATA:
+    HeadNo
+    Use
+    Shape
+    LaserPower
+    FrequencyKhz
+    ShotCount
+    MarkSpeed
+    JumpSpeed
+    OffsetX
+    OffsetY
+    Path
+
+CStationProcess.Start()의 단계:
+
+1) PLAN 확인
+    process plan이 준비되어 있는지 확인합니다.
+
+2) INTERLOCK
+    현재 장비 상태를 모아 CInterLockManager.Evaluate()로 자동 운전 가능 여부를 확인합니다.
+
+3) PARAMETER
+    공정 파라미터를 log에 남깁니다.
+
+4) DEVICE
+    CInterfaceManager.GetCommunicationStatus()로 장비 offline 여부를 확인합니다.
+    simulation mode면 offline 장비를 warning으로 무시합니다.
+
+5) SCRIPT
+    CAutomation1ScriptFile.Build()로 Data/Script/PROCESS.ascript를 생성합니다.
+
+6) TASK
+    station 상태를 Running으로 바꾸고 product/head 상태를 running으로 갱신합니다.
+    현재 코드는 실제 장비 task 실행 연결부가 아니라 simulation log를 남깁니다.
+
+7) WAIT_DONE
+    250ms delay 후 done signal을 받은 것처럼 처리합니다.
+
+8) COMPLETE
+    head 결과와 product 결과를 완료로 저장합니다.
+    station/interface/product log를 남깁니다.
+
+즉 현재 자동 공정은 실제 장비 연동 전, 화면/데이터/로그/스크립트 생성 흐름을 검증하는 simulation 기반 구조입니다.
+
+
+11. 인터락과 알람
+================
+
+인터락:
+
+CInterLockManager는 정해진 Rules를 가지고 ST_DEVICE_STATUS를 검사합니다.
+
+주요 검사 항목:
+
+Door
+EMS
+Key Switch
+Laser Shutter
+Chiller Alarm
+Leak Sensor
+Smoke Temp
+PM Lock
+Scanner Ready
+Vision Ready
+Panel In Position
+Vacuum Check
+Motion alarm
+Chiller alarm
+BET alarm
+
+결과 데이터:
+
+ST_INTERLOCK_SUMMARY
+    CanAutoRun
+    CanManualMove
+    CanLaserOn
+    HasError
+    Items
+
+알람:
+
+CAlarmManager.Build(ST_DEVICE_STATUS, ST_INTERLOCK_SUMMARY)
+    -> interlock NG, chiller alarm, motor alarm, BET alarm 등을 알람 후보로 만든다.
+    -> 알람 code별 최초 발생 시간을 _activeSince에 보관한다.
+    -> ST_ALARM_DATA 목록을 반환한다.
+
+UI에서는 CMenuAlarm과 CRootView header가 이 정보를 사용합니다.
+
+
+12. 제품 추적 구조
+=================
+
+제품 상태는 CProductManager와 CProductFile이 관리합니다.
+
+ST_PRODUCT_DATA:
+    ProductId
+    PanelId
+    LotId
+    ProcessId
+    RecipeId
+    State
+    Result
+    CreatedAt
+    StartedAt
+    CompletedAt
+    Parameters
+    Heads
+
+ST_PRODUCT_HEAD_RESULT:
+    HeadNo
+    State
+    TotalPoints
+    CompletedPoints
+    Result
+    ErrorCode
+    Message
+    StartedAt
+    CompletedAt
+
+저장 위치:
+
+Data/Product/ActiveProduct.csv
+Data/Product/History/yyyyMMdd/ProductHistory_yyyyMMdd.csv
+
+공정과 제품의 연결:
+
+CStationProcess.PrepareProcessPlan()
+    -> CProductManager.CreateProduct()
+
+CStationProcess.StartAutomationTask()
+    -> CProductManager.StartProduct()
+    -> CProductManager.SetHeadRunning()
+
+CStationProcess.CompleteProcess()
+    -> CProductManager.SetHeadResult()
+    -> CProductManager.CompleteProduct()
+
+CStationProcess.Stop()
+    -> CProductManager.StopProduct()
+
+
+13. 파일/로그 구조
+=================
+
+Config:
+    장비와 공정 설정의 원천입니다.
+
+Data:
+    실행 중 생성되는 제품 상태와 script가 저장됩니다.
+
+Log:
+    recipe, setting, interface, station, product trace log가 저장됩니다.
+
+Runtime script:
+    Data/Script/PROCESS.ascript
+
+현재 코드에서 중요한 점:
+
+Config는 version 관리 대상 성격입니다.
+Data와 Log는 실행 결과 성격입니다.
+실제 운영 repo에서는 Data/Log를 git에 포함할지 정책을 정해야 합니다.
+
+
+14. 전체 데이터 흐름 한 줄 요약
+==============================
+
+Config CSV
+    -> Drilling.File adapter
+        -> Drilling.Common data record
+            -> CManager가 manager 구성
+                -> CRootView와 Menu가 화면 구성
+                    -> 사용자 Start
+                        -> Recipe parameter
+                            -> ST_PROCESS_PLAN
+                                -> ST_PROCESS_MODEL
+                                    -> Automation1 script
+                                    -> Product state/log
+                                    -> UI status refresh
+
+
+15. 신규 개발자가 가장 먼저 보면 좋은 핵심 파일
+==============================================
+
+실행 조립:
+    Drilling.UI/CAppStartup.cs
+    Drilling.Common/Managers/CManager.cs
+
+UI shell:
+    Drilling.UI/CRootView.cs
+    Drilling.UI/Menu/Menus/IMenu.cs
+
+자동 공정:
+    Drilling.Common/Station/CStationManager.cs
+    Drilling.Common/Station/CStationProcess.cs
+
+장비 통신:
+    Drilling.Common/Interface/CInterfaceManager.cs
+    Drilling.Common/Interface/CComm.cs
+    Drilling.Common/Interface/Serial/*.cs
+    Drilling.Common/Interface/Socket/*.cs
+
+모션:
+    Drilling.Common/Motion/CMotionManager.cs
+    Drilling.Common/Motion/CMotionController.cs
+    Drilling.Common/Motion/AUTOMATION1/CAutomation1Motion.cs
+
+파일 입출력:
+    Drilling.File/Parser/CCsvParser.cs
+    Drilling.File/JHMI/CConfigStructureFile.cs
+    Drilling.File/JHMI/CInterfaceFile.cs
+    Drilling.File/JHMI/CMotorFile.cs
+    Drilling.File/JHMI/CIoFile.cs
+    Drilling.File/JHMI/CJhmiRecipeFile.cs
+    Drilling.File/JHMI/CSettingFile.cs
+
+제품/로그:
+    Drilling.Common/Product/CProductManager.cs
+    Drilling.File/Product/CProductFile.cs
+    Drilling.Common/Log/CLogManager.cs
+
+
+16. 이 코드의 설계 특징
+======================
+
+1) Manager 중심 구조
+    각 업무 영역마다 manager가 있습니다.
+    Interface, Motion, Station, Product, Recipe, Setting, Alarm, InterLock이 분리되어 있습니다.
+
+2) CSV 기반 설정
+    장비 구성과 recipe/setting이 코드에 hard-code되지 않고 CSV로 분리되어 있습니다.
+
+3) UI 전용 DTO와 도메인 DTO 분리
+    Common의 ST_* record를 메뉴가 화면 전용 row model로 변환합니다.
+
+4) Simulation 우선 구조
+    Interface와 Motion 모두 simulation mode를 지원합니다.
+    실제 장비가 없어도 UI와 공정 흐름을 확인할 수 있습니다.
+
+5) 공정 state snapshot 구조
+    CStationProcess는 현재 상태를 ST_STATION_PROCESS_STATUS snapshot으로 만들어 UI에 전달합니다.
+
+6) 실제 장비 실행 연결은 아직 제한적
+    Automation1 script 파일은 생성하지만, 실제 장비 task 실행은 현재 simulation log로 처리됩니다.
+
+
+17. 디버깅할 때 보는 포인트
+==========================
+
+앱이 시작되지 않으면:
+    CAppStartup.GetConfigRoot()
+    CManager.CheckConfigRoot()
+    CConfigStructureFile.Validate()
+
+Config가 안 읽히면:
+    Drilling.File/Parser/CCsvParser.cs
+    해당 C*File.cs의 RequiredHeaderGroups
+
+장비가 Offline이면:
+    Config/JHMI_INTERFACE.csv
+    CInterfaceFile.Parse()
+    CInterfaceManager.Register()
+    CInterfaceManager.Connect()
+
+모션축이 안 보이면:
+    Config/JHMI_MOTOR.csv
+    CMotorFile.LoadAll()
+    CMotionManager 생성자
+
+IO가 안 보이면:
+    Config/JHMI_IO.csv
+    CIoFile.LoadAll()
+    CMotionManager._io
+
+공정 시작이 안 되면:
+    CRootView.StartCycle()
+    CStationProcess.PrepareProcessPlan()
+    CStationProcess.CheckInterLock()
+    CInterLockManager.Evaluate()
+
+알람이 뜨면:
+    CRootView.GetCurrentAlarms()
+    CInterLockManager.Evaluate()
+    CAlarmManager.Build()
+
+스크립트가 안 만들어지면:
+    CAutomation1ScriptFile.Build()
+    CStationProcess.BuildAutomationScript()
+    Data/Script 폴더 권한
+
+
+18. 전체 흐름을 머릿속에 넣는 방법
+=================================
+
+이 코드는 "파일 설정을 읽어서 manager를 만들고, manager들이 UI와 공정 state machine을 움직이는 구조"입니다.
+
+가장 중요한 축은 세 가지입니다.
+
+첫째, 설정 축:
+    Config CSV -> File adapter -> Common record
+
+둘째, 실행 축:
+    UI command -> CRootView -> CStationProcess -> Script/Product/Log
+
+셋째, 장비 축:
+    Interface/Motion config -> CInterfaceManager/CMotionManager -> Status/Command -> UI/Interlock/Alarm
+
+이 세 축만 이해하면 나머지 클래스는 대부분 어디에 속하는지 판단할 수 있습니다.
+

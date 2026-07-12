@@ -1,0 +1,170 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1220" viewBox="0 0 1800 1220">
+  <defs>
+    <style>
+      .bg { fill: #f7f9fc; }
+      .title { font: 700 34px "Malgun Gothic", "Segoe UI", Arial, sans-serif; fill: #162033; }
+      .subtitle { font: 500 18px "Malgun Gothic", "Segoe UI", Arial, sans-serif; fill: #516070; }
+      .section { font: 700 20px "Malgun Gothic", "Segoe UI", Arial, sans-serif; fill: #172033; }
+      .label { font: 600 17px "Malgun Gothic", "Segoe UI", Arial, sans-serif; fill: #172033; }
+      .small { font: 500 14px "Malgun Gothic", "Segoe UI", Arial, sans-serif; fill: #405060; }
+      .tiny { font: 500 12px "Malgun Gothic", "Segoe UI", Arial, sans-serif; fill: #536274; }
+      .box { stroke-width: 2; rx: 14; ry: 14; }
+      .ui { fill: #e8f1ff; stroke: #3b73d9; }
+      .file { fill: #edf7ee; stroke: #3b8f4f; }
+      .common { fill: #fff3df; stroke: #d88924; }
+      .runtime { fill: #f3eafe; stroke: #8758d5; }
+      .warn { fill: #fff0f0; stroke: #d94b4b; }
+      .neutral { fill: #ffffff; stroke: #9aa8b8; }
+      .arrow { stroke: #526173; stroke-width: 2.4; fill: none; marker-end: url(#arrowHead); }
+      .arrowDashed { stroke: #6f7d8b; stroke-width: 2.2; fill: none; stroke-dasharray: 8 7; marker-end: url(#arrowHead); }
+      .lane { fill: #ffffff; stroke: #d4dce7; stroke-width: 1.5; rx: 18; ry: 18; }
+    </style>
+    <marker id="arrowHead" markerWidth="12" markerHeight="9" refX="10" refY="4.5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,4.5 L0,9 z" fill="#526173"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1800" height="1220"/>
+
+  <text class="title" x="70" y="62">A3 LD Process SW 전체 코드 흐름도</text>
+  <text class="subtitle" x="72" y="96">Config CSV에서 시작해 File Adapter, Common Manager, WPF UI, 자동 공정, Script/Product/Log로 흐르는 구조</text>
+
+  <rect class="lane" x="50" y="130" width="520" height="430"/>
+  <text class="section" x="80" y="166">1. 설정/파일 입력 계층</text>
+
+  <rect class="box file" x="85" y="195" width="420" height="58"/>
+  <text class="label" x="110" y="230">Config/*.csv</text>
+  <text class="small" x="110" y="248">Interface, Motor, IO, Recipe, Setting, BET, PowerMeter</text>
+
+  <rect class="box file" x="85" y="280" width="420" height="78"/>
+  <text class="label" x="110" y="313">Drilling.File</text>
+  <text class="small" x="110" y="335">CJhmiRecipeFile, CSettingFile, CInterfaceFile</text>
+  <text class="small" x="110" y="354">CMotorFile, CIoFile, CProductFile, CAutomation1ScriptFile</text>
+
+  <rect class="box file" x="85" y="385" width="420" height="92"/>
+  <text class="label" x="110" y="418">Common 데이터 record로 변환</text>
+  <text class="small" x="110" y="440">ST_INTERFACE_DATA, ST_MOTOR_DATA, ST_IO_DATA</text>
+  <text class="small" x="110" y="459">ST_RECIPE_DATA, ST_SYSTEM_PARAMETER 등</text>
+
+  <path class="arrow" d="M295 253 L295 280"/>
+  <path class="arrow" d="M295 358 L295 385"/>
+
+  <rect class="lane" x="640" y="130" width="520" height="430"/>
+  <text class="section" x="670" y="166">2. 실행 조립/도메인 계층</text>
+
+  <rect class="box common" x="675" y="195" width="420" height="58"/>
+  <text class="label" x="700" y="230">CAppStartup.CreateMainViewModel()</text>
+  <text class="small" x="700" y="248">Config root 탐색, file adapter 생성</text>
+
+  <rect class="box common" x="675" y="280" width="420" height="78"/>
+  <text class="label" x="700" y="313">CManager</text>
+  <text class="small" x="700" y="335">전체 manager 조립, Config 검증, 초기화 상태 기록</text>
+  <text class="small" x="700" y="354">Interface/Motion/Station/Product/Recipe/Setting 생성</text>
+
+  <rect class="box common" x="675" y="385" width="420" height="115"/>
+  <text class="label" x="700" y="418">핵심 Manager들</text>
+  <text class="small" x="700" y="440">CInterfaceManager: 장비 통신/상태/명령</text>
+  <text class="small" x="700" y="459">CMotionManager: 축/IO/controller dispatch</text>
+  <text class="small" x="700" y="478">CStationProcess: 자동 공정 state machine</text>
+  <text class="small" x="700" y="497">CProductManager, CAlarmManager, CInterLockManager</text>
+
+  <path class="arrow" d="M505 430 C575 430 605 318 675 318"/>
+  <path class="arrow" d="M885 253 L885 280"/>
+  <path class="arrow" d="M885 358 L885 385"/>
+
+  <rect class="lane" x="1230" y="130" width="520" height="430"/>
+  <text class="section" x="1260" y="166">3. WPF UI 계층</text>
+
+  <rect class="box ui" x="1265" y="195" width="420" height="58"/>
+  <text class="label" x="1290" y="230">CRootView</text>
+  <text class="small" x="1290" y="248">root ViewModel, 선택 메뉴/Head/Recipe/상태 관리</text>
+
+  <rect class="box ui" x="1265" y="280" width="420" height="98"/>
+  <text class="label" x="1290" y="313">IMenu.Build() → CScreenViewModel</text>
+  <text class="small" x="1290" y="335">Main, Manual, Recipe, Setting, Alarm</text>
+  <text class="small" x="1290" y="354">Monitor, PM, Exit 화면별 표시 데이터 생성</text>
+  <text class="small" x="1290" y="373">도메인 record를 화면 row model로 변환</text>
+
+  <rect class="box ui" x="1265" y="405" width="420" height="72"/>
+  <text class="label" x="1290" y="438">사용자 명령</text>
+  <text class="small" x="1290" y="460">Start / Stop / Head 선택 / Recipe 저장 / Setting 변경</text>
+
+  <path class="arrow" d="M1095 318 C1170 318 1190 224 1265 224"/>
+  <path class="arrow" d="M1475 253 L1475 280"/>
+  <path class="arrow" d="M1475 378 L1475 405"/>
+
+  <rect class="lane" x="50" y="620" width="1700" height="520"/>
+  <text class="section" x="80" y="656">4. 자동 공정 동작 흐름</text>
+
+  <rect class="box ui" x="85" y="700" width="200" height="78"/>
+  <text class="label" x="110" y="734">사용자 Start</text>
+  <text class="small" x="110" y="756">CRootView.StartCycle()</text>
+
+  <rect class="box ui" x="335" y="700" width="220" height="78"/>
+  <text class="label" x="360" y="734">Recipe 로드</text>
+  <text class="small" x="360" y="756">IRecipeManager.LoadRecipes()</text>
+
+  <rect class="box common" x="605" y="700" width="230" height="78"/>
+  <text class="label" x="630" y="734">공정 계획 생성</text>
+  <text class="small" x="630" y="756">ST_PROCESS_PLAN</text>
+
+  <rect class="box common" x="885" y="700" width="250" height="78"/>
+  <text class="label" x="910" y="734">공정 모델 변환</text>
+  <text class="small" x="910" y="756">ST_PROCESS_MODEL / Head Path</text>
+
+  <rect class="box common" x="1185" y="700" width="230" height="78"/>
+  <text class="label" x="1210" y="734">인터락 확인</text>
+  <text class="small" x="1210" y="756">CInterLockManager.Evaluate()</text>
+
+  <rect class="box common" x="1465" y="700" width="220" height="78"/>
+  <text class="label" x="1490" y="734">장비 상태 확인</text>
+  <text class="small" x="1490" y="756">Interface/Motion status</text>
+
+  <path class="arrow" d="M285 739 L335 739"/>
+  <path class="arrow" d="M555 739 L605 739"/>
+  <path class="arrow" d="M835 739 L885 739"/>
+  <path class="arrow" d="M1135 739 L1185 739"/>
+  <path class="arrow" d="M1415 739 L1465 739"/>
+
+  <rect class="box runtime" x="185" y="850" width="260" height="92"/>
+  <text class="label" x="210" y="884">Automation1 Script 생성</text>
+  <text class="small" x="210" y="906">CAutomation1ScriptFile.Build()</text>
+  <text class="small" x="210" y="925">Data/Script/PROCESS.ascript</text>
+
+  <rect class="box runtime" x="525" y="850" width="230" height="92"/>
+  <text class="label" x="550" y="884">Task 실행 단계</text>
+  <text class="small" x="550" y="906">현재 코드: simulation log</text>
+  <text class="small" x="550" y="925">실제 장비 task 연결 전</text>
+
+  <rect class="box runtime" x="835" y="850" width="240" height="92"/>
+  <text class="label" x="860" y="884">제품 상태 갱신</text>
+  <text class="small" x="860" y="906">CProductManager</text>
+  <text class="small" x="860" y="925">ActiveProduct / History</text>
+
+  <rect class="box runtime" x="1155" y="850" width="230" height="92"/>
+  <text class="label" x="1180" y="884">로그 기록</text>
+  <text class="small" x="1180" y="906">Station / Interface</text>
+  <text class="small" x="1180" y="925">Product / Recipe / Setting</text>
+
+  <rect class="box ui" x="1465" y="850" width="220" height="92"/>
+  <text class="label" x="1490" y="884">UI 상태 갱신</text>
+  <text class="small" x="1490" y="906">ST_STATION_PROCESS_STATUS</text>
+  <text class="small" x="1490" y="925">Header/Footer/Menu refresh</text>
+
+  <path class="arrow" d="M1575 778 C1575 825 315 805 315 850"/>
+  <path class="arrow" d="M445 896 L525 896"/>
+  <path class="arrow" d="M755 896 L835 896"/>
+  <path class="arrow" d="M1075 896 L1155 896"/>
+  <path class="arrow" d="M1385 896 L1465 896"/>
+
+  <rect class="box warn" x="85" y="1010" width="1600" height="78"/>
+  <text class="label" x="110" y="1042">중요 포인트</text>
+  <text class="small" x="110" y="1066">이 코드는 Config 기반 manager 조립 구조이며, UI 명령은 CRootView를 거쳐 CStationProcess로 들어간다. 자동 공정은 Script/Product/Log까지 흐르지만, 실제 Automation1 task 실행부는 현재 simulation 흐름으로 처리된다.</text>
+
+  <path class="arrowDashed" d="M720 778 C720 810 720 820 720 850"/>
+  <text class="tiny" x="735" y="818">StationProcess.Start()</text>
+
+  <path class="arrowDashed" d="M1300 700 C1300 600 900 580 900 500"/>
+  <text class="tiny" x="1040" y="600">장비/모션/인터락 상태는 계속 UI와 공정에 공급</text>
+</svg>
