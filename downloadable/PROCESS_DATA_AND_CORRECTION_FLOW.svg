@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="1900" height="1320" viewBox="0 0 1900 1320">
   <defs>
     <style>
@@ -35,12 +35,12 @@
 
   <rect class="box file" x="82" y="195" width="250" height="88"/>
   <text class="label" x="106" y="228">Config / Recipe</text>
-  <text class="small" x="106" y="250">JHMI_RCP, RECIPE</text>
-  <text class="small" x="106" y="269">JHMI_SETTING, MOTOR, IO</text>
+  <text class="small" x="106" y="250">IPS_RCP, RECIPE</text>
+  <text class="small" x="106" y="269">IPS_SETTING, MOTOR, IO</text>
 
   <rect class="box file" x="385" y="195" width="275" height="88"/>
   <text class="label" x="410" y="228">Drilling.File Adapter</text>
-  <text class="small" x="410" y="250">CJhmiRecipeFile / CMotorFile</text>
+  <text class="small" x="410" y="250">CIpsRecipeFile / CMotorFile</text>
   <text class="small" x="410" y="269">CInterfaceFile / CIoFile 등</text>
 
   <rect class="box common" x="715" y="195" width="290" height="88"/>

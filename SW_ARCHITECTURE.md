@@ -1,4 +1,4 @@
-﻿# A3 LD Process SW Architecture
+# A3 LD Process SW Architecture
 
 이 문서는 현재 솔루션 구조를 기준으로 작성한 아키텍처/데이터 구조 설명이다. 클래스, 구조체, record, enum, interface의 전체 필드/프로퍼티/메서드 목록은 같은 폴더의 `CLASS_INVENTORY.md`에 빌드 결과 기준으로 전수 추출되어 있다.
 
@@ -37,7 +37,7 @@ CApp / App.xaml
 └─ CAppStartup.CreateMainViewModel()
    ├─ Config root 탐색: Drilling.sln 기준 Config 폴더
    ├─ 파일 구현체 생성
-   │  ├─ CJhmiRecipeFile
+   │  ├─ CIpsRecipeFile
    │  ├─ CSettingFile
    │  ├─ CManualScanFile
    │  ├─ CInterfaceFile
@@ -122,18 +122,18 @@ CRootView
 
 ```text
 Config
-├─ JHMI_RCP.csv              Recipe form schema
+├─ IPS_RCP.csv              Recipe form schema
 ├─ RECIPE/*.csv              Recipe value files
-├─ JHMI_SETTING.csv          Setting form schema
+├─ IPS_SETTING.csv          Setting form schema
 ├─ Setting/Setting.csv       Setting values
-├─ JHMI_INTERFACE.csv        장비 통신 정의
-├─ JHMI_MOTOR.csv            축/모션 정의
-├─ JHMI_IO.csv               IO 정의
-├─ JHMI_BET.csv              BET 기본 테이블
+├─ IPS_INTERFACE.csv        장비 통신 정의
+├─ IPS_MOTOR.csv            축/모션 정의
+├─ IPS_IO.csv               IO 정의
+├─ IPS_BET.csv              BET 기본 테이블
 ├─ BET/BET.csv               BET 사용자 값
-├─ JHMI_POWERMETER.csv       Power meter 기본 테이블
+├─ IPS_POWERMETER.csv       Power meter 기본 테이블
 ├─ PowerMeter/*.pwm          Power meter process value
-├─ JHMI_MANUAL_SCAN.csv      Manual scan form schema
+├─ IPS_MANUAL_SCAN.csv      Manual scan form schema
 └─ Manual/*.scan             Manual scan setting value
 
 Runtime generated
@@ -277,7 +277,7 @@ Operator Start
 ## 8. Interface/Communication Structure
 
 ```text
-JHMI_INTERFACE.csv
+IPS_INTERFACE.csv
 └─ CInterfaceFile.LoadAll()
    └─ ST_INTERFACE_DATA
       ├─ InterfaceType: EN_INTERFACE_TYPE
@@ -311,7 +311,7 @@ CInterfaceManager.Register()
 ## 9. Motion Structure
 
 ```text
-JHMI_MOTOR.csv
+IPS_MOTOR.csv
 └─ CMotorFile.LoadAll()
    └─ ST_MOTOR_DATA
       ├─ axis identity: Name, Axis, DevType, DevNo
@@ -319,7 +319,7 @@ JHMI_MOTOR.csv
       ├─ station mapping: System, StationName, DisplayName
       └─ offsets/reverse/home/precheck metadata
 
-JHMI_IO.csv
+IPS_IO.csv
 └─ CIoFile.LoadAll()
    └─ ST_IO_DATA
       ├─ Id, Address, Name
@@ -368,14 +368,14 @@ IMenu
 
 | File adapter | Implements | Reads/Writes | Domain data |
 | --- | --- | --- | --- |
-| `CJhmiRecipeFile` | `IRecipeFile` | `JHMI_RCP.csv`, `RECIPE/*.csv`, recipe log | `ST_RECIPE_DATA`, `ST_RECIPE_PARAM`, `ST_RECIPE_HISTORY` |
-| `CSettingFile` | `ISettingFile` | `JHMI_SETTING.csv`, `Setting/Setting.csv`, setting log | `ST_SYSTEM_PARAMETER`, `ST_SETTING_HISTORY` |
-| `CInterfaceFile` | `IInterfaceFile` | `JHMI_INTERFACE.csv` | `ST_INTERFACE_DATA` |
-| `CMotorFile` | `IMotorFile` | `JHMI_MOTOR.csv` | `ST_MOTOR_DATA` |
-| `CIoFile` | `IIoFile` | `JHMI_IO.csv` | `ST_IO_DATA` |
-| `CBETFile` | `IBETFile` | `JHMI_BET.csv`, `BET/BET.csv` | `ST_BET_TABLE_DATA` |
-| `CPowerMeterFile` | `IPowerMeterFile` | `JHMI_POWERMETER.csv`, `PowerMeter/*.pwm` | `ST_POWER_METER_TABLE_DATA`, `ST_POWER_METER_STEP_DATA` |
-| `CManualScanFile` | `IManualScanFile` | `JHMI_MANUAL_SCAN.csv`, `Manual/*.scan` | `ST_MANUAL_SCAN_PARAM` |
+| `CIpsRecipeFile` | `IRecipeFile` | `IPS_RCP.csv`, `RECIPE/*.csv`, recipe log | `ST_RECIPE_DATA`, `ST_RECIPE_PARAM`, `ST_RECIPE_HISTORY` |
+| `CSettingFile` | `ISettingFile` | `IPS_SETTING.csv`, `Setting/Setting.csv`, setting log | `ST_SYSTEM_PARAMETER`, `ST_SETTING_HISTORY` |
+| `CInterfaceFile` | `IInterfaceFile` | `IPS_INTERFACE.csv` | `ST_INTERFACE_DATA` |
+| `CMotorFile` | `IMotorFile` | `IPS_MOTOR.csv` | `ST_MOTOR_DATA` |
+| `CIoFile` | `IIoFile` | `IPS_IO.csv` | `ST_IO_DATA` |
+| `CBETFile` | `IBETFile` | `IPS_BET.csv`, `BET/BET.csv` | `ST_BET_TABLE_DATA` |
+| `CPowerMeterFile` | `IPowerMeterFile` | `IPS_POWERMETER.csv`, `PowerMeter/*.pwm` | `ST_POWER_METER_TABLE_DATA`, `ST_POWER_METER_STEP_DATA` |
+| `CManualScanFile` | `IManualScanFile` | `IPS_MANUAL_SCAN.csv`, `Manual/*.scan` | `ST_MANUAL_SCAN_PARAM` |
 | `CProductFile` | `IProductFile` | `Data/Product/*.csv` | `ST_PRODUCT_DATA`, `ST_PRODUCT_HISTORY` |
 | `CAutomation1ScriptFile` | `IAutomationScriptFile` | `Data/Script/PROCESS.ascript` | `ST_AUTOMATION1_SCRIPT` |
 | `CConfigStructureFile` | `IConfigStructureFile` | Config folder validation | `ST_CONFIG_FILE_STATUS` |

@@ -8,7 +8,7 @@ using Drilling.Common.InterLock;
 using Drilling.Common.Station;
 using Drilling.File.Parser;
 
-namespace Drilling.File.JHMI;
+namespace Drilling.File.IPS;
 
 public sealed class CInterfaceFile(string configRoot) : IInterfaceFile
 {
@@ -105,7 +105,7 @@ public sealed class CInterfaceFile(string configRoot) : IInterfaceFile
 
     private IReadOnlyList<ST_INTERFACE_DATA> LoadInterfaceRows()
     {
-        CCsvParser.ValidateRequiredHeaders(GetInterfacePath(), "JHMI_INTERFACE", RequiredHeaderGroups);
+        CCsvParser.ValidateRequiredHeaders(GetInterfacePath(), "IPS_INTERFACE", RequiredHeaderGroups);
 
         return CCsvParser.Read(GetInterfacePath())
             .Select((row, index) => Parse(row, index + 2))
@@ -136,7 +136,7 @@ public sealed class CInterfaceFile(string configRoot) : IInterfaceFile
 
     private string GetInterfacePath()
     {
-        return Path.Combine(configRoot, "JHMI_INTERFACE.csv");
+        return Path.Combine(configRoot, "IPS_INTERFACE.csv");
     }
 
     private static IReadOnlyList<string> ReadArguments(IReadOnlyDictionary<string, string> row)
@@ -181,22 +181,22 @@ public sealed class CInterfaceFile(string configRoot) : IInterfaceFile
         {
             if (string.IsNullOrWhiteSpace(data.NickName))
             {
-                throw new InvalidDataException("JHMI_INTERFACE validation failed. NICKNAME cannot be empty.");
+                throw new InvalidDataException("IPS_INTERFACE validation failed. NICKNAME cannot be empty.");
             }
 
             if (!deviceNumbers.Add(CreateInterfaceKey(data)))
             {
-                throw new InvalidDataException($"JHMI_INTERFACE validation failed. Duplicated DEVICE/NUMBER: {FormatInterfaceLabel(data)}");
+                throw new InvalidDataException($"IPS_INTERFACE validation failed. Duplicated DEVICE/NUMBER: {FormatInterfaceLabel(data)}");
             }
 
             if (data.Number < 0)
             {
-                throw new InvalidDataException($"JHMI_INTERFACE validation failed. NUMBER cannot be negative: {FormatInterfaceLabel(data)}");
+                throw new InvalidDataException($"IPS_INTERFACE validation failed. NUMBER cannot be negative: {FormatInterfaceLabel(data)}");
             }
 
             if (data.Arguments.Count > 5)
             {
-                throw new InvalidDataException($"JHMI_INTERFACE validation failed. ARG count must be 5 or less: {FormatInterfaceLabel(data)}");
+                throw new InvalidDataException($"IPS_INTERFACE validation failed. ARG count must be 5 or less: {FormatInterfaceLabel(data)}");
             }
 
             ValidateConnectionArguments(data);
@@ -254,12 +254,12 @@ public sealed class CInterfaceFile(string configRoot) : IInterfaceFile
         {
             if (!actualRows.TryGetValue(CreateInterfaceKey(expected), out var actual))
             {
-                throw new InvalidDataException($"JHMI_INTERFACE validation failed. Missing row: {FormatInterfaceLabel(expected)}");
+                throw new InvalidDataException($"IPS_INTERFACE validation failed. Missing row: {FormatInterfaceLabel(expected)}");
             }
 
             if (!BuildComparisonText(actual).Equals(BuildComparisonText(expected), StringComparison.Ordinal))
             {
-                throw new InvalidDataException($"JHMI_INTERFACE validation failed. Value mismatch: {FormatInterfaceLabel(expected)}");
+                throw new InvalidDataException($"IPS_INTERFACE validation failed. Value mismatch: {FormatInterfaceLabel(expected)}");
             }
         }
     }
@@ -379,7 +379,7 @@ public sealed class CInterfaceFile(string configRoot) : IInterfaceFile
             "SOCKET_C_UDP" => EN_INTERFACE_TYPE.SocketClientUdp,
             "SOCKET_S_UDP" => EN_INTERFACE_TYPE.SocketServerUdp,
             "ACS_NET" or "ACS" => EN_INTERFACE_TYPE.AcsNet,
-            _ => throw new InvalidDataException($"JHMI_INTERFACE validation failed. Unknown TYPE: {value}")
+            _ => throw new InvalidDataException($"IPS_INTERFACE validation failed. Unknown TYPE: {value}")
         };
     }
 
@@ -439,7 +439,7 @@ public sealed class CInterfaceFile(string configRoot) : IInterfaceFile
         int rowNo,
         params string[] names)
     {
-        return CCsvParser.RequireText(row, "JHMI_INTERFACE", rowNo, names);
+        return CCsvParser.RequireText(row, "IPS_INTERFACE", rowNo, names);
     }
 
     private static bool ReadRequiredBool(
@@ -447,7 +447,7 @@ public sealed class CInterfaceFile(string configRoot) : IInterfaceFile
         int rowNo,
         string fieldName)
     {
-        return CCsvParser.ReadRequiredBool(value, "JHMI_INTERFACE", rowNo, fieldName);
+        return CCsvParser.ReadRequiredBool(value, "IPS_INTERFACE", rowNo, fieldName);
     }
 
     private static int ReadRequiredInt(
@@ -455,7 +455,7 @@ public sealed class CInterfaceFile(string configRoot) : IInterfaceFile
         int rowNo,
         string fieldName)
     {
-        return CCsvParser.ReadRequiredInt(value, "JHMI_INTERFACE", rowNo, fieldName);
+        return CCsvParser.ReadRequiredInt(value, "IPS_INTERFACE", rowNo, fieldName);
     }
 
     private static void RequireArgument(
@@ -466,7 +466,7 @@ public sealed class CInterfaceFile(string configRoot) : IInterfaceFile
         if (string.IsNullOrWhiteSpace(value))
         {
             throw new InvalidDataException(
-                $"JHMI_INTERFACE validation failed. {data.NickName}/{fieldName} cannot be empty in ONLINE mode.");
+                $"IPS_INTERFACE validation failed. {data.NickName}/{fieldName} cannot be empty in ONLINE mode.");
         }
     }
 
@@ -479,7 +479,7 @@ public sealed class CInterfaceFile(string configRoot) : IInterfaceFile
             result <= 0)
         {
             throw new InvalidDataException(
-                $"JHMI_INTERFACE validation failed. {data.NickName}/{fieldName} must be a positive integer in ONLINE mode.");
+                $"IPS_INTERFACE validation failed. {data.NickName}/{fieldName} must be a positive integer in ONLINE mode.");
         }
     }
 
@@ -495,7 +495,7 @@ public sealed class CInterfaceFile(string configRoot) : IInterfaceFile
         }
 
         throw new InvalidDataException(
-            $"JHMI_INTERFACE validation failed. {data.NickName}/ARG3/PARITY is invalid: {value}");
+            $"IPS_INTERFACE validation failed. {data.NickName}/ARG3/PARITY is invalid: {value}");
     }
 
     private static void ValidateStopBits(
@@ -510,7 +510,7 @@ public sealed class CInterfaceFile(string configRoot) : IInterfaceFile
         }
 
         throw new InvalidDataException(
-            $"JHMI_INTERFACE validation failed. {data.NickName}/ARG5/STOP_BITS is invalid: {value}");
+            $"IPS_INTERFACE validation failed. {data.NickName}/ARG5/STOP_BITS is invalid: {value}");
     }
 
     private static string Normalize(string value)

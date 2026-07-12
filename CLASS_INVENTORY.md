@@ -2840,7 +2840,7 @@ Type count: 154
 
 Type count: 17
 
-### Drilling.File.JHMI.CBETFile
+### Drilling.File.IPS.CBETFile
 
 - Kind: class
 - Interfaces: Drilling.Common.Interface.IBETFile
@@ -2862,25 +2862,25 @@ Type count: 17
   - public Threading.Tasks.Task Save(Collections.Generic.IReadOnlyList<Drilling.Common.Interface.ST_BET_TABLE_DATA> table, Threading.CancellationToken cancellationToken = null)
   - private static Void WriteTable(String path, Collections.Generic.IReadOnlyList<Drilling.Common.Interface.ST_BET_TABLE_DATA> table)
 
-### Drilling.File.JHMI.CConfigStructureFile
+### Drilling.File.IPS.CConfigStructureFile
 
 - Kind: class
 - Interfaces: Drilling.Common.Managers.IConfigStructureFile
 - Constructors:
   - public CConfigStructureFile(String configRoot)
 - Fields:
-  - private static readonly Collections.Generic.IReadOnlyList<Drilling.File.JHMI.CConfigStructureFile+ST_VALUE_CSV> OptionalValueFiles
-  - private static readonly Collections.Generic.IReadOnlyList<Drilling.File.JHMI.CConfigStructureFile+ST_REQUIRED_CSV> RequiredCsvFiles
+  - private static readonly Collections.Generic.IReadOnlyList<Drilling.File.IPS.CConfigStructureFile+ST_VALUE_CSV> OptionalValueFiles
+  - private static readonly Collections.Generic.IReadOnlyList<Drilling.File.IPS.CConfigStructureFile+ST_REQUIRED_CSV> RequiredCsvFiles
 - Methods:
-  - private Drilling.Common.Managers.ST_CONFIG_FILE_STATUS CheckCsv(Drilling.File.JHMI.CConfigStructureFile+ST_REQUIRED_CSV csvFile)
+  - private Drilling.Common.Managers.ST_CONFIG_FILE_STATUS CheckCsv(Drilling.File.IPS.CConfigStructureFile+ST_REQUIRED_CSV csvFile)
   - private Drilling.Common.Managers.ST_CONFIG_FILE_STATUS CheckCsvValueFiles(String itemName, String relativeDirectory, String pattern, Collections.Generic.IReadOnlyList<Collections.Generic.IReadOnlyList<String>> requiredHeaderGroups, Action<String, Collections.Generic.IReadOnlyList<Collections.Generic.IReadOnlyDictionary<String, String>>> rowValidator, Threading.CancellationToken cancellationToken)
   - private Drilling.Common.Managers.ST_CONFIG_FILE_STATUS CheckLineValueFiles(String itemName, String relativeDirectory, String pattern, Func<Collections.Generic.IReadOnlyList<String>, Boolean> lineValidator, String invalidMessage, Threading.CancellationToken cancellationToken)
   - private Drilling.Common.Managers.ST_CONFIG_FILE_STATUS CheckManualValueFiles(Threading.CancellationToken cancellationToken)
   - private Drilling.Common.Managers.ST_CONFIG_FILE_STATUS CheckPowerMeterValueFiles(Threading.CancellationToken cancellationToken)
   - private Drilling.Common.Managers.ST_CONFIG_FILE_STATUS CheckRecipeValueFiles(Threading.CancellationToken cancellationToken)
   - private Drilling.Common.Managers.ST_CONFIG_FILE_STATUS CheckRoot()
-  - private Drilling.Common.Managers.ST_CONFIG_FILE_STATUS CheckValueCsv(Drilling.File.JHMI.CConfigStructureFile+ST_VALUE_CSV valueFile)
-  - private static Drilling.File.JHMI.CConfigStructureFile+ST_REQUIRED_CSV Csv(String itemName, String relativePath, Collections.Generic.IReadOnlyList<Collections.Generic.IReadOnlyList<String>> requiredHeaderGroups, Action<String, Collections.Generic.IReadOnlyList<Collections.Generic.IReadOnlyDictionary<String, String>>> rowValidator)
+  - private Drilling.Common.Managers.ST_CONFIG_FILE_STATUS CheckValueCsv(Drilling.File.IPS.CConfigStructureFile+ST_VALUE_CSV valueFile)
+  - private static Drilling.File.IPS.CConfigStructureFile+ST_REQUIRED_CSV Csv(String itemName, String relativePath, Collections.Generic.IReadOnlyList<Collections.Generic.IReadOnlyList<String>> requiredHeaderGroups, Action<String, Collections.Generic.IReadOnlyList<Collections.Generic.IReadOnlyDictionary<String, String>>> rowValidator)
   - private Drilling.Common.Managers.ST_CONFIG_FILE_STATUS EnsureDirectory(String itemName, String relativePath, Threading.CancellationToken cancellationToken)
   - private static String GetFirstValue(Collections.Generic.IReadOnlyDictionary<String, String> row, String[] names)
   - private String GetPath(String relativePath)
@@ -2894,9 +2894,9 @@ Type count: 17
   - private static Void ValidateStepKey(String tableName, Collections.Generic.IReadOnlyList<Collections.Generic.IReadOnlyDictionary<String, String>> rows)
   - private static Void ValidateTabNameKey(String tableName, Collections.Generic.IReadOnlyList<Collections.Generic.IReadOnlyDictionary<String, String>> rows)
   - private static Void ValidateUniqueKey(String tableName, Collections.Generic.IReadOnlyList<Collections.Generic.IReadOnlyDictionary<String, String>> rows, Collections.Generic.IReadOnlyList<String> displayKeyNames, Func<Collections.Generic.IReadOnlyDictionary<String, String>, String> createKey)
-  - private static Drilling.File.JHMI.CConfigStructureFile+ST_VALUE_CSV ValueCsv(String itemName, String relativePath, Collections.Generic.IReadOnlyList<Collections.Generic.IReadOnlyList<String>> requiredHeaderGroups, Action<String, Collections.Generic.IReadOnlyList<Collections.Generic.IReadOnlyDictionary<String, String>>> rowValidator)
+  - private static Drilling.File.IPS.CConfigStructureFile+ST_VALUE_CSV ValueCsv(String itemName, String relativePath, Collections.Generic.IReadOnlyList<Collections.Generic.IReadOnlyList<String>> requiredHeaderGroups, Action<String, Collections.Generic.IReadOnlyList<Collections.Generic.IReadOnlyDictionary<String, String>>> rowValidator)
 
-### Drilling.File.JHMI.CInterfaceFile
+### Drilling.File.IPS.CInterfaceFile
 
 - Kind: class
 - Interfaces: Drilling.Common.Managers.IInterfaceFile
@@ -2938,7 +2938,7 @@ Type count: 17
   - private Void WriteFieldModifyLog(String interfaceLabel, Collections.Generic.IReadOnlyDictionary<String, String> oldFields, Collections.Generic.IReadOnlyDictionary<String, String> newFields)
   - private Void WriteModifyLog(Collections.Generic.IReadOnlyDictionary<String, Drilling.Common.Interface.ST_INTERFACE_DATA> oldRows, Collections.Generic.IReadOnlyList<Drilling.Common.Interface.ST_INTERFACE_DATA> newRows)
 
-### Drilling.File.JHMI.CIoFile
+### Drilling.File.IPS.CIoFile
 
 - Kind: class
 - Interfaces: Drilling.Common.Motion.IIoFile
@@ -2965,12 +2965,12 @@ Type count: 17
   - private static Collections.Generic.IReadOnlyDictionary<String, String> Row(String id, String address, String name, Boolean isOutput, Boolean initialState, Int32 displayOrder, String description)
   - private static Void Validate(Collections.Generic.IReadOnlyList<Drilling.Common.Motion.ST_IO_DATA> rows)
 
-### Drilling.File.JHMI.CJhmiRecipeFile
+### Drilling.File.IPS.CIpsRecipeFile
 
 - Kind: class
 - Interfaces: Drilling.Common.Managers.IRecipeFile
 - Constructors:
-  - public CJhmiRecipeFile(String configRoot)
+  - public CIpsRecipeFile(String configRoot)
 - Fields:
   - private static readonly Collections.Generic.IReadOnlyList<String> FormHeaders
   - private readonly String _configRoot
@@ -3004,7 +3004,7 @@ Type count: 17
   - private static Collections.Generic.IReadOnlyList<String> SplitCsvLine(String line)
   - private static Void ValidateSavedRecipeFile(String path, Collections.Generic.IReadOnlyDictionary<String, String> expectedValues)
 
-### Drilling.File.JHMI.CManualScanFile
+### Drilling.File.IPS.CManualScanFile
 
 - Kind: class
 - Interfaces: Drilling.Common.Managers.IManualScanFile
@@ -3015,7 +3015,7 @@ Type count: 17
   - private static readonly Collections.Generic.IReadOnlyList<String> ValueHeaders
   - private readonly String _manualDirectory
 - Methods:
-  - private static Collections.Generic.IReadOnlyList<Drilling.File.JHMI.CManualScanFile+ST_MANUAL_FORM_ITEM> CreateFallbackFormItems()
+  - private static Collections.Generic.IReadOnlyList<Drilling.File.IPS.CManualScanFile+ST_MANUAL_FORM_ITEM> CreateFallbackFormItems()
   - public Threading.Tasks.Task Delete(String settingName, Threading.CancellationToken cancellationToken = null)
   - private String GetDefaultSettingName()
   - private String GetFormPath()
@@ -3024,25 +3024,25 @@ Type count: 17
   - public Threading.Tasks.Task<Collections.Generic.IReadOnlyList<String>> List(Threading.CancellationToken cancellationToken = null)
   - public Threading.Tasks.Task<Drilling.Common.Managers.ST_MANUAL_SCAN_PARAM> Load(Threading.CancellationToken cancellationToken = null)
   - public Threading.Tasks.Task<Drilling.Common.Managers.ST_MANUAL_SCAN_PARAM> Load(String settingName, Threading.CancellationToken cancellationToken = null)
-  - private Collections.Generic.IReadOnlyList<Drilling.File.JHMI.CManualScanFile+ST_MANUAL_FORM_ITEM> LoadFormItems()
+  - private Collections.Generic.IReadOnlyList<Drilling.File.IPS.CManualScanFile+ST_MANUAL_FORM_ITEM> LoadFormItems()
   - private static String NormalizeSettingName(String settingName)
   - private static Boolean ReadBool(String value, Boolean defaultValue)
   - private static Drilling.Common.Managers.EN_RECIPE_DATA_TYPE ReadDataType(String value)
-  - private Double ReadDouble(Collections.Generic.IReadOnlyDictionary<String, String> values, Collections.Generic.IReadOnlyList<Drilling.File.JHMI.CManualScanFile+ST_MANUAL_FORM_ITEM> formItems, String key, Double defaultValue)
+  - private Double ReadDouble(Collections.Generic.IReadOnlyDictionary<String, String> values, Collections.Generic.IReadOnlyList<Drilling.File.IPS.CManualScanFile+ST_MANUAL_FORM_ITEM> formItems, String key, Double defaultValue)
   - private static Double ReadDoubleValue(String value, Double defaultValue)
   - private static Int32 ReadInt(String value, Int32 defaultValue)
-  - private String ReadString(Collections.Generic.IReadOnlyDictionary<String, String> values, Collections.Generic.IReadOnlyList<Drilling.File.JHMI.CManualScanFile+ST_MANUAL_FORM_ITEM> formItems, String key, String defaultValue)
+  - private String ReadString(Collections.Generic.IReadOnlyDictionary<String, String> values, Collections.Generic.IReadOnlyList<Drilling.File.IPS.CManualScanFile+ST_MANUAL_FORM_ITEM> formItems, String key, String defaultValue)
   - public Threading.Tasks.Task Rename(String oldSettingName, String newSettingName, Threading.CancellationToken cancellationToken = null)
   - public Threading.Tasks.Task Save(Drilling.Common.Managers.ST_MANUAL_SCAN_PARAM settings, Threading.CancellationToken cancellationToken = null)
   - public Threading.Tasks.Task Save(String settingName, Drilling.Common.Managers.ST_MANUAL_SCAN_PARAM settings, Threading.CancellationToken cancellationToken = null)
-  - private static String ValidateBoolParameter(Drilling.File.JHMI.CManualScanFile+ST_MANUAL_FORM_ITEM formItem, String value)
-  - private static String ValidateDoubleParameter(Drilling.File.JHMI.CManualScanFile+ST_MANUAL_FORM_ITEM formItem, String value)
-  - private static String ValidateIntParameter(Drilling.File.JHMI.CManualScanFile+ST_MANUAL_FORM_ITEM formItem, String value)
-  - private static String ValidateNumericRange(Drilling.File.JHMI.CManualScanFile+ST_MANUAL_FORM_ITEM formItem, Double value)
+  - private static String ValidateBoolParameter(Drilling.File.IPS.CManualScanFile+ST_MANUAL_FORM_ITEM formItem, String value)
+  - private static String ValidateDoubleParameter(Drilling.File.IPS.CManualScanFile+ST_MANUAL_FORM_ITEM formItem, String value)
+  - private static String ValidateIntParameter(Drilling.File.IPS.CManualScanFile+ST_MANUAL_FORM_ITEM formItem, String value)
+  - private static String ValidateNumericRange(Drilling.File.IPS.CManualScanFile+ST_MANUAL_FORM_ITEM formItem, Double value)
   - private Void ValidateSavedSetting(String settingName, Collections.Generic.IReadOnlyDictionary<String, String> values, Threading.CancellationToken cancellationToken = null)
-  - private static Void ValidateValues(Collections.Generic.IReadOnlyList<Drilling.File.JHMI.CManualScanFile+ST_MANUAL_FORM_ITEM> formItems, Collections.Generic.IReadOnlyDictionary<String, String> values)
+  - private static Void ValidateValues(Collections.Generic.IReadOnlyList<Drilling.File.IPS.CManualScanFile+ST_MANUAL_FORM_ITEM> formItems, Collections.Generic.IReadOnlyDictionary<String, String> values)
 
-### Drilling.File.JHMI.CMotorFile
+### Drilling.File.IPS.CMotorFile
 
 - Kind: class
 - Interfaces: Drilling.Common.Motion.IMotorFile
@@ -3066,7 +3066,7 @@ Type count: 17
   - private static Collections.Generic.IReadOnlyDictionary<String, String> Row(String name, Int32 axis, String displayName, String unit, Double min, Double max, Double maxVel, Double maxAcc)
   - private static Void Validate(Collections.Generic.IReadOnlyList<Drilling.Common.Motion.ST_MOTOR_DATA> motors)
 
-### Drilling.File.JHMI.CPowerMeterFile
+### Drilling.File.IPS.CPowerMeterFile
 
 - Kind: class
 - Interfaces: Drilling.Common.Interface.IPowerMeterFile
@@ -3094,7 +3094,7 @@ Type count: 17
   - private static String SelectProcessFile(Collections.Generic.IReadOnlyList<String> files, String processFile)
   - private static Void WriteSteps(String path, Collections.Generic.IReadOnlyList<Drilling.Common.Interface.ST_POWER_METER_STEP_DATA> steps)
 
-### Drilling.File.JHMI.CSettingFile
+### Drilling.File.IPS.CSettingFile
 
 - Kind: class
 - Interfaces: Drilling.Common.Managers.ISettingFile
@@ -3113,7 +3113,7 @@ Type count: 17
   - private static String GetValue(Collections.Generic.IReadOnlyDictionary<String, String> values, String tab, String name, String defaultValue)
   - private String GetValuePath()
   - public Threading.Tasks.Task<Collections.Generic.IReadOnlyList<Drilling.Common.Managers.ST_SYSTEM_PARAMETER>> Load(Drilling.Common.Managers.EN_SETTING_TAB section, Threading.CancellationToken cancellationToken = null)
-  - private Collections.Generic.IReadOnlyList<Drilling.File.JHMI.CSettingFile+ST_SETTING_FORM_ITEM> LoadFormItems()
+  - private Collections.Generic.IReadOnlyList<Drilling.File.IPS.CSettingFile+ST_SETTING_FORM_ITEM> LoadFormItems()
   - public Threading.Tasks.Task<Collections.Generic.IReadOnlyList<Drilling.Common.Managers.ST_SETTING_HISTORY>> LoadHistory(Drilling.Common.Managers.EN_SETTING_TAB section, Threading.CancellationToken cancellationToken = null)
   - private Collections.Generic.Dictionary<String, String> LoadSettingValues()
   - private static String NormalizeSettingText(String value, String defaultValue)
@@ -3124,21 +3124,21 @@ Type count: 17
   - private static Int32 ReadInt(String value, Int32 defaultValue)
   - public Threading.Tasks.Task Save(Drilling.Common.Managers.EN_SETTING_TAB section, Collections.Generic.IReadOnlyList<Drilling.Common.Managers.ST_SYSTEM_PARAMETER> parameters, Threading.CancellationToken cancellationToken = null)
   - private static String ToTabText(Drilling.Common.Managers.EN_SETTING_TAB section)
-  - private static String ValidateBoolParameter(Drilling.File.JHMI.CSettingFile+ST_SETTING_FORM_ITEM formItem, String value)
-  - private static String ValidateDoubleParameter(Drilling.File.JHMI.CSettingFile+ST_SETTING_FORM_ITEM formItem, String value)
-  - private static String ValidateIntParameter(Drilling.File.JHMI.CSettingFile+ST_SETTING_FORM_ITEM formItem, String value)
-  - private static String ValidateNumericRange(Drilling.File.JHMI.CSettingFile+ST_SETTING_FORM_ITEM formItem, Double value)
+  - private static String ValidateBoolParameter(Drilling.File.IPS.CSettingFile+ST_SETTING_FORM_ITEM formItem, String value)
+  - private static String ValidateDoubleParameter(Drilling.File.IPS.CSettingFile+ST_SETTING_FORM_ITEM formItem, String value)
+  - private static String ValidateIntParameter(Drilling.File.IPS.CSettingFile+ST_SETTING_FORM_ITEM formItem, String value)
+  - private static String ValidateNumericRange(Drilling.File.IPS.CSettingFile+ST_SETTING_FORM_ITEM formItem, Double value)
   - private Void ValidateSavedSection(Drilling.Common.Managers.EN_SETTING_TAB section, Collections.Generic.IReadOnlyList<Drilling.Common.Managers.ST_SYSTEM_PARAMETER> expectedParameters)
-  - private static Void ValidateSectionParameters(String sectionTab, Collections.Generic.IReadOnlyList<Drilling.Common.Managers.ST_SYSTEM_PARAMETER> parameters, Collections.Generic.IReadOnlyList<Drilling.File.JHMI.CSettingFile+ST_SETTING_FORM_ITEM> formItems)
-  - private Void WriteSettingValues(Collections.Generic.IReadOnlyList<Drilling.File.JHMI.CSettingFile+ST_SETTING_FORM_ITEM> formItems, Collections.Generic.IReadOnlyDictionary<String, String> values)
+  - private static Void ValidateSectionParameters(String sectionTab, Collections.Generic.IReadOnlyList<Drilling.Common.Managers.ST_SYSTEM_PARAMETER> parameters, Collections.Generic.IReadOnlyList<Drilling.File.IPS.CSettingFile+ST_SETTING_FORM_ITEM> formItems)
+  - private Void WriteSettingValues(Collections.Generic.IReadOnlyList<Drilling.File.IPS.CSettingFile+ST_SETTING_FORM_ITEM> formItems, Collections.Generic.IReadOnlyDictionary<String, String> values)
 
-### Drilling.File.JHMI.CManualScanFile+ST_MANUAL_FORM_ITEM
+### Drilling.File.IPS.CManualScanFile+ST_MANUAL_FORM_ITEM
 
 - Kind: class
-- Interfaces: System.IEquatable<Drilling.File.JHMI.CManualScanFile+ST_MANUAL_FORM_ITEM>
+- Interfaces: System.IEquatable<Drilling.File.IPS.CManualScanFile+ST_MANUAL_FORM_ITEM>
 - Constructors:
   - public ST_MANUAL_FORM_ITEM(String Name, String DisplayName, Drilling.Common.Managers.EN_RECIPE_DATA_TYPE DataType, String Unit, Boolean Show, Boolean Use, String DefaultValue, Double Min, Double Max, String Description, Int32 DisplayOrder)
-  - private ST_MANUAL_FORM_ITEM(Drilling.File.JHMI.CManualScanFile+ST_MANUAL_FORM_ITEM original)
+  - private ST_MANUAL_FORM_ITEM(Drilling.File.IPS.CManualScanFile+ST_MANUAL_FORM_ITEM original)
 - Properties:
   - public Drilling.Common.Managers.EN_RECIPE_DATA_TYPE DataType (get/set)
   - public String DefaultValue (get/set)
@@ -3153,13 +3153,13 @@ Type count: 17
   - public String Unit (get/set)
   - public Boolean Use (get/set)
 
-### Drilling.File.JHMI.CConfigStructureFile+ST_REQUIRED_CSV
+### Drilling.File.IPS.CConfigStructureFile+ST_REQUIRED_CSV
 
 - Kind: class
-- Interfaces: System.IEquatable<Drilling.File.JHMI.CConfigStructureFile+ST_REQUIRED_CSV>
+- Interfaces: System.IEquatable<Drilling.File.IPS.CConfigStructureFile+ST_REQUIRED_CSV>
 - Constructors:
   - public ST_REQUIRED_CSV(String ItemName, String RelativePath, Collections.Generic.IReadOnlyList<Collections.Generic.IReadOnlyList<String>> RequiredHeaderGroups, Action<String, Collections.Generic.IReadOnlyList<Collections.Generic.IReadOnlyDictionary<String, String>>> RowValidator)
-  - private ST_REQUIRED_CSV(Drilling.File.JHMI.CConfigStructureFile+ST_REQUIRED_CSV original)
+  - private ST_REQUIRED_CSV(Drilling.File.IPS.CConfigStructureFile+ST_REQUIRED_CSV original)
 - Properties:
   - private Type EqualityContract (get)
   - public String ItemName (get/set)
@@ -3167,13 +3167,13 @@ Type count: 17
   - public Collections.Generic.IReadOnlyList<Collections.Generic.IReadOnlyList<String>> RequiredHeaderGroups (get/set)
   - public Action<String, Collections.Generic.IReadOnlyList<Collections.Generic.IReadOnlyDictionary<String, String>>> RowValidator (get/set)
 
-### Drilling.File.JHMI.CSettingFile+ST_SETTING_FORM_ITEM
+### Drilling.File.IPS.CSettingFile+ST_SETTING_FORM_ITEM
 
 - Kind: class
-- Interfaces: System.IEquatable<Drilling.File.JHMI.CSettingFile+ST_SETTING_FORM_ITEM>
+- Interfaces: System.IEquatable<Drilling.File.IPS.CSettingFile+ST_SETTING_FORM_ITEM>
 - Constructors:
   - public ST_SETTING_FORM_ITEM(String Tab, String Group, String Name, String DisplayName, Drilling.Common.Managers.EN_RECIPE_DATA_TYPE DataType, String Unit, Boolean Show, Boolean Use, String DefaultValue, Double Min, Double Max, String Description, Int32 DisplayOrder, Collections.Generic.IReadOnlyDictionary<String, String> Extra = null)
-  - private ST_SETTING_FORM_ITEM(Drilling.File.JHMI.CSettingFile+ST_SETTING_FORM_ITEM original)
+  - private ST_SETTING_FORM_ITEM(Drilling.File.IPS.CSettingFile+ST_SETTING_FORM_ITEM original)
 - Properties:
   - public Drilling.Common.Managers.EN_RECIPE_DATA_TYPE DataType (get/set)
   - public String DefaultValue (get/set)
@@ -3191,13 +3191,13 @@ Type count: 17
   - public String Unit (get/set)
   - public Boolean Use (get/set)
 
-### Drilling.File.JHMI.CConfigStructureFile+ST_VALUE_CSV
+### Drilling.File.IPS.CConfigStructureFile+ST_VALUE_CSV
 
 - Kind: class
-- Interfaces: System.IEquatable<Drilling.File.JHMI.CConfigStructureFile+ST_VALUE_CSV>
+- Interfaces: System.IEquatable<Drilling.File.IPS.CConfigStructureFile+ST_VALUE_CSV>
 - Constructors:
   - public ST_VALUE_CSV(String ItemName, String RelativePath, Collections.Generic.IReadOnlyList<Collections.Generic.IReadOnlyList<String>> RequiredHeaderGroups, Action<String, Collections.Generic.IReadOnlyList<Collections.Generic.IReadOnlyDictionary<String, String>>> RowValidator)
-  - private ST_VALUE_CSV(Drilling.File.JHMI.CConfigStructureFile+ST_VALUE_CSV original)
+  - private ST_VALUE_CSV(Drilling.File.IPS.CConfigStructureFile+ST_VALUE_CSV original)
 - Properties:
   - private Type EqualityContract (get)
   - public String ItemName (get/set)

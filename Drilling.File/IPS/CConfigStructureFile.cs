@@ -1,13 +1,13 @@
 using Drilling.Common.Managers;
 using Drilling.File.Parser;
 
-namespace Drilling.File.JHMI;
+namespace Drilling.File.IPS;
 
 public sealed class CConfigStructureFile(string configRoot) : IConfigStructureFile
 {
     private static readonly IReadOnlyList<ST_REQUIRED_CSV> RequiredCsvFiles =
     [
-        Csv("JHMI_RCP", "JHMI_RCP.csv",
+        Csv("IPS_RCP", "IPS_RCP.csv",
         [
             ["TAB"],
             ["GROUP"],
@@ -27,7 +27,7 @@ public sealed class CConfigStructureFile(string configRoot) : IConfigStructureFi
             ["ORDER"]
         ], ValidateTabNameKey),
 
-        Csv("JHMI_SETTING", "JHMI_SETTING.csv",
+        Csv("IPS_SETTING", "IPS_SETTING.csv",
         [
             ["TAB"],
             ["GROUP"],
@@ -44,7 +44,7 @@ public sealed class CConfigStructureFile(string configRoot) : IConfigStructureFi
             ["ORDER"]
         ], ValidateTabNameKey),
 
-        Csv("JHMI_INTERFACE", "JHMI_INTERFACE.csv",
+        Csv("IPS_INTERFACE", "IPS_INTERFACE.csv",
         [
             ["TYPE"],
             ["DEVICE"],
@@ -60,7 +60,7 @@ public sealed class CConfigStructureFile(string configRoot) : IConfigStructureFi
             ["ARG5"]
         ], ValidateDeviceNumberKey),
 
-        Csv("JHMI_MOTOR", "JHMI_MOTOR.csv",
+        Csv("IPS_MOTOR", "IPS_MOTOR.csv",
         [
             ["NAME", "MOTOR NAME", "AXIS NAME"],
             ["USE"],
@@ -74,7 +74,7 @@ public sealed class CConfigStructureFile(string configRoot) : IConfigStructureFi
             ["MAX"]
         ], ValidateNameKey),
 
-        Csv("JHMI_IO", "JHMI_IO.csv",
+        Csv("IPS_IO", "IPS_IO.csv",
         [
             ["ID"],
             ["USE"],
@@ -85,7 +85,7 @@ public sealed class CConfigStructureFile(string configRoot) : IConfigStructureFi
             ["DEV NO", "DEVICE NO"]
         ], ValidateIdKey),
 
-        Csv("JHMI_BET", "JHMI_BET.csv",
+        Csv("IPS_BET", "IPS_BET.csv",
         [
             ["INDEX"],
             ["USE"],
@@ -96,7 +96,7 @@ public sealed class CConfigStructureFile(string configRoot) : IConfigStructureFi
             ["ROWBEAMSIZE"]
         ], ValidateIndexKey),
 
-        Csv("JHMI_POWERMETER", "JHMI_POWERMETER.csv",
+        Csv("IPS_POWERMETER", "IPS_POWERMETER.csv",
         [
             ["STEP"],
             ["OPTION_NAME"],
@@ -115,7 +115,7 @@ public sealed class CConfigStructureFile(string configRoot) : IConfigStructureFi
             ["STATE"]
         ], ValidateStepKey),
 
-        Csv("JHMI_MANUAL_SCAN", "JHMI_MANUAL_SCAN.csv",
+        Csv("IPS_MANUAL_SCAN", "IPS_MANUAL_SCAN.csv",
         [
             ["NAME"],
             ["DISPLAY NAME"],
@@ -226,7 +226,7 @@ public sealed class CConfigStructureFile(string configRoot) : IConfigStructureFi
                 true,
                 false,
                 false,
-                "Required JHMI schema file is missing.");
+                "Required IPS schema file is missing.");
         }
 
         try

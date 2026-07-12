@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1220" viewBox="0 0 1800 1220">
   <defs>
     <style>
@@ -39,7 +39,7 @@
 
   <rect class="box file" x="85" y="280" width="420" height="78"/>
   <text class="label" x="110" y="313">Drilling.File</text>
-  <text class="small" x="110" y="335">CJhmiRecipeFile, CSettingFile, CInterfaceFile</text>
+  <text class="small" x="110" y="335">CIpsRecipeFile, CSettingFile, CInterfaceFile</text>
   <text class="small" x="110" y="354">CMotorFile, CIoFile, CProductFile, CAutomation1ScriptFile</text>
 
   <rect class="box file" x="85" y="385" width="420" height="92"/>

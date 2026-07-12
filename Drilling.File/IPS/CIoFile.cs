@@ -2,7 +2,7 @@ using System.Globalization;
 using Drilling.Common.Motion;
 using Drilling.File.Parser;
 
-namespace Drilling.File.JHMI;
+namespace Drilling.File.IPS;
 
 public sealed class CIoFile(string configRoot) : IIoFile
 {
@@ -35,7 +35,7 @@ public sealed class CIoFile(string configRoot) : IIoFile
     {
         cancellationToken.ThrowIfCancellationRequested();
         EnsureFile();
-        CCsvParser.ValidateRequiredHeaders(GetIoPath(), "JHMI_IO", RequiredHeaderGroups);
+        CCsvParser.ValidateRequiredHeaders(GetIoPath(), "IPS_IO", RequiredHeaderGroups);
 
         var rows = CCsvParser.Read(GetIoPath())
             .Select((row, index) => Parse(row, index + 2))
@@ -82,7 +82,7 @@ public sealed class CIoFile(string configRoot) : IIoFile
 
     private string GetIoPath()
     {
-        return Path.Combine(configRoot, "JHMI_IO.csv");
+        return Path.Combine(configRoot, "IPS_IO.csv");
     }
 
     private static void Validate(IReadOnlyList<ST_IO_DATA> rows)
@@ -94,32 +94,32 @@ public sealed class CIoFile(string configRoot) : IIoFile
         {
             if (string.IsNullOrWhiteSpace(row.Id))
             {
-                throw new InvalidDataException("JHMI_IO validation failed. ID cannot be empty.");
+                throw new InvalidDataException("IPS_IO validation failed. ID cannot be empty.");
             }
 
             if (!usedIds.Add(row.Id))
             {
-                throw new InvalidDataException($"JHMI_IO validation failed. Duplicated ID: {row.Id}");
+                throw new InvalidDataException($"IPS_IO validation failed. Duplicated ID: {row.Id}");
             }
 
             if (string.IsNullOrWhiteSpace(row.Address))
             {
-                throw new InvalidDataException($"JHMI_IO validation failed. ADDRESS cannot be empty: {row.Id}");
+                throw new InvalidDataException($"IPS_IO validation failed. ADDRESS cannot be empty: {row.Id}");
             }
 
             if (!usedAddresses.Add(row.Address))
             {
-                throw new InvalidDataException($"JHMI_IO validation failed. Duplicated ADDRESS: {row.Address}");
+                throw new InvalidDataException($"IPS_IO validation failed. Duplicated ADDRESS: {row.Address}");
             }
 
             if (string.IsNullOrWhiteSpace(row.DevType))
             {
-                throw new InvalidDataException($"JHMI_IO validation failed. DEV TYPE cannot be empty: {row.Id}");
+                throw new InvalidDataException($"IPS_IO validation failed. DEV TYPE cannot be empty: {row.Id}");
             }
 
             if (row.DevNo < 0)
             {
-                throw new InvalidDataException($"JHMI_IO validation failed. DEV NO cannot be negative: {row.Id}");
+                throw new InvalidDataException($"IPS_IO validation failed. DEV NO cannot be negative: {row.Id}");
             }
         }
     }
@@ -192,7 +192,7 @@ public sealed class CIoFile(string configRoot) : IIoFile
             "OUT" or "OUTPUT" or "Y" => true,
             "IN" or "INPUT" or "X" => false,
             _ => throw new InvalidDataException(
-                $"JHMI_IO validation failed. Row {rowNo} / DIRECTION must be IN or OUT: {value}")
+                $"IPS_IO validation failed. Row {rowNo} / DIRECTION must be IN or OUT: {value}")
         };
     }
 
@@ -201,7 +201,7 @@ public sealed class CIoFile(string configRoot) : IIoFile
         int rowNo,
         params string[] names)
     {
-        return CCsvParser.RequireText(row, "JHMI_IO", rowNo, names);
+        return CCsvParser.RequireText(row, "IPS_IO", rowNo, names);
     }
 
     private static string ReadFirst(
@@ -222,7 +222,7 @@ public sealed class CIoFile(string configRoot) : IIoFile
         string fieldName,
         int defaultValue)
     {
-        return CCsvParser.ReadInt(value, "JHMI_IO", rowNo, fieldName, defaultValue);
+        return CCsvParser.ReadInt(value, "IPS_IO", rowNo, fieldName, defaultValue);
     }
 
     private static string ReadController(string value)

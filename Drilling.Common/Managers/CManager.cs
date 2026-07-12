@@ -503,7 +503,7 @@ public sealed class CManager
             _loadedInterfaceCount = interfaceData.Count;
 
             AddStartupStep(
-                "Load JHMI_INTERFACE",
+                "Load IPS_INTERFACE",
                 EN_MANAGER_STARTUP_RESULT.Ready,
                 $"Loaded {interfaceData.Count} interface row(s).");
 
@@ -511,7 +511,7 @@ public sealed class CManager
         }
         catch (Exception ex) when (IsStartupDataException(ex))
         {
-            AddStartupFailure("Load JHMI_INTERFACE", ex);
+            AddStartupFailure("Load IPS_INTERFACE", ex);
             return [];
         }
     }
@@ -550,7 +550,7 @@ public sealed class CManager
             var motorData = _motorFile.LoadAll().GetAwaiter().GetResult();
             _loadedMotorCount = motorData.Count;
             AddStartupStep(
-                "Load JHMI_MOTOR",
+                "Load IPS_MOTOR",
                 EN_MANAGER_STARTUP_RESULT.Ready,
                 $"Loaded {motorData.Count} motor row(s).");
 
@@ -558,7 +558,7 @@ public sealed class CManager
         }
         catch (Exception ex) when (IsStartupDataException(ex))
         {
-            AddStartupFailure("Load JHMI_MOTOR", ex);
+            AddStartupFailure("Load IPS_MOTOR", ex);
             return [];
         }
     }
@@ -570,7 +570,7 @@ public sealed class CManager
             var ioData = _ioFile.LoadAll().GetAwaiter().GetResult();
             _loadedIoCount = ioData.Count;
             AddStartupStep(
-                "Load JHMI_IO",
+                "Load IPS_IO",
                 EN_MANAGER_STARTUP_RESULT.Ready,
                 $"Loaded {ioData.Count} IO row(s).");
 
@@ -578,7 +578,7 @@ public sealed class CManager
         }
         catch (Exception ex) when (IsStartupDataException(ex))
         {
-            AddStartupFailure("Load JHMI_IO", ex);
+            AddStartupFailure("Load IPS_IO", ex);
             return [];
         }
     }

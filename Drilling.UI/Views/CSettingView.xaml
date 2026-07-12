@@ -408,7 +408,7 @@
                                         Visibility="{Binding CurrentScreen.Setting.IsInterfaceTab, Converter={StaticResource BooleanToVisibilityConverter}}">
                                     <DockPanel>
                                         <TextBlock DockPanel.Dock="Top"
-                                                   Text="JHMI_INTERFACE.csv"
+                                                   Text="IPS_INTERFACE.csv"
                                                    Style="{StaticResource PanelTitle}"
                                                    FontSize="18" />
                                         <DataGrid ItemsSource="{Binding CurrentScreen.Setting.InterfaceRows}"

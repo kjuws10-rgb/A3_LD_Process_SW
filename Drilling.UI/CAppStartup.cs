@@ -2,7 +2,7 @@ using Drilling.Common.Log;
 using System.IO;
 using System.Text;
 using Drilling.Common.Managers;
-using Drilling.File.JHMI;
+using Drilling.File.IPS;
 using Drilling.File.Product;
 using Drilling.File.Script;
 
@@ -15,7 +15,7 @@ public static class CAppStartup
         var configRoot = GetConfigRoot();
         var manager = new CManager(
             configRoot,
-            new CJhmiRecipeFile(configRoot),
+            new CIpsRecipeFile(configRoot),
             new CSettingFile(configRoot),
             new CManualScanFile(configRoot),
             new CInterfaceFile(configRoot),

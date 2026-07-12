@@ -8,9 +8,9 @@ using Drilling.Common.InterLock;
 using Drilling.Common.Station;
 using Drilling.File.Parser;
 
-namespace Drilling.File.JHMI;
+namespace Drilling.File.IPS;
 
-public sealed class CJhmiRecipeFile(string configRoot) : IRecipeFile
+public sealed class CIpsRecipeFile(string configRoot) : IRecipeFile
 {
     private static readonly IReadOnlyList<string> FormHeaders =
     [
@@ -302,7 +302,7 @@ public sealed class CJhmiRecipeFile(string configRoot) : IRecipeFile
     {
         CCsvParser.ValidateRequiredHeaders(
             GetFormPath(),
-            "JHMI_RCP",
+            "IPS_RCP",
             FormHeaders.Select(header => new[] { header }));
 
         return CCsvParser.Read(GetFormPath())
@@ -394,7 +394,7 @@ public sealed class CJhmiRecipeFile(string configRoot) : IRecipeFile
 
     private string GetFormPath()
     {
-        return Path.Combine(_configRoot, "JHMI_RCP.csv");
+        return Path.Combine(_configRoot, "IPS_RCP.csv");
     }
 
     private string GetRecipePath(string recipeId)

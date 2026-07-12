@@ -7,7 +7,7 @@ using Drilling.Common.InterLock;
 using Drilling.Common.Station;
 using Drilling.File.Parser;
 
-namespace Drilling.File.JHMI;
+namespace Drilling.File.IPS;
 
 public sealed class CBETFile(string configRoot) : IBETFile
 {
@@ -119,7 +119,7 @@ public sealed class CBETFile(string configRoot) : IBETFile
 
     private string GetFormPath()
     {
-        return Path.Combine(configRoot, "JHMI_BET.csv");
+        return Path.Combine(configRoot, "IPS_BET.csv");
     }
 
     private string GetValuePath()

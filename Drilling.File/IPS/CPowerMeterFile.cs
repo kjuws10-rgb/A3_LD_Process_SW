@@ -2,7 +2,7 @@ using System.Globalization;
 using Drilling.Common.Interface;
 using Drilling.File.Parser;
 
-namespace Drilling.File.JHMI;
+namespace Drilling.File.IPS;
 
 public sealed class CPowerMeterFile(string configRoot) : IPowerMeterFile
 {
@@ -194,7 +194,7 @@ public sealed class CPowerMeterFile(string configRoot) : IPowerMeterFile
 
     private string GetFormPath()
     {
-        return Path.Combine(configRoot, "JHMI_POWERMETER.csv");
+        return Path.Combine(configRoot, "IPS_POWERMETER.csv");
     }
 
     private string GetProcessPath(string processFile)
