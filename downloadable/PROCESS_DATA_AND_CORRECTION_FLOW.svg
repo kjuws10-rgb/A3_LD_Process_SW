@@ -1,0 +1,160 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1900" height="1320" viewBox="0 0 1900 1320">
+  <defs>
+    <style>
+      .bg { fill: #f7f9fc; }
+      .title { font: 700 34px "Malgun Gothic", "Segoe UI", Arial, sans-serif; fill: #142033; }
+      .subtitle { font: 500 18px "Malgun Gothic", "Segoe UI", Arial, sans-serif; fill: #536174; }
+      .section { font: 700 21px "Malgun Gothic", "Segoe UI", Arial, sans-serif; fill: #142033; }
+      .label { font: 700 17px "Malgun Gothic", "Segoe UI", Arial, sans-serif; fill: #142033; }
+      .small { font: 500 14px "Malgun Gothic", "Segoe UI", Arial, sans-serif; fill: #3d4c5f; }
+      .tiny { font: 500 12px "Malgun Gothic", "Segoe UI", Arial, sans-serif; fill: #526174; }
+      .lane { fill: #ffffff; stroke: #d4dce7; stroke-width: 1.5; rx: 18; ry: 18; }
+      .file { fill: #eaf7ee; stroke: #3b8f4f; }
+      .ui { fill: #e8f1ff; stroke: #3b73d9; }
+      .common { fill: #fff3df; stroke: #d88924; }
+      .runtime { fill: #f3eafe; stroke: #8758d5; }
+      .measure { fill: #e9fbfb; stroke: #15949a; }
+      .correct { fill: #fff0f0; stroke: #d94b4b; }
+      .note { fill: #fffbe8; stroke: #d2a735; }
+      .box { stroke-width: 2; rx: 14; ry: 14; }
+      .arrow { stroke: #526173; stroke-width: 2.4; fill: none; marker-end: url(#arrowHead); }
+      .dash { stroke: #7a8795; stroke-width: 2.3; fill: none; stroke-dasharray: 8 7; marker-end: url(#arrowHead); }
+    </style>
+    <marker id="arrowHead" markerWidth="12" markerHeight="9" refX="10" refY="4.5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,4.5 L0,9 z" fill="#526173"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1900" height="1320"/>
+  <text class="title" x="64" y="58">공정 데이터 이동 구조와 리뷰 측정/보정 적용 지점</text>
+  <text class="subtitle" x="66" y="92">현재 코드가 들고 다니는 클래스/변수 흐름과, 가공 후 측정값을 보정으로 닫기 위해 추가되어야 할 구조</text>
+
+  <rect class="lane" x="50" y="125" width="1800" height="330"/>
+  <text class="section" x="80" y="162">1. 현재 코드의 공정 데이터 흐름</text>
+
+  <rect class="box file" x="82" y="195" width="250" height="88"/>
+  <text class="label" x="106" y="228">Config / Recipe</text>
+  <text class="small" x="106" y="250">JHMI_RCP, RECIPE</text>
+  <text class="small" x="106" y="269">JHMI_SETTING, MOTOR, IO</text>
+
+  <rect class="box file" x="385" y="195" width="275" height="88"/>
+  <text class="label" x="410" y="228">Drilling.File Adapter</text>
+  <text class="small" x="410" y="250">CJhmiRecipeFile / CMotorFile</text>
+  <text class="small" x="410" y="269">CInterfaceFile / CIoFile 등</text>
+
+  <rect class="box common" x="715" y="195" width="290" height="88"/>
+  <text class="label" x="740" y="228">CManager</text>
+  <text class="small" x="740" y="250">manager 조립과 Config 검증</text>
+  <text class="small" x="740" y="269">Interface/Motion/Station 생성</text>
+
+  <rect class="box ui" x="1060" y="195" width="290" height="88"/>
+  <text class="label" x="1085" y="228">CRootView / Menu</text>
+  <text class="small" x="1085" y="250">선택 Recipe, Head, 화면 상태</text>
+  <text class="small" x="1085" y="269">StartCycle 명령 발생</text>
+
+  <rect class="box common" x="1405" y="195" width="320" height="88"/>
+  <text class="label" x="1430" y="228">CStationProcess</text>
+  <text class="small" x="1430" y="250">ST_PROCESS_PLAN → MODEL</text>
+  <text class="small" x="1430" y="269">Script/Product/Log 흐름 제어</text>
+
+  <path class="arrow" d="M332 239 L385 239"/>
+  <path class="arrow" d="M660 239 L715 239"/>
+  <path class="arrow" d="M1005 239 L1060 239"/>
+  <path class="arrow" d="M1350 239 L1405 239"/>
+
+  <rect class="box common" x="110" y="330" width="1650" height="86"/>
+  <text class="label" x="135" y="360">이 흐름에서 이동하는 주요 데이터 구조</text>
+  <text class="small" x="135" y="384">ST_RECIPE_DATA → Dictionary&lt;string,string&gt; Parameters → ST_PROCESS_PLAN → ST_PROCESS_MODEL → ST_HEAD_PROCESS_DATA → ST_AUTOMATION1_SCRIPT</text>
+  <text class="small" x="135" y="405">장비 상태는 ST_DEVICE_STATUS로 모이고, 제품 상태는 ST_PRODUCT_DATA / ST_PRODUCT_HEAD_RESULT로 저장된다.</text>
+
+  <rect class="lane" x="50" y="490" width="870" height="390"/>
+  <text class="section" x="80" y="528">2. 어떤 클래스가 어떤 상태/변수를 들고 다니는가</text>
+
+  <rect class="box ui" x="85" y="560" width="380" height="102"/>
+  <text class="label" x="110" y="592">CRootView</text>
+  <text class="small" x="110" y="616">_selectedRecipeId, _selectedHeadNo</text>
+  <text class="small" x="110" y="635">_systemStatus, _pmLockStatus</text>
+  <text class="small" x="110" y="654">CurrentScreen, Header/FooterStatusItems</text>
+
+  <rect class="box common" x="500" y="560" width="380" height="102"/>
+  <text class="label" x="525" y="592">CStationProcess</text>
+  <text class="small" x="525" y="616">_processModel, _snapshot</text>
+  <text class="small" x="525" y="635">_lastScript, _statistics</text>
+  <text class="small" x="525" y="654">_processLogs, _lastInterLockItems</text>
+
+  <rect class="box common" x="85" y="700" width="380" height="102"/>
+  <text class="label" x="110" y="732">CInterfaceManager</text>
+  <text class="small" x="110" y="756">_devices: CInterfaceDevice dictionary</text>
+  <text class="small" x="110" y="775">laser/chiller/attenuator/BET 상태 dictionary</text>
+  <text class="small" x="110" y="794">ST_INTERFACE_COMM_STATUS 생성</text>
+
+  <rect class="box common" x="500" y="700" width="380" height="102"/>
+  <text class="label" x="525" y="732">CMotionManager</text>
+  <text class="small" x="525" y="756">_axisData: ST_MOTOR_DATA</text>
+  <text class="small" x="525" y="775">_axes: ST_AXIS_STATE</text>
+  <text class="small" x="525" y="794">_io: ST_IO_STATE, _controllers</text>
+
+  <rect class="box common" x="85" y="825" width="795" height="40"/>
+  <text class="small" x="110" y="850">CProductManager는 _current: ST_PRODUCT_DATA를 들고 공정 시작/완료/NG/History 상태를 이어간다.</text>
+
+  <rect class="lane" x="980" y="490" width="870" height="390"/>
+  <text class="section" x="1010" y="528">3. 리뷰 측정/보정 관점에서 현재 반영된 것과 빠진 것</text>
+
+  <rect class="box note" x="1015" y="560" width="800" height="100"/>
+  <text class="label" x="1040" y="592">현재 코드에 이미 있는 훅</text>
+  <text class="small" x="1040" y="616">ST_HEAD_PROCESS_DATA.OffsetX / OffsetY, ST_MOTOR_DATA OffsetX/Y/Z/T, Recipe/Setting parameter</text>
+  <text class="small" x="1040" y="635">ST_PRODUCT_HEAD_RESULT의 Result/ErrorCode/Message, Log/Product History 기록 구조</text>
+  <text class="small" x="1040" y="654">즉 보정값을 넣을 수 있는 “자리”는 일부 있지만, 측정→보정 계산→다음 공정 반영 루프는 전용 구조가 없다.</text>
+
+  <rect class="box correct" x="1015" y="700" width="800" height="128"/>
+  <text class="label" x="1040" y="732">추가 적용이 필요한 보정 루프</text>
+  <text class="small" x="1040" y="756">CReviewMeasurementManager / IReviewMeasurementFile / ST_REVIEW_MEASUREMENT_DATA</text>
+  <text class="small" x="1040" y="775">ST_HEAD_MEASUREMENT_RESULT: HeadNo, TargetX/Y, MeasuredX/Y, ErrorX/Y, ReviewResult</text>
+  <text class="small" x="1040" y="794">CCorrectionManager / ST_CORRECTION_MODEL / ST_HEAD_CORRECTION</text>
+  <text class="small" x="1040" y="813">계산된 보정값을 Recipe/Setting 또는 다음 ST_PROCESS_PLAN.Parameters에 반영해야 닫힌 루프가 된다.</text>
+
+  <rect class="lane" x="50" y="920" width="1800" height="330"/>
+  <text class="section" x="80" y="958">4. 가공 → 리뷰 측정 → 보정 → 다음 가공으로 닫히는 목표 구조</text>
+
+  <rect class="box common" x="90" y="1000" width="250" height="88"/>
+  <text class="label" x="115" y="1032">가공 실행</text>
+  <text class="small" x="115" y="1054">CStationProcess.Start()</text>
+  <text class="small" x="115" y="1073">ST_PROCESS_MODEL 사용</text>
+
+  <rect class="box runtime" x="390" y="1000" width="250" height="88"/>
+  <text class="label" x="415" y="1032">제품/Head 결과</text>
+  <text class="small" x="415" y="1054">CProductManager</text>
+  <text class="small" x="415" y="1073">ST_PRODUCT_HEAD_RESULT</text>
+
+  <rect class="box measure" x="690" y="1000" width="270" height="88"/>
+  <text class="label" x="715" y="1032">리뷰 측정값 수집</text>
+  <text class="small" x="715" y="1054">추가 필요: Review manager</text>
+  <text class="small" x="715" y="1073">MeasuredX/Y, ErrorX/Y</text>
+
+  <rect class="box correct" x="1010" y="1000" width="270" height="88"/>
+  <text class="label" x="1035" y="1032">보정 모델 계산</text>
+  <text class="small" x="1035" y="1054">추가 필요: Correction manager</text>
+  <text class="small" x="1035" y="1073">Offset/Scale/Theta 보정</text>
+
+  <rect class="box file" x="1330" y="1000" width="250" height="88"/>
+  <text class="label" x="1355" y="1032">보정값 저장</text>
+  <text class="small" x="1355" y="1054">Recipe / Setting / Data</text>
+  <text class="small" x="1355" y="1073">CorrectionHistory</text>
+
+  <rect class="box common" x="1630" y="1000" width="170" height="88"/>
+  <text class="label" x="1655" y="1032">다음 공정</text>
+  <text class="small" x="1655" y="1054">ST_PROCESS_PLAN</text>
+  <text class="small" x="1655" y="1073">Parameters 반영</text>
+
+  <path class="arrow" d="M340 1044 L390 1044"/>
+  <path class="arrow" d="M640 1044 L690 1044"/>
+  <path class="arrow" d="M960 1044 L1010 1044"/>
+  <path class="arrow" d="M1280 1044 L1330 1044"/>
+  <path class="arrow" d="M1580 1044 L1630 1044"/>
+  <path class="dash" d="M1715 1000 C1715 930 215 930 215 1000"/>
+
+  <rect class="box note" x="95" y="1145" width="1700" height="70"/>
+  <text class="label" x="120" y="1176">판단</text>
+  <text class="small" x="120" y="1200">현재 구조는 공정/제품/로그/offset parameter의 기반은 갖고 있지만, 리뷰 측정 데이터를 전용 모델로 받아 보정값을 계산하고 다음 공정에 자동 반영하는 폐루프는 아직 명시적으로 구현되어 있지 않다.</text>
+</svg>
