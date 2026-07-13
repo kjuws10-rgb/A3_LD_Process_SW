@@ -36,3 +36,4 @@ Review 측정 / Review Offset base 코드
 검증
 - dotnet build 성공.
 - 경고 0개, 오류 0개.
+2026-07-13 package fix: Rebuilt project ZIP to include Drilling.Common\Log source files. The previous ZIP excluded the source Log namespace by mistake while excluding runtime logs.
