@@ -1,0 +1,151 @@
+===== 확인 요청항목 =====
+[CONFIDENTIAL / 대외비]
+WONIK IPS
+작성자: 강정우 님
+A3 LD 스캐너 가공프로그램 고객사 확인 요청 항목
+IT 적용 가공프로그램 기준으로 신규 Scale-Down 설비 적용범위, 변경/제외 기능, 보정/통신/시퀀스 사양을 고객사와 확정
+No | 대분류 | 세부 확인 항목 | 확인 목적 / 주요 확인 내용 | IPS 판단 여부 | 고객사 확인 / 제공 필요자료 | 비고 / 결정사항 | 상태
+1 | 가공프로그램 기능 리스트 | IT 스캐너 가공프로그램 기능 리스트 | IT에 적용된 가공프로그램의 필수 기능 범위 확인. 신규 Scale-down 설비 적용 범위의 기준자료로 활용 | 불가 | 기존 적용 프로그램 기능 리스트, 기능 설명서, 매뉴얼, 화면 캡처 | SDC 요구사항리스트 | 확인
+2 | 프로그램 화면 구성 | Auto 화면 | 자동 운전 상태, 가공 시작/정지, 진행 상태, 설비 Ready/Busy/Complete/Error 표시 방식 확인 | 부분 가능 | Auto 화면 캡처, 버튼/상태표시/운전 조건 설명 | 미확인
+3 | Manual 화면 | Scanner, Laser, Stage 연동 Manual 조작 범위 및 수동 동작 권한 확인 | 부분 가능 | Manual 화면 캡처, 광학계/Stage 수동 조작 항목 리스트 | 미확인
+4 | Recipe 화면 | 가공 조건 입력, Recipe 편집/저장/불러오기/선택 방식 확인 | 부분 가능 | Recipe 화면 캡처, 입력 파라미터 목록 | 미확인
+5 | Scanner Setting 화면 | Scanner별 설정값, 보정 파일 선택, 통신 상태, 기본 파라미터 관리 방식 확인 | 부분 가능 | Scanner Setting 화면 캡처, 설정 항목 리스트 | 미확인
+6 | Calibration / Correction 화면 | Scanner 보정, Field Correction, 좌표 보정 관련 기능 화면 및 운영 절차 확인 | 불가 | Calibration/Correction 화면 캡처, 보정 절차서, 보정 데이터 샘플 | 미확인
+7 | Alarm / Log 화면 | Alarm 표시 및 Log 저장 방식은 IPS 기준으로 일부 판단 가능하나, 고객사 요구 저장 항목은 확인 필요 | 가능 | 필요 시 기존 Alarm/Log 화면 캡처 및 저장 항목 | IPS 판단 가능 | 미확인
+8 | 가공 Recipe 구조 | 가공 좌표 입력 방식 | Recipe 내 가공 좌표가 Global 좌표, Scanner 좌표, Stage 좌표 중 어떤 기준으로 입력되는지 확인 | 불가 | 좌표 입력 포맷, 좌표계 정의서, Recipe 샘플 파일 | 좌표입력방식 | 확인
+9 | 가공형태 Pattern / Line / Point / Area | 지원해야 할 가공 형상 및 형상별 파라미터 구성 확인 | 불가 | 가공 Pattern 종류, Line/Point/Area 정의, 샘플 Recipe | 미확인
+10 | Laser Power / Frequency / Speed / Pulse 조건 | 가공 조건 파라미터 범위, 단위, 기본값, 제한값 및 Recipe 저장 방식 확인 | 불가 | Laser 조건표, 파라미터 범위, 단위, 기존 Recipe 샘플 | 미확인
+11 | Scanner별 Recipe 적용 방식 | Multi Scanner 사용 시 동일 Recipe 적용인지, Scanner별 Offset/조건 분리 적용인지 확인 | 불가 | Scanner별 Recipe 적용 규칙, 기존 설정 파일 | 미확인
+12 | Recipe 저장 및 불러오기 방식 | 파일 포맷, 저장 경로, 관리, 권한, Recipe 변경 이력 필요 여부 확인 | 부분 가능 | Recipe 파일 구조, 저장 경로 정책, 예제 파일 | 미확인
+13 | 스캐너 가공 시퀀스 | Auto 가공 시작 조건 | Auto Run 시작 전 필요한 Scanner/Laser Ready 조건 확인 | 불가 | Auto 시작 조건표 | 미확인
+14 | Scanner 가공 시작/종료 조건 | Scanner 명령 전송 시점, Script 실행 방식, 가공 완료 신호 및 Timeout 조건 확인 | 불가 | Scanner Start/End 조건, Script 실행 방식, 완료 판정 기준 | 미확인
+15 | Laser On/Off 조건 | Laser Enable, Gate On/Off, 가공 중 Laser 제어 타이밍 및 안전 조건 확인 | 불가 | Laser On/Off Sequence, Timing Chart, Safety 조건 | 미확인
+16 | 비정상 상황 Recovery 방식 | 가공 중 정지, 통신 오류, Laser 오류, Scanner 오류 발생 시 단순복구/재가공시작/초기화 기준 확인 | 불가 | Recovery Flow, Error별 처리 기준, 재가공 가능 여부 | 미확인
+17 | 좌표계 및 보정 방식 | Scanner 좌표계 정의 | Scanner 내부 좌표, Field 중심, 단위, 좌표 방향, Global 좌표와의 관계 확인 | 불가 | 좌표계 정의서, Scanner Field 기준, 좌표 변환 규칙 | 가공좌표, 리뷰좌표기준점 | 미확인
+18 | Scanner 방향 및 Command 정의 | Scanner의 Gx, Gy에 대한 방향성 확인, Scanner Command에 대한 좌표변환 확인 | 불가 | 변환좌표 정의 및 규칙 | 스캐너 좌표계 | 미확인
+19 | Review Camera 좌표계와의 연관성 여부 | Review 측정 좌표가 가공 좌표 보정에 사용 시 변환 기준 및 Offset 반영 방식 확인 | 불가 | Review 좌표계 정의, Camera-to-Global 변환 기준, 측정 결과 항목 | 미확인
+20 | 가공용 Scanner Field Correction 방식 | Field 왜곡 보정 방식, 보정 파일 생성/적용/검증 방법 확인 | 불가 | Correction 방식 설명, 보정 파일 샘플, 적용 SW Tool(or 기능) 정보 | Defatult Offset | 확인
+21 | Align 결과의 가공 좌표 반영 방식 | Align 결과 X/Y/Theta 또는 왜곡(Distortion) 보정값이 가공 좌표에 반영되는 방식 확인 | 불가 | Align 결과 데이터 포맷, 보정 적용 수식/절차 | 미확인
+22 | Review 측정 결과 기반 Offset 보정 방식 | 가공 후 Review 측정 결과로 Scanner/Recipe/Process Offset을 보정하는 방식 확인 | 불가 | Review Offset 반영 기준, 보정 가중치/누적/초기화 정책, 결과샘플 | 미확인
+23 | 설비의 보정 파일 또는 보정 데이터 구조 | 설비에서 사용 중인 Correction/Calibration/Offset 파일 구조 확인 | 불가 | 보정 파일 샘플, 파일 경로, 버전 관리 방식, 적용 절차 | 미확인
+24 | On the fly / MOF적용 여부 | Stage 이동 중 가공 처리방식 | Stage 이동 중 Scanner 가공 방식 확인 | 불가 | MOF 적용 여부, Stage 이동 중 가공 Sequence, Timing Chart | 미확인
+25 | Trigger / Encoder / PSO 사용 여부 | 가공 Trigger 발생 기준, Encoder 입력 사용 여부, PSO 적용 여부와 설정 파라미터 확인 | 불가 | Trigger/Encoder/PSO 설정값, 기존 Script/Parameter | 미확인
+26 | 0차 방어 기능 확인 | 0차 방어 동작에 대한 컨셉 확인 | 불가 | 0차 방어 I/F 및 Timing Chart | 미확인
+27 | Laser 및 Optic 연동 조건 | Laser Enable 조건 | Laser 사용 가능 상태, Enable 조건, Ready 조건, Interlock 조건 확인 | 불가 | Laser Enable 조건표, Ready/Error 신호 정의, Interlock 항목 | 미확인
+28 | Power Meter 연동 여부 | 가공 전/후 Power 측정, 보정, Recipe 조건 검증, 측정 결과 저장 및 활용 방식 확인 | 불가 | Power Meter Sequence, 측정 조건, 저장 항목 | 미확인
+29 | Attenuator / DOE / 광학계 제어 연동 여부 | Attenuator, DOE, 기타 광학계 제어가 스캐너 가공 프로그램과 연동되는지 확인 | 부분 가능 | 광학계 관련 제어 구성도 및 Component 정보 | 미확인
+30 | Laser Alarm 처리 방식 | Laser Alarm 발생 시 가공 중단, Laser Off, Scanner 정지, Stage 정지 등 처리 순서 확인 | 부분 가능 | Alarm Code, Error 처리 Flow, Recovery 기준 | 미확인
+31 | 통신 I/F | Stage PC와의 통신 항목 | 가공 시작/종료, Stage 위치, Ready/Busy/Complete/Error 등 Stage PC 연동 항목 확인 | 부분 가능 | 통신 사양서, Command/Response 목록, 데이터 포맷 | 미확인
+32 | Vision PC와의 좌표/측정 결과 통신 항목 | Align/Review 측정 좌표, Offset, 품질 판정 결과를 어떻게 수신/반영하는지 확인 | 부분 가능 | Vision 통신 I/F, 좌표 데이터 포맷, 측정 결과 샘플 | 미확인
+33 | PLC 와의 통신 항목 | PLC I/O, Word Map, 설비 상태, Interlock, Start/Complete/Error 신호 항목 확인 | 부분 가능 | PLC I/O Map, Word Map | 미확인
+34 | Alarm / Interlock / Safety | Scanner Ready 조건 | Scanner 통신, Optics Ready 등 가공 전 준비 완료 조건 확인 | 부분 가능 | Scanner Ready 조건표, 상태 Code, Error Code | 미확인
+35 | Laser Ready 조건 | Laser Enable, Shutter/Gate, Power 상태, Alarm 없음 등 준비 완료 조건 확인 | 불가 | Laser Ready 조건표, 상태 Code, Error Code | 미확인
+36 | 가공 중 정지 및 재개 조건 | 가공 중 Stop/Pause/EMS/Alarm 발생 시 정지 순서와 재개 가능 조건 확인 | 불가 | Stop/Pause/Resume Flow, EMS 처리 기준, 재가공 기준 | 미확인
+===== SDC 요구사항리스트 =====
+3. 상세 기능 요구사항
+상세 기능 요구항목 | 기능ID | 기능명 | 상세 설명 | 문의 | 확인사항 | 추가 검토결과
+3.1 자동화 및 모니터링 (Auto & Monitoring) | AM-001 | Glass 정보 모니터링 | · Glass 투입/투출/체류 시간, Glass ID, PPID, EQ Recipe 정보 실시간 표시 | Melsec으로 받는 데이터 | SDC 의견수렴 PLC메모리영역 접근하여 데이터 저장 및 화면표시
+AM-002 | 알람 상태 모니터링 | · 전체 알람 발생 상태 모니터링 | 현재 Process SW 내에 발생하는 알람들에 대해 표시
+AM-003 | CIM 연결 상태 모니터링 | · CIM 연결 상태 | SDC 의견수렴
+AM-004 | 광학계 상태 모니터링 | · Laser 출력 상태, 최근 파워미터 측정값, Attenuator 사용량 등 모니터링 | 레이저 출력 상태의미 : 단순 On/Off? ATT 사용량은 어떤 정보를 의미하는지? | 각도(0~360도) 및 굴절률에 따라 파워가 다르며 사인 파형을 그림. 파형이 증가하는 부분만 사용. 헤드별 각도는 필옵틱스에서 세팅하며 현재 사용 가능 범위를 파악할 수 있음. 오염 발생 시 파워를 점진적으로 올려야 하므로, 이 사용량이 보호윈도우 교체 판단의 근거가 됨. | + 각 ATT별 시작 포인트 상이함 > 가공 프로그램에서 관리 필요 + 8개 헤드의 제어 각도 및 1기판 종료 후 각도 보정량이 헤드별로 다름 + 사용량은 %와 각도를 GUI에 함께 표시하며, 상한/하한선을 표시함 + EC를 통해 MIN, MAX 관리
+AM-005 | Align 결과 모니터링 | · 기준(Ref.) 대비 Align 결과 및 Distortion Key 위치 정보를 그래픽으로 시각화하여 표시 | distortion key 화면도 같이 표현? 6개? | 6개 표현해야함 | + 화면에 파인얼라인키 및 디스토션키 표시 필요 (디스토션 3개 포함 총 10개, A3 LD) + 정방향 및 프로세스 레디 위치로 갈 때만 보정 + 기판 변형량 평가를 위해 갈 때와 올 때 모두 측정할 수 있도록 기능 구현은 필요 (김덕호 프로)
+AM-006 | Interface 상태 모니터링 | · Sequence 별 Interface 신호 상태 · 보호윈도우 교체 Signal 모니터링 | 보호윈도우 교체 상황조건 | ATT 8개 헤드 중 사용량이 한계치에 도달하면 가공 쪽에 신호 발생. 기판 Out 시와 In 시 각각 한 번씩 총 두 번 체크. ATT각도 또는 사용 매수를 기준으로 교체하며, 사용 매수 초과 시 파워미터 측정 없이 패스. 가공에서는 무조건 교체하며 쉬프트 여부는 물류에서 결정. 가공이든 물류이든 한쪽에서 통합 관리하는 것이 효율적 (김덕호 프로). ATT 각도 돌리는 동작까지 시퀀스에 포함 필요. | + 8개 중 1개만 도달하거나 최대 매수에 도달해도 교체하는 OR 조건 (총 9개 조건: 어텐 각도 8개 + 가공 매수) + 쉬프트 또는 교체 여부는 물류에서 판단함 (인/아웃 모두 모니터링) + 보호윈도우 교체 시 파워 보정을 하지 않으며, 교체 완료 후에 보정 진행 (나갈 기판은 측정 제외)
+AM-007 | 전체 인터락 모니터링 | · Laser, 광학계, Stage, 광학 Table, Chamber, Optic 등 설비 전체 인터락 상태 통합 표시 | + 옵틱 PC에서 송신하는 신호 (예: 칠러 다운 시) 및 각 컴포넌트별 개별 인터락 필수 구현
+AM-008 | Sequence 진행 모니터링 | · 현재 수행 중인 Sequence (Step) 진행 상황 실시간 추적 | SDC 의견수렴
+AM-009 | 운영 환경 현황 모니터링 | · 현재 적용된 운영 환경 설정 값 실시간 확인 | 목적 (보여줘야할 필수항목) | 시퀀스 상태, 보정 방식, 검사 줄 수, 보정 진행 여부 등 정밀도 확보를 위한 옵션을 필수로 표시 필요. | SDC 의견수렴
+AM-010 | 구동부 상태 모니터링 | · 주요 구동부 (Stage, Optic Table 등)의 상태 실시간 표시 | 목적 (보여줘야할 필수항목)
+AM-011 | 자동 가공 실행 | · Flow Chart 에 의거한 자동 가공 사이클 수행 및 0 선 방어 기능 포함 | 0선방어 시 스테이지에 전달할 검사좌표 기준 | + X축은 항상 먼저 도착하여 대기해야 함 (A5는 200mm/s, 1헤드당 1개씩 찍음) + 0선 좌표 위치는 레시피가 동일할 경우 고정 + 스캐너 1헤드당 1~2개 셀 관여 (X방향으로 110mm 관여) + 가공 속도와 리뷰 속도를 고려하여 1기판당 약 2포인트(2개 헤드 수준) 순환 검사 진행 (헤드 1,2번 > 3,4번 > 5,6번 > 7,8번) + 0선 가공은 보정을 생략하며, 레이저 출사 상태 및 가공 홀의 보조 전극 진입 여부를 통해 합/불만 판단 (TACT 시간 유지를 위한 최선책) + 물류에서 좌표를 생성하여 리뷰에 전달 + 0선 2포인트 상황에서 3포인트 가공 시 알람 발생 로직 필요 (IPS 내부 판단)
+AM-012 | 자동 정밀도 보정 | · Flow Chart 에 의거한 가공 파워 및 정밀도 자동 보정 로직 수행 | 정밀도 자동보정로직 설명 요청 | APC 데이터는 파일 형태로 받으며, CIM PC 측 공유폴더로 접근하여 다운로드. 별도의 검사기가 존재하며 현재 설비는 0선 방어 기능만 있음. APC 구축에는 다소 시간 소요 예상. | + APC 데이터는 기판 단위의 테이블 형태 파일 정보임 (기판 내 위치별 데이터 포함) + 3점/2점/1점 방식이 있으며, 해당 점들의 좌표를 검사기에 제공해야 함 (모델 최초 생성 시 송신) + Step 검사 진행 시 1헤드당 12포인트(총 100포인트)를 추출하여 제공해야 하며, 이는 자공정 좌표와 일치해야 함
+AM-013 | 운전 모드 제어 | · Auto Mode Start/Stop 및 Reset 기능 제공 | Stop은 시퀀스 stop인가요?, Reset을 통해 수행되는 것 | + 스탑 클릭 즉시 정지 또는 Cycle 정지 창 표시, 리셋은 시퀀스 리셋(IO 리셋 개념)으로 동작
+AM-014 | 자동 Job Change 기능 | · Recipe(PPID) 변경에 따라 설비 Recipe 및 공정 관련 파라미터 자동 설정 변경 | 오토잡체인지에 대한 정확한 의미 | 셀 배치 또는 모델 변경을 의미함. 설비 측 기구 변경과 SW 레시피 변경이 동시 진행되며 모델별로 보정 테이블이 상이함. 레이저 조건, 스캐너 동작 조건, DOE Z축 등이 전부 변경되며 전극 크기도 변경 가능. 이 경우 리뷰 측 레시피도 변경 필요. 가공 사이즈도 변경될 수 있으며 사전에 약속된 모델만 진행. 최초 투입 기판은 Job Set으로 처리. | SDC 의견수렴
+AM-015 | Interface 초기화 | · 시스템 Interface 신호 초기화 기능 | SDC 의견수렴
+AM-016 | 주요 운영 환경 설정 | · 자공정 설정, 0 선 방어 운영 환경 활성화, 자공정 자동 보정 기능 설정 | 용어들에 대한 내용확인 | 자공정은 설비자체적으로 보정을 적용하며 가공하는 것을 의미하고 0선방어가 가공 중 리뷰측정 및 보정까지 같이 진행하며, 보정값을 적용하는 부분으로 이를 자공정이라고 함. 보통 양산에서는 APC데이터를 통해 보정값이 내려오면 CIM data를 통해 보정을 하고 있음 | + 검사기 불능 시 물류 텍 여유가 있다면 자공정 검사(3줄 검사) 후 자동 보정 진행 + 오토 화면에 주요 옵션 기능(0선 방어 여부, 자공정 검사 후 보정 여부, 자공정 검사 주기 등) 추가 필요
+3.2 수동 제어 및 유지보수 (Manual & Maintenance) | MM-001 | 서보/구동부 상태 확인 | · 서보 별 상태 및 구동부 상태 개별 모니터링 | SDC 의견수렴
+MM-002 | 구동부 기본 제어 | · 구동부 원점 복귀, 단위 동작, 에러 리셋 기능 제공 | SDC 의견수렴
+MM-003 | Task 및 서보 리셋 | · Task 상태 모니터링 · 서보 에러 및 MOF 설정 Reset 기능 | SDC 의견수렴
+MM-004 | 매뉴얼 가공 조건 설정 | · 가공 형상 (십자가, 원형, X 자, 사각형, Grid) 선택 · 크기/Pitch/반복 횟수 입력 · Head 선택, Laser 조건 세팅 | Spot구조로 연속 가공 시 라인 형성. | SDC 의견수렴
+MM-005 | TEG 가공 관리 | · TEG 가공 위치 정보 저장 · Offset 적용, 유무 개별 세팅 및 매뉴얼 가공 실행 | TEG 가공의미 | TEG 가공은 별도 기능으로 분리하여 구현하며 Step 가공 가능. 좌표 정보는 얼라인 키 기준으로 TEG 가공 위치 센터 측정. 레시피마다 개별 준비 필요하며 기판마다 다름 (즉, 별도 TEG 레시피 필요). 모델마다 다를 수 있고 항상 발생하지는 않으므로 매뉴얼에서만 관리 (상위 관리 레시피 아님). 가공 후 비전 확인 필수. 전극 모양은 동일하나 주변은 다를 수 있으며, 보조전극이 다른 위치에 하나 더 있는 개념임. | + 오토 시퀀스 최하단에 추가하여 옵션별로 진행 (TACT 미반영 예외 가공이므로 MOF 불가) + 기판 단변 끝 얼라인 카메라 4개 영역의 TEG에 STEP 방식으로 가공
+MM-006 | 분기법 측정 (수동) | · 측정 기준 위치 입력, 분기법 자동 이동 측정 수행, 측정 Data 분석 기능 제공 | 내용설명요청 | 위치 사양 및 셋업은 필옵틱스 담당 (ESC 평탄도에 영향 받음). 기판 특정 영역을 분기빔으로 측정하며, 측정은 IPS가 수행하고 결과 확인 및 데이터 활용은 필옵틱스에서 진행. | + 리뷰 측정 시 빔 번호 설정 가능 (16개 빔 중 11번 위주 고정, 변경 가능한 체크박스 필요) + 가공 SW에서 16개 빔을 모두 측정할 수 있어야 하며, 사용자가 사용할 빔을 선택 가능해야 함 + 디스토션 측정: 대각선으로 1, 11, 16번을 촬영하여 리뷰 시 광학계 및 ESC 틀어짐 확인 (정밀도 산출 목적) + 자동 이동 기능이 있으나 16개를 전수 측정하는 리뷰 좌표는 시간이 오래 걸려 현재는 없음 > 검사 방식 (3줄 / 1줄) + 3줄 검사: 한 라인에 셀이 3개인 경우 (끝, 가운데, 끝). 맨 끝의 라운드 영역은 회피하여 측정하며, 보정 필요 시 지그재그로 촬영. 오토 모드에서는 3줄만 찍고 측정한 데이터만 보정함 (가공 안 한 영역은 레시피 기준으로 회피) + 전셀 1줄: 각 셀의 중앙 기준, 런 진행 시 11번 빔 기준 측정 + 그냥 1줄: 매 기판 0선 방어 후 TACT 여유 시 측정 (옵션 On/Off) + 순환 1줄: 한 라인의 셀들을 한 방향(M>S)으로 돌아가면서 측정
+MM-007 | MOF 위치 모니터링 | · Stage 및 Review 의 현재 위치 정보 실시간 모니터링 | SDC 의견수렴
+MM-008 | MOF 모션 제어 | · Stage/Review 에 대한 상대/절대 이동 모션 제어 및 매뉴얼 MOF 가공 실행 | 메뉴얼 MOF 가공에 대한 가공조건 | SDC 의견수렴
+MM-009 | MOF 대상 Head 선택 | · MOF 가공을 수행할 대상 Head 선택 기능 | 메뉴얼 MOF 가공에 대한 가공조건 | SDC 의견수렴
+3.3 레시피 및 데이터 관리 (Recipe & Data Management) | RD-001 | Recipe 리스트 관리 | · Recipe 생성, 복사, 삭제 기능 제공 | + 레시피 파일만 복사할지, 보정 데이터를 포함할지 선택 옵션 제공
+RD-002 | 공통 Recipe 데이터 입력 | · 공통정보, 코너 및 Camera Hole Masking 정보 입력 | 내용 설명요청 | 스마트폰 카메라 위치 및 라운드 부위는 가공 제외 영역. 분기빔은 사각형 빔 형태이므로 라운드 부위는 가공 불가. | SDC 의견수렴
+RD-003 | Cell 별 Recipe 파라미터 입력 | · Align to Cell 가공 시작 위치, Roataion, shift offset | 특정 Cell에 한해서 좌표위치를 바꾸는 목적인지 | 특정 셀 및 헤드별 독립적인 쉬프트 기능 필요. 전체 셀 대상으로 셋업 및 평가를 위해 가공 안된 보조전극을 찾아 가공 후 검사 진행. 기판 1매로 미가공된 부분을 찾아 반복 평가 시 필요한 기능이며, 양산운영용은 아님 (평소 0 입력, 매뉴얼 평가 시에만 사용). 특정 기능을 통해 연관 항목 일괄 변경 지원 필요 | SDC 의견수렴
+RD-004 | Head 별 Recipe 파라미터 입력 | · shot time · scanner jump rate, scanner jump speed, scanner jump delay · DOE Z Position
+RD-005 | 기준 위치 Shift 반영 | · 전체 또는 Cell 별 가공 기준 위치 Shift 반영 기능 | 특정 Cell에 한해서 좌표위치를 바꾸는 목적인지
+RD-006 | PPID 매칭 (Matching) | · PPID 와 EQ Recipe 를 매칭하는 기능(수동/자동) · 매칭 리스트 생성/삭제/저장 | 실제 사용 레시피는 1:1 매칭이나, 하나의 EQP에 여러 PPID 매칭 가능
+RD-007 | 모델 별 기준 위치 입력 | · 모델 별 Align Key 기준 위치 입력 기능 | Align key 입력 기준(측정기준?) | 카메라 픽셀 값 기준 입력 및 얼라인 최종 8포인트 결과 활용. Job Change 시 작업 정밀도를 맞추면 기준 기판이 되며 얼라인 키와 보정 테이블 반영. 레시피에서 모델별 관리. 카메라 센터 중심 얼라인 후 일정 범위 내 존재 시 완료. 다음 기판부터 해당 키 기준으로 보정 진행. 얼라인 키와 디스톨션 키 위치 입력 기능 포함. 진동 대응으로 얼라인 스펙을 넓히면 외곽 셀의 위치 정확도가 떨어지므로, 진동 영향이 크지 않다면 기존 스펙 유지 권장. | SDC 의견수렴
+3.4 검사 및 보정 (Inspection & Calibration) | IC-001 | IOF/PtoP 검사 실행 | · 선택된 Cell/Head에 대해 세팅된 조건으로 IOF 및 PtoP 검사 수행 · 전체 Cell 에 대해 세팅된 조건으로 IOF 및 PtoP 검사 수행 | + PtoP는 보조전극에 홀이 러프하게 진입하도록 처리하는 목적임 + 검사가 안 된 부분은 위치 정보를 확인하여 수동 검사 또는 이미지 처리 기능으로 분리 필요
+IC-002 | Fine 보정 | · 검사 결과 데이터 기반 Cell/Head 에 대한 선형 보정 수행 | - 러프 보정: 초기 가공 시 보조전극에 홀 진입이 안 될 때, 각 헤드/셀별 1포인트씩 이동하며 보정 데이터 취득 > 오프셋 측정 후 일괄 보정 (리뷰 측 인터페이스 필요, 이후 PtoP 보정 진행) - 심플 보정: 초기 셋업 잡셋 시 헤드/셀별로 일괄 값을 수동으로 입력해야 할 때 사용 (사용자가 판단하므로 좌표 추출 필요 없음, 보통 헤드나 전체 셀 기준) - 파인 보정: 3줄 검사 완료 후 Y방향 3줄, X방향 7mm 간격(분기빔)으로 모든 데이터를 선형 보정 (반복성이 나온다는 가정하에 진행하며 셀 단위로 관리)
+IC-003 | Rough 보정 | · Cell 별 1 Point 자동 이동 검사 · 이후 측정값을 기반으로 Cell 에 Offset 일괄 보정 수행
+IC-004 | Simple 보정 | · Cell or Head 선택 기능 · Offset X or Y Key-in 기능 · 입력값 보정 | 보정방법 컨셉
+IC-005 | MOF Offset 테이블 모니터링 | · Recipe 별 MOF Offset Table 실시간 모니터링 | SDC 의견수렴
+IC-006 | 검사 옵션 세팅 | · Head 지정 · Cell 지정 · 검사 포인트 수량 지정(X,Y) · 분기법 선택 | SDC 의견수렴
+IC-007 | 검사 데이터 모니터링 | · 세팅 검사 조건 기준 검사 Data Table 표시 · Table內 Data 중 Min/Max 표시 · Data Table 업데이트 기능 | Data Table 업데이트를 어떤 부분을 업데이트 하는지? | SDC 의견수렴
+IC-008 | Tolerance 관리 | · 검사 Data Tolerance 범위 입력 · 초과 데이터 적등 표시 | 인접 셀 데이터 측정 및 절대값 측정 관리. 통계 요약 리포트는 참조용이며 보정 완료 여부나 특정 셀/헤드 재작업 여부 판단 근거로 활용. | SDC 의견수렴
+IC-009 | 리모트 검사 업데이트 | · Table內 검사 포인트 위치 이동 기능 · 리모트 검사 기능 · 검사 Data 업데이트 기능 | 내용 설명요청 | Cell클릭하여 Vision과 I/F를 통해 측정 데이터를 수동으로 측정하는 기능 | SDC 의견수렴
+IC-010 | 통계 요약 리포트 | · 전체 Cell 검사 결과에대한 통계 리포트 생성 (Min, Max, 3σ, Tolerance 초과 포인트 현황) | 내용 설명요청 | SDC 의견수렴
+IC-011 | MOF 매뉴얼 가공 | · Stage, Review 위치 정보 모니터링 · Stage 모션 제어 기능 · Review 모션 제어 기능 · 상대/절대 이동 기능 · 매뉴얼 MOF 가공 기능 · MOF 가공 대상 Head 선택 기능 | Melsec으로만 제어, 제어권은 Stage만 갖도록 변경제안 | 가공 제어권을 IPS로 넘기는 것은 임의 진행 가능 (시간 지연 없을 것). 가공은 Melsec으로 위치 이동하며 ACS 직접 접근 안 함. 리뷰(Review)만 ACS 접근하며, 리뷰 ATF On/Off는 Stage 위치 기반 판단. | SDC 의견수렴
+3.5 시스템 설정 (System Settings) | SS-001 | Laser 세팅 및 모니터링 | · Head 별 Diode On/Off. · Mode(Internal/External) · Gate, Shutter 제어 및 파라미터 모니터링 · 인터락 상태 모니터링 | SDC 의견수렴
+SS-002 | Optic 세팅 및 모니터링 | · Head 별 Bex L1/L2 · Scan Tilt 축 Position 세팅 · Attenuator 세팅 및 모니터링 · DOE Z Position 세팅 및 모니터링 | SDC 의견수렴
+SS-003 | Scanner 세팅 | · Scanner Default Offset 세팅 및 자동 계산/제안 기능 · CPU/EQD/Angle/Mark Speed/Delay 파라미터 설정 | 내용 설명요청 | 스캐너 세팅의 CPU는 스캐너 각도를 디지털 값으로 변환할 때 참조하는 계수임. | SDC 의견수렴
+SS-004 | 파워 보정 (수동/자동) | · 수동 파워미터 측정 및 조건 세팅 · 목표값/Tolerance 기반 자동 보정 시작/강제종료 · 인터락 및 Stage 회피 동작 확인 | SDC 의견수렴
+SS-005 | 파워 측정 데이터 표시 | · 파워미터 실시간 측정값 및 최종 결과값 표기 | SDC 의견수렴
+SS-006 | Attenuator 제어 | · Head 별 최소/최대 각도 제한 표시 · 현재/세팅 위치 표기 · 목표 위치 이동 (개별/전체) · Reset, Origin, Error Code 표시 | SDC 의견수렴
+SS-007 | 통신 관리 | · 시리얼 및 TCP/IP 통신 상태 모니터링과 수동 연결/해제 기능 | Process Melsec Map 요청 | SDC 의견수렴
+SS-008 | 운영 환경 설정 | · Tolerance Limit 및 인터락 설정 · Option 기능 선택 · 타임 아웃 설정 · 보호윈도우 교체 기준 설정 · 리뷰 기준 위치 세팅(Master-Front Align Key 위치) | 내용 설명요청 | SDC 의견수렴
+5. 비기능 요구사항 (Non-Functional Requirements)
+- 정밀도: Align 및 가공 위치 정밀도는 설비 사양서 (Mech Spec) 를 준수해야 함.
+- 안정성: 24 시간 연속 운전 시 메모리 누수 없이 안정적이어야 하며, 비정상 종료 시 복구 로직이 포함되어야 함.
+- 사용자 편의성: 복잡한 보정 로직 (Fine/Rough/Simple) 은 운영자가 직관적으로 이해할 수 있는 UI와 가이드 (Flow Chart 기반) 를 제공해야 함.
+- 데이터 무결성: Recipe 변경 이력, 가공 로그, 검사 데이터는 손실 없이 저장 및 관리되어야 함.
+6. 납품물 및 검수 기준
+1. 소스 코드 및 실행 파일: 전체 모듈 포함
+2. 납품물: 설계 문서, 사용자 매뉴얼, 통신 규격서격 (ICD), 테스트 보고서
+3. 검수 시나리오:
+- 자동 가공 사이클 정상 수행 확인
+- 각 보정 모드 (Fine, Rough, Simple) 에 따른 정밀도 향상 검증
+- 인터락 발생 시 안전 정지 및 복구 테스트
+- Recipe 변경 시 실제 가공 파라미터 적용 확인
+- TEG 및 MOF 가공 기능 정상 동작 확인
+- 상호 협의한 체크 시트를 기반으로 기능 검증
+===== 좌표입력방식 =====
+-. 각 스캐너 마다 Align Key를 기준으로 첫 가공셀 위치에 대해 기준좌표를 생성하면 되는지?
+-. Stage 이동 영역이 아닌 Scanner 동작영역에 대해서도 가공좌표 생성에 포함시켜야 하는지?
+-. Hole에 대한 표현은 어떤 식으로 정의할지? (ex. Line 1 Hole 1…LnHn?)
+-. 가공좌표생성 시 Scanner 좌표계까지의 오프셋 어떻게 반영할지
+ㄴ 위 그림에 표현한 좌표계는 Design 좌표계인데, 해당 좌표계를 기준으로 스캐너 좌표계까지의 Offset을 반영하는 방법은?
+ㄴ 위 질문과 동일하게 리뷰좌표계는 어떻게 반영하나요? 스캐너에서 리뷰카메라까지의 물리적 거리로 Offset을 반영하나요?
+수정
+모든 셀들에 대해 Align Key를 기준으로 좌표점 생성
+===== 가공좌표, 리뷰좌표기준점 =====
+===== Default Offset =====
+각 스캐너들 간에 가공된 간격에 대해 X, Y 방향에 대해 모두 등간격을 이루도록 스캐너별 Offset을 만드는 작업
+Default Offset이 셋팅이 되고나면 모든 스캐너들은 이제 동작할 때 8개의 스캐너가 하나의 스캐너처럼 동작해야하기 때문에
+X Y방향에 대해 Shift 조건이 발생하면 8개 모두 동일하게 Shift 동작하도록 되어야함
+===== 스캐너 방향 참고자료 =====
+스캐너 배치 및 가공방향 기준 (BE1 옵션기준)
+가공방향 기준 Galvo Gx/Gy 정의 (BE1 옵션기준)
+구분 | 레이저 입사방향 | 가공순서 | Gx정의 | Gy정의
+홀수열 | 좌 → 우 | 2차통과 | +Gx = -Xp | +Gy = +Yp
+짝수열 | 우 → 좌 | 1차통과 | +Gx = +Xp | +Gy = -Yp
+===== P사 광학계 네트워크 구성도 =====
+Component 정보
+품명 | 모델명 | Maker
+Laser | Talon 355 15W | Newport
+Scanner | AGV-20HPO | Aerotech
+Scanner Amp | Automation1-GL4-20-ES19412-20 | Aerotech
+Attunuator | VA-CB-355-CONEX | Newport
+Beam Expander | 4401-634-000-21 | QIOPTIQ
+Power Meter | PM150-19C | Coherent
+Scanner Tilt | XPS-D8 | Newport
+DOE Z | XC2-10 | Aerotech
+DOE Tilt | TBD | TBD
+===== FlowChart =====
+Auto Mode - 가공, 물류, 검사
+파워측정 | 파워보정
+자공정 검사 (Manual IOF 검사) | 자공정 검사 (Manual P to P 검사)
+자공정 검사 (Auto IOF 검사) | 자공정 검사 (Auto P to P 검사)
+보호윈도우 교체 | APC 보정
+TEG 가공
