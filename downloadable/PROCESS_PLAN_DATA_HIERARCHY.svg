@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="2200" height="1500" viewBox="0 0 2200 1500">
+  <defs>
+    <style>
+      .bg { fill: #f5f7fb; }
+      .lane { fill: #ffffff; stroke: #d6dfe9; stroke-width: 1.6; rx: 18; ry: 18; }
+      .box { stroke-width: 2; rx: 12; ry: 12; }
+      .file { fill: #eaf7ee; stroke: #348a4a; }
+      .ui { fill: #e8f1ff; stroke: #336fd6; }
+      .common { fill: #fff3df; stroke: #d9851f; }
+      .model { fill: #f0eafd; stroke: #8056c8; }
+      .data { fill: #e9fbfb; stroke: #139aa2; }
+      .note { fill: #fffbea; stroke: #d3a32f; }
+      .title { font: 700 36px "Malgun Gothic", "Segoe UI", Arial, sans-serif; fill: #102033; }
+      .sub { font: 500 18px "Malgun Gothic", "Segoe UI", Arial, sans-serif; fill: #5a6b80; }
+      .section { font: 700 22px "Malgun Gothic", "Segoe UI", Arial, sans-serif; fill: #172033; }
+      .label { font: 700 18px "Malgun Gothic", "Segoe UI", Arial, sans-serif; fill: #172033; }
+      .small { font: 500 14px "Malgun Gothic", "Segoe UI", Arial, sans-serif; fill: #3e4f64; }
+      .tiny { font: 500 12px "Malgun Gothic", "Segoe UI", Arial, sans-serif; fill: #526174; }
+      .code { font: 600 13px "Consolas", "Malgun Gothic", monospace; fill: #213044; }
+      .arrow { stroke: #56677a; stroke-width: 2.4; fill: none; marker-end: url(#arrowHead); }
+      .dash { stroke: #778596; stroke-width: 2.2; fill: none; stroke-dasharray: 8 7; marker-end: url(#arrowHead); }
+    </style>
+    <marker id="arrowHead" markerWidth="12" markerHeight="9" refX="10" refY="4.5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,4.5 L0,9 z" fill="#56677a"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="2200" height="1500"/>
+  <text class="title" x="72" y="64">Recipe → ST_PROCESS_PLAN → ST_PROCESS_MODEL 데이터 계층 구조</text>
+  <text class="sub" x="74" y="98">레시피에서 공정 Plan을 만들고, Plan이 Head별 실행 Model과 Path로 확장되는 부분만 상세 정리</text>
+
+  <rect class="lane" x="55" y="135" width="2090" height="270"/>
+  <text class="section" x="85" y="176">1. Recipe 원천 데이터</text>
+
+  <rect class="box file" x="95" y="215" width="350" height="120"/>
+  <text class="label" x="120" y="248">Config / RECIPE/*.csv</text>
+  <text class="small" x="120" y="274">예: Config/RECIPE/DRILL_A01.csv</text>
+  <text class="small" x="120" y="298">가공 조건, Head별 조건, Offset 후보</text>
+  <text class="small" x="120" y="322">CSV row → ST_RECIPE_PARAM</text>
+
+  <rect class="box file" x="520" y="215" width="380" height="120"/>
+  <text class="label" x="545" y="248">CIpsRecipeFile.LoadAll()</text>
+  <text class="small" x="545" y="274">Recipe CSV를 읽어 Common record로 변환</text>
+  <text class="small" x="545" y="298">IRecipeFile 구현체</text>
+  <text class="small" x="545" y="322">CRecipeManager.LoadRecipes()로 전달</text>
+
+  <rect class="box data" x="975" y="185" width="500" height="185"/>
+  <text class="label" x="1000" y="218">ST_RECIPE_DATA</text>
+  <text class="code" x="1000" y="246">string Id</text>
+  <text class="code" x="1000" y="270">string Name</text>
+  <text class="code" x="1000" y="294">IReadOnlyList&lt;ST_RECIPE_PARAM&gt; Parameters</text>
+  <text class="code" x="1000" y="318">IReadOnlyList&lt;ST_RECIPE_HISTORY&gt; History</text>
+  <text class="small" x="1000" y="348">레시피 한 개를 표현하는 상위 record</text>
+
+  <rect class="box data" x="1545" y="185" width="540" height="185"/>
+  <text class="label" x="1570" y="218">ST_RECIPE_PARAM</text>
+  <text class="code" x="1570" y="246">Name, Value, Unit, Range, DefaultValue</text>
+  <text class="code" x="1570" y="270">Tab, Group, Key, Description</text>
+  <text class="code" x="1570" y="294">Show, Use, DisplayOrder, DataType</text>
+  <text class="code" x="1570" y="318">ChangeLimit, Min, Max, Extra</text>
+  <text class="small" x="1570" y="348">Plan 생성 시 Key/Name을 기준으로 Dictionary에 접힌다</text>
+
+  <path class="arrow" d="M445 275 L520 275"/>
+  <path class="arrow" d="M900 275 L975 275"/>
+  <path class="arrow" d="M1475 275 L1545 275"/>
+
+  <rect class="lane" x="55" y="450" width="2090" height="325"/>
+  <text class="section" x="85" y="492">2. CRootView에서 ST_PROCESS_PLAN 생성</text>
+
+  <rect class="box ui" x="95" y="535" width="460" height="150"/>
+  <text class="label" x="120" y="568">CRootView.PrepareInitialProcessPlan()</text>
+  <text class="small" x="120" y="594">1) _recipeManager.LoadRecipes()</text>
+  <text class="small" x="120" y="618">2) FindSelectedRecipe()</text>
+  <text class="small" x="120" y="642">3) CreateProcessParameters(recipe)</text>
+  <text class="small" x="120" y="666">4) new ST_PROCESS_PLAN(...)</text>
+
+  <rect class="box ui" x="625" y="535" width="440" height="150"/>
+  <text class="label" x="650" y="568">CreateProcessParameters()</text>
+  <text class="small" x="650" y="594">ST_RECIPE_PARAM 목록을 Dictionary로 변환</text>
+  <text class="code" x="650" y="620">Key = parameter.Key</text>
+  <text class="code" x="650" y="644">Value = parameter.Value</text>
+  <text class="small" x="650" y="670">ProductId / PanelId / LotId fallback 추가</text>
+
+  <rect class="box common" x="1135" y="500" width="500" height="220"/>
+  <text class="label" x="1160" y="533">ST_PROCESS_PLAN</text>
+  <text class="code" x="1160" y="563">string ProcessId</text>
+  <text class="code" x="1160" y="587">string RecipeId</text>
+  <text class="code" x="1160" y="611">string ProductId</text>
+  <text class="code" x="1160" y="635">string PanelId</text>
+  <text class="code" x="1160" y="659">string LotId</text>
+  <text class="code" x="1160" y="683">DateTimeOffset CreatedAt</text>
+  <text class="code" x="1160" y="707">IReadOnlyDictionary&lt;string,string&gt; Parameters</text>
+
+  <rect class="box note" x="1695" y="535" width="370" height="150"/>
+  <text class="label" x="1720" y="568">Plan의 역할</text>
+  <text class="small" x="1720" y="594">공정 시작을 위한 최소 계약 데이터</text>
+  <text class="small" x="1720" y="618">Recipe 선택 결과와 제품 식별자 보관</text>
+  <text class="small" x="1720" y="642">Head 조건은 아직 문자열 파라미터 상태</text>
+  <text class="small" x="1720" y="666">StationProcess에서 실행 모델로 해석</text>
+
+  <path class="arrow" d="M555 610 L625 610"/>
+  <path class="arrow" d="M1065 610 L1135 610"/>
+  <path class="arrow" d="M1635 610 L1695 610"/>
+
+  <rect class="lane" x="55" y="820" width="2090" height="410"/>
+  <text class="section" x="85" y="862">3. CStationProcess에서 Plan을 Process Model로 해석</text>
+
+  <rect class="box common" x="95" y="910" width="430" height="145"/>
+  <text class="label" x="120" y="943">CStationProcess.PrepareProcessPlan()</text>
+  <text class="small" x="120" y="969">_processLogs 초기화</text>
+  <text class="small" x="120" y="993">_lastInterLockItems / script 상태 초기화</text>
+  <text class="small" x="120" y="1017">_processModel = BuildProcessModel(plan)</text>
+  <text class="small" x="120" y="1041">BuildPreview(model, Ready)</text>
+
+  <rect class="box common" x="590" y="910" width="450" height="145"/>
+  <text class="label" x="615" y="943">BuildProcessModel(ST_PROCESS_PLAN)</text>
+  <text class="small" x="615" y="969">Parameters Dictionary 복사</text>
+  <text class="small" x="615" y="993">HeadCount, LaserPower, Frequency 등 읽기</text>
+  <text class="small" x="615" y="1017">Enumerable.Range(1, headCount)</text>
+  <text class="small" x="615" y="1041">Head별 ST_HEAD_PROCESS_DATA 생성</text>
+
+  <rect class="box model" x="1105" y="875" width="485" height="220"/>
+  <text class="label" x="1130" y="908">ST_PROCESS_MODEL</text>
+  <text class="code" x="1130" y="938">ST_PROCESS_PLAN Plan</text>
+  <text class="code" x="1130" y="962">ST_PRODUCT_DATA? Product</text>
+  <text class="code" x="1130" y="986">IReadOnlyList&lt;ST_HEAD_PROCESS_DATA&gt; Heads</text>
+  <text class="code" x="1130" y="1010">IReadOnlyDictionary&lt;string,string&gt; Parameters</text>
+  <text class="code" x="1130" y="1034">DateTimeOffset CreatedAt</text>
+  <text class="small" x="1130" y="1067">Plan 문자열 파라미터를 실행 가능한 Head 모델로 확장한 결과</text>
+
+  <rect class="box model" x="1660" y="875" width="430" height="220"/>
+  <text class="label" x="1685" y="908">ST_HEAD_PROCESS_DATA[]</text>
+  <text class="code" x="1685" y="938">HeadNo, Use, Shape</text>
+  <text class="code" x="1685" y="962">LaserPower, FrequencyKhz</text>
+  <text class="code" x="1685" y="986">ShotCount, MarkSpeed, JumpSpeed</text>
+  <text class="code" x="1685" y="1010">OffsetX, OffsetY</text>
+  <text class="code" x="1685" y="1034">IReadOnlyList&lt;ST_PATH_POINT&gt; Path</text>
+  <text class="small" x="1685" y="1067">Head별 가공 조건과 좌표 Path를 함께 들고 간다</text>
+
+  <path class="arrow" d="M525 982 L590 982"/>
+  <path class="arrow" d="M1040 982 L1105 982"/>
+  <path class="arrow" d="M1590 982 L1660 982"/>
+
+  <rect class="box data" x="590" y="1110" width="450" height="85"/>
+  <text class="label" x="615" y="1143">Read* helper</text>
+  <text class="small" x="615" y="1169">ReadIntAny / ReadDoubleAny / ReadBoolAny / ReadTextAny</text>
+  <text class="tiny" x="615" y="1188">H01_OFFSET_X, HEAD1_LASER_POWER 같은 Head별 key를 우선 해석</text>
+
+  <rect class="box data" x="1660" y="1110" width="430" height="85"/>
+  <text class="label" x="1685" y="1143">ST_PATH_POINT</text>
+  <text class="code" x="1685" y="1169">double X, double Y, bool LaserOn = true</text>
+  <text class="tiny" x="1685" y="1188">BuildHeadShape()가 Shape/HeadNo 기준 preview path를 만든다</text>
+
+  <path class="dash" d="M815 1055 L815 1110"/>
+  <path class="dash" d="M1875 1095 L1875 1110"/>
+
+  <rect class="lane" x="55" y="1270" width="2090" height="165"/>
+  <text class="section" x="85" y="1310">4. 한 줄 요약 흐름</text>
+  <rect class="box note" x="95" y="1340" width="1990" height="65"/>
+  <text class="small" x="120" y="1370">ST_RECIPE_DATA.Parameters → Dictionary&lt;string,string&gt; Parameters → ST_PROCESS_PLAN → BuildProcessModel() → ST_PROCESS_MODEL.Heads[] → ST_HEAD_PROCESS_DATA.Path[] → ST_PATH_POINT</text>
+  <text class="tiny" x="120" y="1394">Plan은 “공정 요청서”, ProcessModel은 “실행 가능한 Head별 가공 모델”로 보면 설명하기 쉽다.</text>
+</svg>
