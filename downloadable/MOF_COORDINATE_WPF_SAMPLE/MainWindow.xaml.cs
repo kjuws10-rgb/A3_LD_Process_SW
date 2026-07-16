@@ -149,13 +149,13 @@ public partial class MainWindow : Window
         var inFieldCount = _lastResult.Commands.Count(x => x.InField);
         var filteredCount = GetVisibleMatrixCommands().Count;
         SummaryText.Text =
-            $"AK1 Stage Anchor = ({_lastResult.Ak1GlobalX:0.######}, {_lastResult.Ak1GlobalY:0.######}) mm   " +
-            $"Cells = {_lastResult.Commands.Count}, X-cover = {inFieldCount}, Scanner filter = {selectedScannerCount}, View = {filteredCount}, Selected = {_selectedPointKeys.Count}   " +
-            $"Review Basis = H{_lastResult.SelectedReviewScanner.Index} DOE{_lastResult.SelectedDoeBeam.BeamNo:00}";
+            $"AK1 Stage 기준 = ({_lastResult.Ak1GlobalX:0.######}, {_lastResult.Ak1GlobalY:0.######}) mm   " +
+            $"전체 좌표 = {_lastResult.Commands.Count}, X 커버 좌표 = {inFieldCount}, 선택 Scanner = {selectedScannerCount}, 표시 좌표 = {filteredCount}, 선택 좌표 = {_selectedPointKeys.Count}   " +
+            $"Review 기준 = H{_lastResult.SelectedReviewScanner.Index} DOE{_lastResult.SelectedDoeBeam.BeamNo:00}";
 
         FormulaText.Text =
-            "Click scanner boxes or their surrounding hit area to toggle multiple scanners. Matrix views show only coordinates processable by selected scanners. " +
-            "All Scanner Select/Clear Scanner controls the filter. Ctrl + mouse-wheel zooms board/matrix.";
+            "스캐너 박스 또는 주변 클릭 영역을 누르면 복수 선택/해제가 됩니다. 선택된 스캐너가 있으면 좌표 Matrix는 해당 스캐너의 X 가공 가능 범위에 포함되는 좌표만 표시합니다. " +
+            "All Scanner Select / Clear Scanner로 필터를 제어하고, Ctrl + 마우스 휠로 Board와 Matrix를 확대/축소합니다.";
 
         DrawLayout();
     }
@@ -170,7 +170,7 @@ public partial class MainWindow : Window
         LayoutCanvas.Children.Clear();
         ResizeLayoutCanvas();
 
-        DrawTitle("Board cell selection and zigzag scanner layout", 20, 8, 21, FontWeights.Bold);
+        DrawTitle("기판 셀 선택 및 지그재그 스캐너 배치", 20, 8, 21, FontWeights.Bold);
 
         var boardLeft = 24.0;
         var boardTop = 52.0;
@@ -180,7 +180,7 @@ public partial class MainWindow : Window
         DrawBoardFrame(boardLeft, boardTop, boardWidth, boardHeight);
         DrawCellBlocks(boardLeft, boardTop, boardWidth, boardHeight);
         DrawScannerHeads(boardLeft, boardTop + boardHeight + 26.0, boardWidth);
-        DrawLegend(boardLeft + 410, 12);
+        DrawLegend(Math.Max(20, LayoutCanvas.Width - 610), 14);
     }
 
     private void ResizeLayoutCanvas()
@@ -197,8 +197,8 @@ public partial class MainWindow : Window
         {
             Width = width,
             Height = height,
-            Fill = Brushes.White,
-            Stroke = new SolidColorBrush(Color.FromRgb(183, 160, 37)),
+            Fill = new SolidColorBrush(Color.FromRgb(15, 23, 42)),
+            Stroke = new SolidColorBrush(Color.FromRgb(100, 116, 139)),
             StrokeThickness = 1.2
         };
         Canvas.SetLeft(frame, left);
@@ -233,19 +233,19 @@ public partial class MainWindow : Window
             var isSelected = IsPointSelected(command);
             var isHeadSelected = command.IsHighlightedScanner;
 
-            var fill = Brushes.White;
+            var fill = new SolidColorBrush(Color.FromRgb(17, 24, 39));
             if (isHeadSelected)
             {
-                fill = new SolidColorBrush(command.InField ? Color.FromRgb(247, 180, 132) : Color.FromRgb(255, 224, 198));
+                fill = new SolidColorBrush(command.InField ? Color.FromRgb(146, 64, 14) : Color.FromRgb(67, 56, 42));
             }
             if (isSelected)
             {
-                fill = new SolidColorBrush(Color.FromRgb(255, 168, 104));
+                fill = new SolidColorBrush(Color.FromRgb(249, 115, 22));
             }
 
             var stroke = command.ScannerIndex % 2 == 1
-                ? new SolidColorBrush(Color.FromRgb(178, 158, 47))
-                : new SolidColorBrush(Color.FromRgb(93, 143, 169));
+                ? new SolidColorBrush(Color.FromRgb(250, 204, 21))
+                : new SolidColorBrush(Color.FromRgb(56, 189, 248));
 
             var rect = new Rectangle
             {
@@ -280,7 +280,7 @@ public partial class MainWindow : Window
 
             if (cellW > 34 && cellH > 24)
             {
-                DrawText(command.MatrixPointName, x + 5, y + 4, Math.Min(13, Math.Max(8, cellH * 0.28)), FontWeights.SemiBold, Brushes.Black);
+                DrawText(command.MatrixPointName, x + 5, y + 4, Math.Min(13, Math.Max(8, cellH * 0.28)), FontWeights.SemiBold, Brushes.White);
             }
         }
 
@@ -289,7 +289,7 @@ public partial class MainWindow : Window
             var first = blockGroup.OrderBy(x => x.Row).ThenBy(x => x.Column).First();
             var x = boardLeft + 28 + first.LocalX * scale;
             var y = boardTop + 20 + first.LocalY * scale - 22;
-            DrawText($"Cell#{first.CellBlock}", x, y, 13, FontWeights.Bold, new SolidColorBrush(Color.FromRgb(23, 32, 51)));
+            DrawText($"Cell#{first.CellBlock}", x, y, 13, FontWeights.Bold, new SolidColorBrush(Color.FromRgb(226, 232, 240)));
         }
     }
 
@@ -329,10 +329,10 @@ public partial class MainWindow : Window
             var localX = scanner.CenterX - _lastResult.Ak1GlobalX;
             var x = left + 28 + localX * boardScale - boxWidth * 0.5;
             var y = top + Math.Max(0, (scanner.CenterY - minScannerY) * boardScale);
-            var isReviewBasis = scanner.Index == _input.ReviewBasisScannerHead;
-            var fill = scanner.IsHighlighted || isReviewBasis
+            var isActiveScanner = scanner.IsHighlighted;
+            var fill = isActiveScanner
                 ? new SolidColorBrush(Color.FromRgb(59, 130, 246))
-                : new SolidColorBrush(Color.FromRgb(248, 250, 252));
+                : new SolidColorBrush(Color.FromRgb(15, 23, 42));
 
             var hit = new Rectangle
             {
@@ -353,10 +353,10 @@ public partial class MainWindow : Window
                 Width = boxWidth,
                 Height = boxHeight,
                 Fill = fill,
-                Stroke = isReviewBasis
-                    ? new SolidColorBrush(Color.FromRgb(14, 165, 233))
-                    : new SolidColorBrush(Color.FromRgb(15, 23, 42)),
-                StrokeThickness = isReviewBasis ? 2.8 : 2,
+                Stroke = isActiveScanner
+                    ? new SolidColorBrush(Color.FromRgb(96, 165, 250))
+                    : new SolidColorBrush(Color.FromRgb(71, 85, 105)),
+                StrokeThickness = isActiveScanner ? 2.8 : 1.6,
                 Tag = scanner,
                 Cursor = Cursors.Hand
             };
@@ -365,8 +365,8 @@ public partial class MainWindow : Window
             Canvas.SetTop(box, y);
             LayoutCanvas.Children.Add(box);
 
-            DrawText($"Scanner\n#{scanner.Index}", x + 8, y + 14, 15, FontWeights.SemiBold, scanner.IsHighlighted || isReviewBasis ? Brushes.White : new SolidColorBrush(Color.FromRgb(15, 23, 42)));
-            DrawText($"({scanner.CenterX:0.#}, {scanner.CenterY:0.#})", x - 4, y + boxHeight + 4, 10, FontWeights.Normal, new SolidColorBrush(Color.FromRgb(37, 54, 77)));
+            DrawText($"Scanner\n#{scanner.Index}", x + 8, y + 14, 15, FontWeights.SemiBold, isActiveScanner ? Brushes.White : new SolidColorBrush(Color.FromRgb(203, 213, 225)));
+            DrawText($"({scanner.CenterX:0.#}, {scanner.CenterY:0.#})", x - 4, y + boxHeight + 4, 10, FontWeights.Normal, new SolidColorBrush(Color.FromRgb(148, 163, 184)));
         }
     }
 
@@ -398,8 +398,8 @@ public partial class MainWindow : Window
             {
                 Width = Math.Max(3, width),
                 Height = Math.Max(3, height),
-                Fill = new SolidColorBrush(Color.FromArgb(34, 80, 170, 255)),
-                Stroke = new SolidColorBrush(Color.FromRgb(30, 91, 190)),
+                Fill = new SolidColorBrush(Color.FromArgb(48, 59, 130, 246)),
+                Stroke = new SolidColorBrush(Color.FromRgb(96, 165, 250)),
                 StrokeDashArray = new DoubleCollection { 5, 4 },
                 StrokeThickness = 2
             };
@@ -407,7 +407,7 @@ public partial class MainWindow : Window
             Canvas.SetTop(area, y);
             LayoutCanvas.Children.Add(area);
 
-            DrawText($"{scanner.Name} X process band\nY covered by board motion", x + 6, y + 6, 12, FontWeights.Bold, new SolidColorBrush(Color.FromRgb(30, 91, 190)));
+            DrawText($"{scanner.Name} X 가공 가능 Band\nY 방향은 기판 이동으로 커버", x + 6, y + 6, 12, FontWeights.Bold, new SolidColorBrush(Color.FromRgb(147, 197, 253)));
         }
     }
 
@@ -479,31 +479,33 @@ public partial class MainWindow : Window
             Width = width,
             Height = height,
             Fill = fill,
-            Stroke = new SolidColorBrush(Color.FromRgb(207, 216, 226)),
+            Stroke = new SolidColorBrush(Color.FromRgb(51, 65, 85)),
             StrokeThickness = 1
         };
         Canvas.SetLeft(rect, x);
         Canvas.SetTop(rect, y);
         canvas.Children.Add(rect);
 
-        DrawCanvasText(canvas, text, x + 4, y + 4, width - 8, height - 8, fontSize, FontWeights.SemiBold, new SolidColorBrush(Color.FromRgb(37, 54, 77)));
+        DrawCanvasText(canvas, text, x + 4, y + 4, width - 8, height - 8, fontSize, FontWeights.SemiBold, new SolidColorBrush(Color.FromRgb(226, 232, 240)));
     }
 
     private void DrawMatrixCell(Canvas canvas, CellCommand command, string mode, double x, double y, double width, double height, double fontSize)
     {
         var selected = IsPointSelected(command);
         var fill = selected
-            ? new SolidColorBrush(Color.FromRgb(255, 168, 104))
+            ? new SolidColorBrush(Color.FromRgb(249, 115, 22))
             : command.IsHighlightedScanner
-                ? new SolidColorBrush(Color.FromRgb(247, 180, 132))
-                : Brushes.White;
+                ? new SolidColorBrush(Color.FromRgb(146, 64, 14))
+                : new SolidColorBrush(Color.FromRgb(17, 24, 39));
 
         var rect = new Rectangle
         {
             Width = width,
             Height = height,
             Fill = fill,
-            Stroke = new SolidColorBrush(Color.FromRgb(174, 184, 196)),
+            Stroke = selected
+                ? new SolidColorBrush(Color.FromRgb(251, 146, 60))
+                : new SolidColorBrush(Color.FromRgb(51, 65, 85)),
             StrokeThickness = selected ? 2.2 : 1,
             Tag = command,
             Cursor = Cursors.Hand
@@ -514,7 +516,7 @@ public partial class MainWindow : Window
         canvas.Children.Add(rect);
 
         var text = FormatMatrixCell(command, mode);
-        DrawCanvasText(canvas, text, x + 4, y + 4, width - 8, height - 8, fontSize, FontWeights.Normal, Brushes.Black);
+        DrawCanvasText(canvas, text, x + 4, y + 4, width - 8, height - 8, fontSize, FontWeights.Normal, selected ? Brushes.White : new SolidColorBrush(Color.FromRgb(203, 213, 225)));
     }
 
     private void MatrixCell_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -592,16 +594,16 @@ public partial class MainWindow : Window
         var blockHeaderHeight = 28.0;
         var y = rowHeaderHeight;
 
-        DrawMatrixHeader(canvas, "Cell#", 0, 0, headerWidth, rowHeaderHeight, fontSize, Brushes.WhiteSmoke);
+        DrawMatrixHeader(canvas, "Cell#", 0, 0, headerWidth, rowHeaderHeight, fontSize, new SolidColorBrush(Color.FromRgb(30, 41, 59)));
         for (var column = 0; column < _input.CellColumns; column++)
         {
-            DrawMatrixHeader(canvas, ToColumnLetter(column), headerWidth + column * cellWidth, 0, cellWidth, rowHeaderHeight, fontSize, Brushes.WhiteSmoke);
+            DrawMatrixHeader(canvas, ToColumnLetter(column), headerWidth + column * cellWidth, 0, cellWidth, rowHeaderHeight, fontSize, new SolidColorBrush(Color.FromRgb(30, 41, 59)));
         }
 
         var visibleCommands = GetVisibleMatrixCommands();
         if (visibleCommands.Count == 0)
         {
-            DrawMatrixHeader(canvas, "No coordinates in selected scanner process area", 0, y, headerWidth + _input.CellColumns * cellWidth, 44, fontSize, new SolidColorBrush(Color.FromRgb(255, 247, 237)));
+            DrawMatrixHeader(canvas, "선택된 스캐너의 X 가공 가능 범위에 포함되는 좌표가 없습니다.", 0, y, headerWidth + _input.CellColumns * cellWidth, 44, fontSize, new SolidColorBrush(Color.FromRgb(67, 20, 7)));
             canvas.Width = headerWidth + _input.CellColumns * cellWidth + 20;
             canvas.Height = y + 64;
             return;
@@ -609,12 +611,12 @@ public partial class MainWindow : Window
 
         foreach (var blockGroup in visibleCommands.GroupBy(x => x.CellBlock).OrderBy(x => x.Key))
         {
-            DrawMatrixHeader(canvas, $"Cell#{blockGroup.Key}", 0, y, headerWidth + _input.CellColumns * cellWidth, blockHeaderHeight, fontSize, new SolidColorBrush(Color.FromRgb(248, 250, 252)));
+            DrawMatrixHeader(canvas, $"Cell#{blockGroup.Key}", 0, y, headerWidth + _input.CellColumns * cellWidth, blockHeaderHeight, fontSize, new SolidColorBrush(Color.FromRgb(15, 23, 42)));
             y += blockHeaderHeight;
 
             foreach (var rowGroup in blockGroup.GroupBy(x => x.Row).OrderBy(x => x.Key))
             {
-                DrawMatrixHeader(canvas, (rowGroup.Key + 1).ToString(CultureInfo.InvariantCulture), 0, y, headerWidth, cellHeight, fontSize, Brushes.White);
+                DrawMatrixHeader(canvas, (rowGroup.Key + 1).ToString(CultureInfo.InvariantCulture), 0, y, headerWidth, cellHeight, fontSize, new SolidColorBrush(Color.FromRgb(17, 24, 39)));
 
                 foreach (var command in rowGroup.OrderBy(x => x.Column))
                 {
@@ -651,20 +653,23 @@ public partial class MainWindow : Window
                 VerticalContentAlignment = VerticalAlignment.Stretch,
                 Content = new Border
                 {
-                    BorderBrush = new SolidColorBrush(Color.FromRgb(93, 143, 169)),
+                    BorderBrush = beam.BeamNo == _input.ReviewBasisDoeBeam
+                        ? new SolidColorBrush(Color.FromRgb(251, 146, 60))
+                        : new SolidColorBrush(Color.FromRgb(71, 85, 105)),
                     BorderThickness = new Thickness(1.4),
                     CornerRadius = new CornerRadius(4),
-                    Padding = new Thickness(8),
+                    Padding = new Thickness(4),
                     Background = beam.BeamNo == _input.ReviewBasisDoeBeam
-                        ? new SolidColorBrush(Color.FromRgb(255, 226, 184))
-                        : Brushes.White,
+                        ? new SolidColorBrush(Color.FromRgb(124, 45, 18))
+                        : new SolidColorBrush(Color.FromRgb(15, 23, 42)),
                     Child = new TextBlock
                     {
                         Text = $"DOE{beam.BeamNo:00}\nR{beam.Row} C{beam.Column}\n{beam.MatrixCoordinate}",
                         TextAlignment = TextAlignment.Center,
                         TextWrapping = TextWrapping.Wrap,
-                        FontSize = 13,
-                        FontWeight = beam.BeamNo == _input.ReviewBasisDoeBeam ? FontWeights.Bold : FontWeights.Normal
+                        FontSize = 9.5,
+                        FontWeight = beam.BeamNo == _input.ReviewBasisDoeBeam ? FontWeights.Bold : FontWeights.Normal,
+                        Foreground = beam.BeamNo == _input.ReviewBasisDoeBeam ? Brushes.White : new SolidColorBrush(Color.FromRgb(203, 213, 225))
                     }
                 }
             };
@@ -711,9 +716,9 @@ public partial class MainWindow : Window
 
     private void DrawLegend(double left, double top)
     {
-        DrawLegendBox(left, top, Color.FromRgb(255, 168, 104), "Selected cell");
-        DrawLegendBox(left + 150, top, Color.FromRgb(247, 180, 132), "Cells handled by highlighted heads");
-        DrawLegendBox(left + 425, top, Color.FromRgb(144, 211, 78), "Highlighted / review head");
+        DrawLegendBox(left, top, Color.FromRgb(249, 115, 22), "선택 좌표");
+        DrawLegendBox(left + 132, top, Color.FromRgb(146, 64, 14), "선택 스캐너 가공 가능 좌표");
+        DrawLegendBox(left + 360, top, Color.FromRgb(59, 130, 246), "선택 스캐너 / X 가공 Band");
     }
 
     private void DrawLegendBox(double x, double y, Color color, string text)
@@ -723,13 +728,13 @@ public partial class MainWindow : Window
             Width = 18,
             Height = 18,
             Fill = new SolidColorBrush(color),
-            Stroke = Brushes.Black,
+            Stroke = new SolidColorBrush(Color.FromRgb(148, 163, 184)),
             StrokeThickness = 1
         };
         Canvas.SetLeft(box, x);
         Canvas.SetTop(box, y);
         LayoutCanvas.Children.Add(box);
-        DrawText(text, x + 25, y - 1, 13, FontWeights.Normal, new SolidColorBrush(Color.FromRgb(37, 54, 77)));
+        DrawText(text, x + 25, y - 1, 13, FontWeights.Normal, new SolidColorBrush(Color.FromRgb(203, 213, 225)));
     }
 
     private void DrawAlignKey(double x, double y, string text)
@@ -745,12 +750,12 @@ public partial class MainWindow : Window
         Canvas.SetLeft(ak, x);
         Canvas.SetTop(ak, y);
         LayoutCanvas.Children.Add(ak);
-        DrawText(text, x + 13, y - 4, 12, FontWeights.Bold, new SolidColorBrush(Color.FromRgb(80, 58, 0)));
+        DrawText(text, x + 13, y - 4, 12, FontWeights.Bold, new SolidColorBrush(Color.FromRgb(253, 230, 138)));
     }
 
     private void DrawTitle(string text, double x, double y, double size, FontWeight weight)
     {
-        DrawText(text, x, y, size, weight, new SolidColorBrush(Color.FromRgb(23, 32, 51)));
+        DrawText(text, x, y, size, weight, new SolidColorBrush(Color.FromRgb(248, 250, 252)));
     }
 
     private void DrawText(string text, double x, double y, double size, FontWeight weight, Brush brush)
