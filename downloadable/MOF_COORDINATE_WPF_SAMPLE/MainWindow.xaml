@@ -6,7 +6,7 @@
         Height="980"
         MinWidth="1240"
         MinHeight="780"
-        Background="#F4F6F8">
+        Background="#EEF2F7">
   <Grid Margin="14">
     <Grid.ColumnDefinitions>
       <ColumnDefinition Width="355"/>
@@ -15,8 +15,8 @@
     </Grid.ColumnDefinitions>
 
     <Border Grid.Column="0"
-            Background="White"
-            BorderBrush="#D5DEE8"
+            Background="#FFFFFF"
+            BorderBrush="#CBD5E1"
             BorderThickness="1"
             CornerRadius="8"
             Padding="14">
@@ -85,6 +85,18 @@
             <StackPanel Margin="0,0,8,8"><TextBlock Text="DOE Pitch X"/><TextBox x:Name="DoePitchXBox"/></StackPanel>
             <StackPanel Margin="0,0,0,8"><TextBlock Text="DOE Pitch Y"/><TextBox x:Name="DoePitchYBox"/></StackPanel>
           </UniformGrid>
+          <UniformGrid Columns="2" Margin="0,0,0,10">
+            <Button x:Name="SelectAllScannersButton"
+                    Height="34"
+                    Margin="0,0,5,0"
+                    Content="All Scanner Select"
+                    Click="SelectAllScannersButton_Click"/>
+            <Button x:Name="ClearScannerSelectionButton"
+                    Height="34"
+                    Margin="5,0,0,0"
+                    Content="Clear Scanner"
+                    Click="ClearScannerSelectionButton_Click"/>
+          </UniformGrid>
 
           <TextBlock Text="Review Offset" Style="{StaticResource SectionTitleStyle}"/>
           <UniformGrid Columns="2" Margin="0,4,0,14">
@@ -130,7 +142,7 @@
         <RowDefinition Height="92"/>
       </Grid.RowDefinitions>
 
-      <Border Background="White" BorderBrush="#D5DEE8" BorderThickness="1" CornerRadius="8" Padding="12">
+      <Border Background="White" BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="8" Padding="12">
         <Grid>
           <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -153,7 +165,7 @@
         </Grid>
       </Border>
 
-      <Border Grid.Row="2" Background="White" BorderBrush="#D5DEE8" BorderThickness="1" CornerRadius="8" Padding="8">
+      <Border Grid.Row="2" Background="White" BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="8" Padding="8">
         <TabControl>
           <TabItem Header="Design 2D Matrix">
             <ScrollViewer HorizontalScrollBarVisibility="Auto"
@@ -196,7 +208,7 @@
         </TabControl>
       </Border>
 
-      <Border Grid.Row="4" Background="White" BorderBrush="#D5DEE8" BorderThickness="1" CornerRadius="8" Padding="12">
+      <Border Grid.Row="4" Background="White" BorderBrush="#CBD5E1" BorderThickness="1" CornerRadius="8" Padding="12">
         <TextBlock x:Name="FormulaText"
                    TextWrapping="Wrap"
                    Foreground="#25364D"/>

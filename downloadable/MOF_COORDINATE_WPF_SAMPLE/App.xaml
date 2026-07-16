@@ -3,11 +3,35 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              StartupUri="MainWindow.xaml">
   <Application.Resources>
+    <Style TargetType="Button">
+      <Setter Property="Background" Value="#2563EB"/>
+      <Setter Property="Foreground" Value="White"/>
+      <Setter Property="BorderBrush" Value="#1D4ED8"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="Padding" Value="10,6"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="Cursor" Value="Hand"/>
+    </Style>
+    <Style TargetType="TextBox">
+      <Setter Property="MinHeight" Value="25"/>
+      <Setter Property="Padding" Value="5,2"/>
+      <Setter Property="BorderBrush" Value="#CBD5E1"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="Background" Value="#FBFDFF"/>
+    </Style>
+    <Style TargetType="TabControl">
+      <Setter Property="Background" Value="#F8FAFC"/>
+      <Setter Property="BorderBrush" Value="#CBD5E1"/>
+    </Style>
+    <Style TargetType="TabItem">
+      <Setter Property="Padding" Value="12,6"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
     <Style x:Key="SectionTitleStyle" TargetType="TextBlock">
       <Setter Property="FontSize" Value="15"/>
       <Setter Property="FontWeight" Value="Bold"/>
-      <Setter Property="Foreground" Value="#172033"/>
-      <Setter Property="Margin" Value="0,8,0,2"/>
+      <Setter Property="Foreground" Value="#0F172A"/>
+      <Setter Property="Margin" Value="0,12,0,4"/>
     </Style>
   </Application.Resources>
 </Application>

@@ -116,6 +116,21 @@ public partial class MainWindow : Window
         GenerateAndRender();
     }
 
+    private void SelectAllScannersButton_Click(object sender, RoutedEventArgs e)
+    {
+        var count = Math.Max(1, ReadInt(ScannerCountBox, _input.ScannerCount));
+        _input.HighlightScannerHeads = string.Join(",", Enumerable.Range(1, count));
+        LoadInputToScreen(_input);
+        GenerateAndRender();
+    }
+
+    private void ClearScannerSelectionButton_Click(object sender, RoutedEventArgs e)
+    {
+        _input.HighlightScannerHeads = "";
+        LoadInputToScreen(_input);
+        GenerateAndRender();
+    }
+
     private void GenerateAndRender()
     {
         _lastResult = _service.Generate(_input);
@@ -130,15 +145,17 @@ public partial class MainWindow : Window
         BuildDoeMatrixPanel();
 
         var selected = _lastResult.Commands.FirstOrDefault(x => x.IsSelectedCell);
+        var selectedScannerCount = ParseScannerHeadSet(_input.HighlightScannerHeads).Count;
         var inFieldCount = _lastResult.Commands.Count(x => x.InField);
+        var filteredCount = GetVisibleMatrixCommands().Count;
         SummaryText.Text =
             $"AK1 Stage Anchor = ({_lastResult.Ak1GlobalX:0.######}, {_lastResult.Ak1GlobalY:0.######}) mm   " +
-            $"Cells = {_lastResult.Commands.Count}, In-field = {inFieldCount}, Selected = {_selectedPointKeys.Count}   " +
+            $"Cells = {_lastResult.Commands.Count}, X-cover = {inFieldCount}, Scanner filter = {selectedScannerCount}, View = {filteredCount}, Selected = {_selectedPointKeys.Count}   " +
             $"Review Basis = H{_lastResult.SelectedReviewScanner.Index} DOE{_lastResult.SelectedDoeBeam.BeamNo:00}";
 
         FormulaText.Text =
-            "MOF concept: scanners are fixed in zigzag layout, the board moves along Y, so scanner processability is judged by X coverage. " +
-            "Click a scanner to show its full-Y process band. Hold Ctrl and use mouse-wheel over board/matrix to zoom.";
+            "Click scanner boxes or their surrounding hit area to toggle multiple scanners. Matrix views show only coordinates processable by selected scanners. " +
+            "All Scanner Select/Clear Scanner controls the filter. Ctrl + mouse-wheel zooms board/matrix.";
 
         DrawLayout();
     }
@@ -245,6 +262,22 @@ public partial class MainWindow : Window
             Canvas.SetTop(rect, y);
             LayoutCanvas.Children.Add(rect);
 
+            var hitSizeW = Math.Max(cellW, 20);
+            var hitSizeH = Math.Max(cellH, 20);
+            var hitRect = new Rectangle
+            {
+                Width = hitSizeW,
+                Height = hitSizeH,
+                Fill = new SolidColorBrush(Color.FromArgb(1, 0, 0, 0)),
+                StrokeThickness = 0,
+                Tag = command,
+                Cursor = Cursors.Hand
+            };
+            hitRect.MouseLeftButtonDown += CellRect_MouseLeftButtonDown;
+            Canvas.SetLeft(hitRect, x + (cellW - hitSizeW) * 0.5);
+            Canvas.SetTop(hitRect, y + (cellH - hitSizeH) * 0.5);
+            LayoutCanvas.Children.Add(hitRect);
+
             if (cellW > 34 && cellH > 24)
             {
                 DrawText(command.MatrixPointName, x + 5, y + 4, Math.Min(13, Math.Max(8, cellH * 0.28)), FontWeights.SemiBold, Brushes.Black);
@@ -298,8 +331,22 @@ public partial class MainWindow : Window
             var y = top + Math.Max(0, (scanner.CenterY - minScannerY) * boardScale);
             var isReviewBasis = scanner.Index == _input.ReviewBasisScannerHead;
             var fill = scanner.IsHighlighted || isReviewBasis
-                ? new SolidColorBrush(Color.FromRgb(144, 211, 78))
-                : Brushes.White;
+                ? new SolidColorBrush(Color.FromRgb(59, 130, 246))
+                : new SolidColorBrush(Color.FromRgb(248, 250, 252));
+
+            var hit = new Rectangle
+            {
+                Width = boxWidth + 28,
+                Height = boxHeight + 34,
+                Fill = new SolidColorBrush(Color.FromArgb(1, 0, 0, 0)),
+                StrokeThickness = 0,
+                Tag = scanner,
+                Cursor = Cursors.Hand
+            };
+            hit.MouseLeftButtonDown += ScannerRect_MouseLeftButtonDown;
+            Canvas.SetLeft(hit, x - 14);
+            Canvas.SetTop(hit, y - 12);
+            LayoutCanvas.Children.Add(hit);
 
             var box = new Rectangle
             {
@@ -307,8 +354,8 @@ public partial class MainWindow : Window
                 Height = boxHeight,
                 Fill = fill,
                 Stroke = isReviewBasis
-                    ? new SolidColorBrush(Color.FromRgb(30, 91, 190))
-                    : Brushes.Black,
+                    ? new SolidColorBrush(Color.FromRgb(14, 165, 233))
+                    : new SolidColorBrush(Color.FromRgb(15, 23, 42)),
                 StrokeThickness = isReviewBasis ? 2.8 : 2,
                 Tag = scanner,
                 Cursor = Cursors.Hand
@@ -318,7 +365,7 @@ public partial class MainWindow : Window
             Canvas.SetTop(box, y);
             LayoutCanvas.Children.Add(box);
 
-            DrawText($"Scanner\n#{scanner.Index}", x + 8, y + 14, 15, FontWeights.Normal, Brushes.Black);
+            DrawText($"Scanner\n#{scanner.Index}", x + 8, y + 14, 15, FontWeights.SemiBold, scanner.IsHighlighted || isReviewBasis ? Brushes.White : new SolidColorBrush(Color.FromRgb(15, 23, 42)));
             DrawText($"({scanner.CenterX:0.#}, {scanner.CenterY:0.#})", x - 4, y + boxHeight + 4, 10, FontWeights.Normal, new SolidColorBrush(Color.FromRgb(37, 54, 77)));
         }
     }
@@ -395,7 +442,13 @@ public partial class MainWindow : Window
         if (sender is FrameworkElement { Tag: ScannerModel scanner })
         {
             _input.ReviewBasisScannerHead = scanner.Index;
-            _input.HighlightScannerHeads = scanner.Index.ToString(CultureInfo.InvariantCulture);
+            var selectedHeads = ParseScannerHeadSet(_input.HighlightScannerHeads);
+            if (!selectedHeads.Add(scanner.Index))
+            {
+                selectedHeads.Remove(scanner.Index);
+            }
+
+            _input.HighlightScannerHeads = string.Join(",", selectedHeads.OrderBy(x => x));
             LoadInputToScreen(_input);
             GenerateAndRender();
         }
@@ -502,7 +555,8 @@ public partial class MainWindow : Window
             Height = Math.Max(1, height),
             TextAlignment = TextAlignment.Center,
             TextWrapping = TextWrapping.Wrap,
-            VerticalAlignment = VerticalAlignment.Center
+            VerticalAlignment = VerticalAlignment.Center,
+            IsHitTestVisible = false
         };
         Canvas.SetLeft(block, x);
         Canvas.SetTop(block, y);
@@ -544,7 +598,16 @@ public partial class MainWindow : Window
             DrawMatrixHeader(canvas, ToColumnLetter(column), headerWidth + column * cellWidth, 0, cellWidth, rowHeaderHeight, fontSize, Brushes.WhiteSmoke);
         }
 
-        foreach (var blockGroup in _lastResult.Commands.GroupBy(x => x.CellBlock).OrderBy(x => x.Key))
+        var visibleCommands = GetVisibleMatrixCommands();
+        if (visibleCommands.Count == 0)
+        {
+            DrawMatrixHeader(canvas, "No coordinates in selected scanner process area", 0, y, headerWidth + _input.CellColumns * cellWidth, 44, fontSize, new SolidColorBrush(Color.FromRgb(255, 247, 237)));
+            canvas.Width = headerWidth + _input.CellColumns * cellWidth + 20;
+            canvas.Height = y + 64;
+            return;
+        }
+
+        foreach (var blockGroup in visibleCommands.GroupBy(x => x.CellBlock).OrderBy(x => x.Key))
         {
             DrawMatrixHeader(canvas, $"Cell#{blockGroup.Key}", 0, y, headerWidth + _input.CellColumns * cellWidth, blockHeaderHeight, fontSize, new SolidColorBrush(Color.FromRgb(248, 250, 252)));
             y += blockHeaderHeight;
@@ -698,7 +761,8 @@ public partial class MainWindow : Window
             FontSize = size,
             FontWeight = weight,
             Foreground = brush,
-            TextAlignment = TextAlignment.Center
+            TextAlignment = TextAlignment.Center,
+            IsHitTestVisible = false
         };
         Canvas.SetLeft(block, x);
         Canvas.SetTop(block, y);
@@ -759,6 +823,8 @@ public partial class MainWindow : Window
         SetTip(LoadConfigButton, "Load Saved CSV Config", "저장된 CSV 설정 파일을 선택해 화면 입력값과 좌표 배치를 갱신합니다.", "Key,Value 형식 CSV", "None");
         SetTip(ReloadConfigButton, "Reload Current CSV", "마지막으로 열거나 로드한 CSV 파일을 다시 읽어 화면을 갱신합니다.", "Excel에서 수정 저장 후 바로 Reload", "None");
         SetTip(SaveConfigButton, "Save Current CSV", "현재 화면 입력값을 CSV 파일에 저장합니다. CSV 설정을 수정한 뒤 파일까지 업데이트할 때 사용합니다.", "화면 입력값 -> CSV 저장", "None");
+        SetTip(SelectAllScannersButton, "All Scanner Select", "전체 Scanner를 선택해서 모든 Scanner의 X process band 기준으로 가공 가능한 좌표를 Matrix View에 표시합니다.", "전체 Scanner 선택 -> 좌표 View 필터 적용", "None");
+        SetTip(ClearScannerSelectionButton, "Clear Scanner", "Scanner 선택을 모두 해제합니다. 선택 Scanner가 없으면 Matrix View는 전체 좌표를 표시합니다.", "Scanner 선택 해제 -> 전체 좌표 표시", "None");
     }
 
     private void SetTip(Control control, string title, string description, string formula, string diagramKind)
@@ -1067,6 +1133,36 @@ public partial class MainWindow : Window
     private static string PointKey(CellCommand command) => $"{command.CellBlock}:{command.Column}:{command.Row}";
 
     private bool IsPointSelected(CellCommand command) => _selectedPointKeys.Contains(PointKey(command));
+
+    private IReadOnlyList<CellCommand> GetVisibleMatrixCommands()
+    {
+        if (_lastResult is null)
+        {
+            return Array.Empty<CellCommand>();
+        }
+
+        var selectedHeads = ParseScannerHeadSet(_input.HighlightScannerHeads);
+        if (selectedHeads.Count == 0)
+        {
+            return _lastResult.Commands;
+        }
+
+        return _lastResult.Commands.Where(x => x.IsHighlightedScanner).ToList();
+    }
+
+    private static HashSet<int> ParseScannerHeadSet(string text)
+    {
+        var heads = new HashSet<int>();
+        foreach (var token in text.Split(new[] { ',', ';', ' ' }, StringSplitOptions.RemoveEmptyEntries))
+        {
+            if (int.TryParse(token, NumberStyles.Integer, CultureInfo.InvariantCulture, out var head) && head > 0)
+            {
+                heads.Add(head);
+            }
+        }
+
+        return heads;
+    }
 
     private void ResetSelectionFromInput()
     {
