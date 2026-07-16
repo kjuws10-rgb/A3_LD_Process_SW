@@ -1,166 +1,222 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="980" viewBox="0 0 1500 980">
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1280" viewBox="0 0 1800 1280">
   <defs>
     <style>
-      .title{font-family:Segoe UI,Arial,sans-serif;font-size:28px;font-weight:700;fill:#172033}
-      .sub{font-family:Segoe UI,Arial,sans-serif;font-size:15px;fill:#42526b}
-      .box{fill:#ffffff;stroke:#52637a;stroke-width:1.5;rx:8}
-      .box2{fill:#eef7ff;stroke:#2a6fbb;stroke-width:1.5;rx:8}
-      .box3{fill:#f7fff1;stroke:#5f8f24;stroke-width:1.5;rx:8}
-      .box4{fill:#fff7e8;stroke:#b36b00;stroke-width:1.5;rx:8}
-      .box5{fill:#fff1f5;stroke:#b82b58;stroke-width:1.5;rx:8}
-      .h{font-family:Segoe UI,Arial,sans-serif;font-size:18px;font-weight:700;fill:#172033}
-      .t{font-family:Segoe UI,Arial,sans-serif;font-size:14px;fill:#25364d}
-      .small{font-family:Consolas,Menlo,monospace;font-size:13px;fill:#25364d}
-      .arrow{stroke:#344563;stroke-width:2;fill:none;marker-end:url(#arrow)}
-      .dash{stroke:#778899;stroke-width:1.5;fill:none;stroke-dasharray:6 5}
-      .board{fill:#f9fbfd;stroke:#2d3b4f;stroke-width:2}
-      .ak{fill:#ffcc4d;stroke:#755500;stroke-width:1.5}
-      .cell{fill:#68b7ff;stroke:#075d9a;stroke-width:1;opacity:.78}
-      .scanOdd{fill:#dcf4d5;stroke:#4f8b29;stroke-width:2}
-      .scanEven{fill:#fde8cb;stroke:#a45c00;stroke-width:2}
+      .title{font-family:Segoe UI,Arial,sans-serif;font-size:30px;font-weight:700;fill:#e5f0ff}
+      .subtitle{font-family:Segoe UI,Arial,sans-serif;font-size:15px;fill:#a9bdd8}
+      .section{font-family:Segoe UI,Arial,sans-serif;font-size:20px;font-weight:700;fill:#eaf2ff}
+      .h{font-family:Segoe UI,Arial,sans-serif;font-size:17px;font-weight:700;fill:#f8fbff}
+      .t{font-family:Segoe UI,Arial,sans-serif;font-size:13px;fill:#d5e3f5}
+      .small{font-family:Consolas,Menlo,monospace;font-size:12px;fill:#d7e7f8}
+      .tiny{font-family:Segoe UI,Arial,sans-serif;font-size:11px;fill:#b7c7da}
+      .panel{fill:#111827;stroke:#334155;stroke-width:1.5;rx:10}
+      .input{fill:#172554;stroke:#60a5fa;stroke-width:1.6;rx:9}
+      .calc{fill:#0f3b46;stroke:#22d3ee;stroke-width:1.6;rx:9}
+      .stage{fill:#1e293b;stroke:#94a3b8;stroke-width:1.6;rx:9}
+      .scanner{fill:#2d1f10;stroke:#f59e0b;stroke-width:1.6;rx:9}
+      .review{fill:#3b1632;stroke:#f472b6;stroke-width:1.6;rx:9}
+      .feedback{fill:#301a0a;stroke:#fb923c;stroke-width:1.6;rx:9}
+      .board{fill:#08111f;stroke:#64748b;stroke-width:2}
+      .cell{fill:#0e7490;stroke:#67e8f9;stroke-width:1;opacity:.8}
+      .cellSel{fill:#f59e0b;stroke:#fde68a;stroke-width:2}
+      .band{fill:#0891b25c;stroke:#22d3ee;stroke-width:2;stroke-dasharray:7 5}
+      .ak{fill:#facc15;stroke:#854d0e;stroke-width:1.4}
+      .headOdd{fill:#1d4ed8;stroke:#7dd3fc;stroke-width:2}
+      .headEven{fill:#1e40af;stroke:#7dd3fc;stroke-width:2;stroke-dasharray:5 4}
+      .arrow{stroke:#93a4b8;stroke-width:2.2;fill:none;marker-end:url(#arrow)}
+      .arrow2{stroke:#22d3ee;stroke-width:2.4;fill:none;marker-end:url(#arrowC)}
+      .dash{stroke:#f59e0b;stroke-width:2;fill:none;stroke-dasharray:7 5;marker-end:url(#arrowO)}
+      .grid{stroke:#243244;stroke-width:1}
+      .badge{fill:#082f49;stroke:#22d3ee;stroke-width:1.2;rx:5}
     </style>
     <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
-      <path d="M0,0 L12,6 L0,12 Z" fill="#344563"/>
+      <path d="M0,0 L12,6 L0,12 Z" fill="#93a4b8"/>
+    </marker>
+    <marker id="arrowC" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 Z" fill="#22d3ee"/>
+    </marker>
+    <marker id="arrowO" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 Z" fill="#f59e0b"/>
     </marker>
   </defs>
 
-  <rect width="1500" height="980" fill="#f4f7fb"/>
-  <text x="40" y="50" class="title">Review AK1 기반 Stage / Scanner / MOF GxGy 좌표계 변환 Concept</text>
-  <text x="42" y="78" class="sub">엑셀 예제값: 6GH 1500 x 925 mm, AK1 Review 측정, H5 Odd Scanner 선택 예</text>
+  <rect width="1800" height="1280" fill="#07111f"/>
+  <text x="42" y="48" class="title">MOF Coordinate Transform 상세 흐름도</text>
+  <text x="44" y="76" class="subtitle">Review Camera AK1 측정값을 기준으로 Recipe Cell 좌표를 Stage 좌표로 만들고, Zigzag Scanner의 X 가공 가능 Band를 통해 MOF Gx/Gy와 DOE Review 좌표를 생성하는 전체 과정</text>
 
-  <rect x="40" y="115" width="270" height="145" class="box2"/>
-  <text x="62" y="147" class="h">1. Review AK1 Measurement</text>
-  <text x="62" y="178" class="t">Review Center Global</text>
-  <text x="62" y="201" class="small">(105, 1200) mm</text>
-  <text x="62" y="228" class="t">Measured AK1 Pixel</text>
-  <text x="62" y="251" class="small">U=1282, V=1053</text>
+  <rect x="36" y="105" width="1728" height="178" class="panel"/>
+  <text x="60" y="138" class="section">0. 입력 데이터 묶음</text>
+  <text x="60" y="163" class="subtitle">프로그램에서는 아래 항목들이 CoordinateInput에 모이고, CoordinateTransformService가 CoordinateResult와 CellCommand 목록을 생성한다.</text>
 
-  <rect x="375" y="115" width="290" height="145" class="box2"/>
-  <text x="397" y="147" class="h">2. AK1 Stage Anchor</text>
-  <text x="397" y="178" class="small">dU = U_AK1 - U0</text>
-  <text x="397" y="201" class="small">dV = V_AK1 - V0</text>
-  <text x="397" y="228" class="small">AK1 = ReviewCenter + dPixel*Scale</text>
-  <text x="397" y="251" class="small">AK1=(105.2001,1200.10005)</text>
+  <rect x="60" y="184" width="300" height="76" class="input"/>
+  <text x="78" y="208" class="h">Recipe / Cell Layout</text>
+  <text x="78" y="229" class="tiny">CellFirstX/Y, CellPitchX/Y, CellRows/Columns</text>
+  <text x="78" y="247" class="tiny">CellBlockRows/Columns, BlockPitch, PatternOffset</text>
 
-  <rect x="730" y="115" width="300" height="145" class="box3"/>
-  <text x="752" y="147" class="h">3. Cell Local Grid</text>
-  <text x="752" y="178" class="small">X = FirstX + Col*PitchX + OffsetX</text>
-  <text x="752" y="201" class="small">Y = FirstY + Row*PitchY + OffsetY</text>
-  <text x="752" y="228" class="small">Col=14, Row=9</text>
-  <text x="752" y="251" class="small">P_local=(760,440)</text>
+  <rect x="390" y="184" width="300" height="76" class="input"/>
+  <text x="408" y="208" class="h">Review AK Measurement</text>
+  <text x="408" y="229" class="tiny">ReviewCenterX/Y, U0/V0, PixelScaleX/Y</text>
+  <text x="408" y="247" class="tiny">MeasuredAk1U/V, ThetaAlignDeg</text>
 
-  <rect x="1095" y="115" width="330" height="145" class="box3"/>
-  <text x="1117" y="147" class="h">4. Stage Global Target</text>
-  <text x="1117" y="178" class="small">P_global = AK1 + R(theta)*P_local</text>
-  <text x="1117" y="201" class="small">theta_align = 0.05 deg</text>
-  <text x="1117" y="228" class="small">R*P=(759.615738,440.663057)</text>
-  <text x="1117" y="251" class="small">Target=(864.815838,1640.763107)</text>
+  <rect x="720" y="184" width="300" height="76" class="input"/>
+  <text x="738" y="208" class="h">Scanner Design</text>
+  <text x="738" y="229" class="tiny">ScannerCount, FirstScannerCenterX/Y</text>
+  <text x="738" y="247" class="tiny">ScannerPitchX, EvenYOffset, FieldHalfX/Y</text>
 
-  <path class="arrow" d="M310 188 H375"/>
-  <path class="arrow" d="M665 188 H730"/>
-  <path class="arrow" d="M1030 188 H1095"/>
+  <rect x="1050" y="184" width="300" height="76" class="input"/>
+  <text x="1068" y="208" class="h">DOE / Review Basis</text>
+  <text x="1068" y="229" class="tiny">ReviewBasisScannerHead, ReviewBasisDoeBeam</text>
+  <text x="1068" y="247" class="tiny">DoeBeamPitchX/Y, DOE 4 x 4 Beam Matrix</text>
 
-  <rect x="40" y="320" width="1385" height="410" class="box"/>
-  <text x="65" y="355" class="h">Stage Global Layout: 기판은 고정 Scanner 위를 지나가고, Scanner는 Zigzag Odd/Even으로 배치된다</text>
+  <rect x="1380" y="184" width="300" height="76" class="input"/>
+  <text x="1398" y="208" class="h">Offset / Feedback</text>
+  <text x="1398" y="229" class="tiny">ProcessOffsetGlobalX/Y</text>
+  <text x="1398" y="247" class="tiny">Review Error 보정값을 다음 Plan에 반영</text>
 
-  <rect x="95" y="395" width="880" height="280" class="board"/>
-  <text x="105" y="385" class="small">Board local area projected to Stage Global</text>
+  <rect x="36" y="315" width="1728" height="250" class="panel"/>
+  <text x="60" y="348" class="section">1. AK1 Stage Anchor 생성 및 Recipe Local 좌표 생성</text>
 
-  <circle cx="145" cy="440" r="10" class="ak"/>
-  <circle cx="145" cy="628" r="10" class="ak"/>
-  <circle cx="920" cy="440" r="10" class="ak"/>
-  <circle cx="920" cy="628" r="10" class="ak"/>
-  <text x="158" y="435" class="small">AK1 anchor</text>
-  <text x="158" y="458" class="small">(105.2001,1200.10005)</text>
+  <rect x="60" y="375" width="330" height="148" class="calc"/>
+  <text x="82" y="405" class="h">1-1. Review Pixel → Stage Anchor</text>
+  <text x="82" y="433" class="small">dU = MeasuredAk1U - ReviewPixelCenterU</text>
+  <text x="82" y="456" class="small">dV = MeasuredAk1V - ReviewPixelCenterV</text>
+  <text x="82" y="479" class="small">AK1.X = ReviewCenterX + dU * PixelScaleX</text>
+  <text x="82" y="502" class="small">AK1.Y = ReviewCenterY + dV * PixelScaleY</text>
 
-  <g opacity=".65">
-    <rect x="188" y="461" width="16" height="13" class="cell"/>
-    <rect x="245" y="461" width="16" height="13" class="cell"/>
-    <rect x="302" y="461" width="16" height="13" class="cell"/>
-    <rect x="359" y="461" width="16" height="13" class="cell"/>
-    <rect x="416" y="461" width="16" height="13" class="cell"/>
-    <rect x="473" y="461" width="16" height="13" class="cell"/>
-    <rect x="530" y="461" width="16" height="13" class="cell"/>
-    <rect x="587" y="461" width="16" height="13" class="cell"/>
-    <rect x="644" y="461" width="16" height="13" class="cell"/>
-    <rect x="701" y="461" width="16" height="13" class="cell"/>
-    <rect x="758" y="461" width="16" height="13" class="cell"/>
-    <rect x="815" y="461" width="16" height="13" class="cell"/>
-    <rect x="188" y="512" width="16" height="13" class="cell"/>
-    <rect x="245" y="512" width="16" height="13" class="cell"/>
-    <rect x="302" y="512" width="16" height="13" class="cell"/>
-    <rect x="359" y="512" width="16" height="13" class="cell"/>
-    <rect x="416" y="512" width="16" height="13" class="cell"/>
-    <rect x="473" y="512" width="16" height="13" class="cell"/>
-    <rect x="530" y="512" width="16" height="13" class="cell"/>
-    <rect x="587" y="512" width="16" height="13" class="cell"/>
-    <rect x="644" y="512" width="16" height="13" class="cell"/>
-    <rect x="701" y="512" width="16" height="13" class="cell"/>
-    <rect x="758" y="512" width="16" height="13" class="cell"/>
-    <rect x="815" y="512" width="16" height="13" class="cell"/>
-    <rect x="188" y="563" width="16" height="13" class="cell"/>
-    <rect x="245" y="563" width="16" height="13" class="cell"/>
-    <rect x="302" y="563" width="16" height="13" class="cell"/>
-    <rect x="359" y="563" width="16" height="13" class="cell"/>
-    <rect x="416" y="563" width="16" height="13" class="cell"/>
-    <rect x="473" y="563" width="16" height="13" class="cell"/>
-    <rect x="530" y="563" width="16" height="13" class="cell"/>
-    <rect x="587" y="563" width="16" height="13" class="cell"/>
-    <rect x="644" y="563" width="16" height="13" class="cell"/>
-    <rect x="701" y="563" width="16" height="13" class="cell"/>
-    <rect x="758" y="563" width="16" height="13" class="cell"/>
-    <rect x="815" y="563" width="16" height="13" class="cell"/>
-  </g>
+  <rect x="455" y="375" width="350" height="148" class="calc"/>
+  <text x="477" y="405" class="h">1-2. Cell# Block Origin</text>
+  <text x="477" y="433" class="small">BlockCol = (CellBlock - 1) % BlockColumns</text>
+  <text x="477" y="456" class="small">BlockRow = (CellBlock - 1) / BlockColumns</text>
+  <text x="477" y="479" class="small">OriginX = BlockCol * EffectiveBlockPitchX</text>
+  <text x="477" y="502" class="small">OriginY = BlockRow * EffectiveBlockPitchY</text>
 
-  <circle cx="585" cy="530" r="8" fill="#e6004c"/>
-  <text x="598" y="527" class="small">Example target</text>
-  <text x="598" y="549" class="small">Cell(14,9) -> Stage Target</text>
+  <rect x="870" y="375" width="360" height="148" class="calc"/>
+  <text x="892" y="405" class="h">1-3. Cell 내부 첫 가공점과 Pitch</text>
+  <text x="892" y="433" class="small">LocalX = OriginX + CellFirstX</text>
+  <text x="892" y="456" class="small">       + Column * CellPitchX + PatternOffsetX</text>
+  <text x="892" y="479" class="small">LocalY = OriginY + CellFirstY</text>
+  <text x="892" y="502" class="small">       + Row * CellPitchY + PatternOffsetY</text>
 
-  <g>
-    <rect x="1045" y="420" width="95" height="60" class="scanOdd"/>
-    <rect x="1157" y="465" width="95" height="60" class="scanEven"/>
-    <rect x="1269" y="420" width="95" height="60" class="scanOdd"/>
-    <rect x="1045" y="570" width="95" height="60" class="scanOdd"/>
-    <rect x="1157" y="615" width="95" height="60" class="scanEven"/>
-    <rect x="1269" y="570" width="95" height="60" class="scanOdd"/>
-    <text x="1074" y="455" class="small">H1 Odd</text>
-    <text x="1181" y="500" class="small">H2 Even</text>
-    <text x="1298" y="455" class="small">H3 Odd</text>
-    <text x="1074" y="605" class="small">H5 Odd</text>
-    <text x="1181" y="650" class="small">H6 Even</text>
-    <text x="1298" y="605" class="small">H7 Odd</text>
-  </g>
+  <rect x="1295" y="375" width="390" height="148" class="stage"/>
+  <text x="1317" y="405" class="h">1-4. Board Local → Stage Global</text>
+  <text x="1317" y="433" class="small">Stage = AK1 + R(theta) * Local</text>
+  <text x="1317" y="456" class="small">theta는 Review align 결과 보정각</text>
+  <text x="1317" y="479" class="small">DesignStage = 보정 전 설계 좌표</text>
+  <text x="1317" y="502" class="small">ProcessStage = DesignStage + ProcessOffset</text>
 
-  <path class="dash" d="M585 530 C760 560, 905 610, 1092 600"/>
-  <circle cx="1092" cy="600" r="7" fill="#e6004c"/>
-  <text x="1038" y="705" class="small">Scanner H5 center = (879.7, 1640.1)</text>
+  <path class="arrow2" d="M390 449 H455"/>
+  <path class="arrow2" d="M805 449 H870"/>
+  <path class="arrow2" d="M1230 449 H1295"/>
 
-  <rect x="40" y="775" width="315" height="145" class="box4"/>
-  <text x="62" y="807" class="h">5. Scanner Relative</text>
-  <text x="62" y="838" class="small">D = Target - C_H5</text>
-  <text x="62" y="864" class="small">D=(-14.884162, 0.663107)</text>
-  <text x="62" y="890" class="small">Target이 Field 안이면 H5 선택</text>
+  <rect x="36" y="600" width="1728" height="392" class="panel"/>
+  <text x="60" y="633" class="section">2. Stage Layout 및 Scanner X 가공 가능 Band 판단</text>
+  <text x="60" y="657" class="subtitle">MOF 컨셉에서는 Scanner가 고정 배치되고 기판이 Y 방향으로 이동한다. 따라서 가공 가능 여부는 주로 X 방향 커버리지로 판단한다.</text>
 
-  <rect x="420" y="775" width="315" height="145" class="box4"/>
-  <text x="442" y="807" class="h">6. Odd / Even Sign</text>
-  <text x="442" y="838" class="small">Odd:  Gx=-Dx, Gy=+Dy</text>
-  <text x="442" y="864" class="small">Even: Gx=+Dx, Gy=-Dy</text>
-  <text x="442" y="890" class="small">H5 Odd -> (14.884162,0.663107)</text>
+  <rect x="70" y="692" width="925" height="235" class="board"/>
+  <text x="82" y="682" class="tiny">Board / Cell Local 영역이 AK1 Stage Anchor 기준으로 투영된 모습</text>
+  <circle cx="110" cy="725" r="8" class="ak"/>
+  <circle cx="110" cy="890" r="8" class="ak"/>
+  <circle cx="960" cy="725" r="8" class="ak"/>
+  <circle cx="960" cy="890" r="8" class="ak"/>
+  <text x="124" y="729" class="tiny">AK1 Stage Anchor</text>
+  <text x="124" y="747" class="tiny">Review 측정으로 결정</text>
 
-  <rect x="800" y="775" width="315" height="145" class="box5"/>
-  <text x="822" y="807" class="h">7. MOF Command</text>
-  <text x="822" y="838" class="small">Gx/Gy = ScannerCoord + FineOffset</text>
-  <text x="822" y="864" class="small">Review Error 발생 시</text>
-  <text x="822" y="890" class="small">ProcessOffset = -GlobalError</text>
+  <rect x="395" y="692" width="130" height="235" class="band"/>
+  <rect x="655" y="692" width="130" height="235" class="band"/>
+  <rect x="150" y="755" width="24" height="18" class="cell"/>
+  <rect x="195" y="755" width="24" height="18" class="cell"/>
+  <rect x="240" y="755" width="24" height="18" class="cell"/>
+  <rect x="285" y="755" width="24" height="18" class="cell"/>
+  <rect x="330" y="755" width="24" height="18" class="cell"/>
+  <rect x="375" y="755" width="24" height="18" class="cell"/>
+  <rect x="420" y="755" width="24" height="18" class="cellSel"/>
+  <rect x="465" y="755" width="24" height="18" class="cell"/>
+  <rect x="510" y="755" width="24" height="18" class="cell"/>
+  <rect x="555" y="755" width="24" height="18" class="cell"/>
+  <rect x="600" y="755" width="24" height="18" class="cell"/>
+  <rect x="645" y="755" width="24" height="18" class="cell"/>
+  <rect x="690" y="755" width="24" height="18" class="cellSel"/>
+  <rect x="735" y="755" width="24" height="18" class="cell"/>
+  <rect x="780" y="755" width="24" height="18" class="cell"/>
+  <rect x="150" y="815" width="24" height="18" class="cell"/>
+  <rect x="195" y="815" width="24" height="18" class="cell"/>
+  <rect x="240" y="815" width="24" height="18" class="cell"/>
+  <rect x="285" y="815" width="24" height="18" class="cell"/>
+  <rect x="330" y="815" width="24" height="18" class="cell"/>
+  <rect x="375" y="815" width="24" height="18" class="cell"/>
+  <rect x="420" y="815" width="24" height="18" class="cell"/>
+  <rect x="465" y="815" width="24" height="18" class="cell"/>
+  <rect x="510" y="815" width="24" height="18" class="cell"/>
+  <rect x="555" y="815" width="24" height="18" class="cell"/>
+  <rect x="600" y="815" width="24" height="18" class="cell"/>
+  <rect x="645" y="815" width="24" height="18" class="cell"/>
+  <rect x="690" y="815" width="24" height="18" class="cell"/>
+  <rect x="735" y="815" width="24" height="18" class="cell"/>
+  <rect x="780" y="815" width="24" height="18" class="cell"/>
 
-  <rect x="1180" y="775" width="245" height="145" class="box5"/>
-  <text x="1202" y="807" class="h">Feedback Loop</text>
-  <text x="1202" y="838" class="small">Review 측정</text>
-  <text x="1202" y="864" class="small">Global Error 계산</text>
-  <text x="1202" y="890" class="small">다음 Plan Offset 반영</text>
+  <rect x="385" y="942" width="154" height="28" class="badge"/>
+  <text x="398" y="961" class="tiny">H1 X Band: 가공 가능</text>
+  <rect x="645" y="942" width="154" height="28" class="badge"/>
+  <text x="658" y="961" class="tiny">H5 X Band: 가공 가능</text>
 
-  <path class="arrow" d="M355 848 H420"/>
-  <path class="arrow" d="M735 848 H800"/>
-  <path class="arrow" d="M1115 848 H1180"/>
-  <path class="arrow" d="M1302 775 C1302 745, 1035 742, 957 775"/>
+  <rect x="1060" y="700" width="110" height="70" class="headOdd"/>
+  <rect x="1210" y="750" width="110" height="70" class="headEven"/>
+  <rect x="1360" y="700" width="110" height="70" class="headOdd"/>
+  <rect x="1060" y="845" width="110" height="70" class="headOdd"/>
+  <rect x="1210" y="895" width="110" height="70" class="headEven"/>
+  <rect x="1360" y="845" width="110" height="70" class="headOdd"/>
+  <text x="1094" y="740" class="small">H1 Odd</text>
+  <text x="1242" y="790" class="small">H2 Even</text>
+  <text x="1394" y="740" class="small">H3 Odd</text>
+  <text x="1094" y="885" class="small">H5 Odd</text>
+  <text x="1242" y="935" class="small">H6 Even</text>
+  <text x="1394" y="885" class="small">H7 Odd</text>
+
+  <path class="dash" d="M435 764 C570 706, 880 695, 1115 880"/>
+  <text x="1118" y="944" class="small">Scanner Head는 설계치수 기준으로 Zigzag 고정 배치</text>
+
+  <rect x="1510" y="700" width="210" height="210" class="scanner"/>
+  <text x="1530" y="730" class="h">X Band 판단식</text>
+  <text x="1530" y="760" class="small">abs(ProcessStageX</text>
+  <text x="1530" y="783" class="small"> - ScannerCenterX)</text>
+  <text x="1530" y="806" class="small"> &lt;= ScannerFieldHalfX</text>
+  <text x="1530" y="842" class="t">Y 방향은 기판 이동으로</text>
+  <text x="1530" y="864" class="t">전체 영역 커버 가능하다고</text>
+  <text x="1530" y="886" class="t">가정하고 표시한다.</text>
+
+  <rect x="36" y="1030" width="1728" height="190" class="panel"/>
+  <text x="60" y="1063" class="section">3. Scanner 상대좌표, MOF Gx/Gy, DOE Review 좌표, Offset Feedback</text>
+
+  <rect x="60" y="1092" width="310" height="95" class="scanner"/>
+  <text x="82" y="1121" class="h">3-1. Scanner Relative</text>
+  <text x="82" y="1149" class="small">Dx = ProcessStageX - ScannerCenterX</text>
+  <text x="82" y="1172" class="small">Dy = ProcessStageY - ScannerCenterY</text>
+
+  <rect x="420" y="1092" width="315" height="95" class="scanner"/>
+  <text x="442" y="1121" class="h">3-2. Odd / Even 좌표 부호</text>
+  <text x="442" y="1149" class="small">Odd : Gx = -Dx, Gy = +Dy</text>
+  <text x="442" y="1172" class="small">Even: Gx = +Dx, Gy = -Dy</text>
+
+  <rect x="785" y="1092" width="295" height="95" class="scanner"/>
+  <text x="807" y="1121" class="h">3-3. MOF Command</text>
+  <text x="807" y="1149" class="small">Gx/Gy + Scanner 내부 보정값</text>
+  <text x="807" y="1172" class="small">→ 실제 Scanner 가공 명령</text>
+
+  <rect x="1130" y="1092" width="300" height="95" class="review"/>
+  <text x="1152" y="1121" class="h">3-4. DOE 16 Review 좌표</text>
+  <text x="1152" y="1149" class="small">DoeOffset = ((Col-1.5)*PitchX, ...)</text>
+  <text x="1152" y="1172" class="small">ReviewCoord = ProcessStage - BasisHeadDoeStage</text>
+
+  <rect x="1480" y="1092" width="245" height="95" class="feedback"/>
+  <text x="1502" y="1121" class="h">3-5. Review Offset</text>
+  <text x="1502" y="1149" class="small">Measured - Target = Error</text>
+  <text x="1502" y="1172" class="small">Next ProcessOffset에 반영</text>
+
+  <path class="arrow" d="M370 1142 H420"/>
+  <path class="arrow" d="M735 1142 H785"/>
+  <path class="arrow" d="M1080 1142 H1130"/>
+  <path class="arrow" d="M1430 1142 H1480"/>
+  <path class="arrow" d="M1605 1092 C1605 1038, 910 1018, 910 1092"/>
+
+  <rect x="60" y="1232" width="1665" height="28" fill="#0f172a" stroke="#334155" rx="6"/>
+  <text x="78" y="1251" class="tiny">핵심 데이터 흐름: CoordinateInput → AK1 Stage Anchor → Cell Local Grid → DesignStage / ProcessStage → Scanner 선택 및 Gx/Gy → DOE Review 좌표 → Review Offset Feedback → 다음 Process Plan</text>
 </svg>
