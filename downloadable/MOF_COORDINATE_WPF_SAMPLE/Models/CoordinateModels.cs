@@ -1,15 +1,14 @@
 namespace MofCoordinateDemo.Models;
 
 /// <summary>
-/// WPF 화면에서 입력받는 전체 좌표 변환 파라미터이다.
-/// Recipe, Review Camera, Scanner Array, Review Offset을 한곳에 모아
-/// "어떤 입력으로 Stage/Scanner 좌표가 만들어지는지" 설명하기 쉽게 구성했다.
+/// CoordinateInput contains every parameter needed to explain the coordinate chain.
+/// The sample keeps these values in one object so the UI can show how recipe data,
+/// review measurement data, scanner geometry, and DOE beam selection create results.
 /// </summary>
 public sealed class CoordinateInput
 {
     public double BoardSizeX { get; set; } = 1500;
     public double BoardSizeY { get; set; } = 925;
-
     public double AlignMarginX { get; set; } = 55;
     public double AlignMarginY { get; set; } = 45;
 
@@ -32,6 +31,9 @@ public sealed class CoordinateInput
     public int CellColumns { get; set; } = 28;
     public int CellRows { get; set; } = 18;
 
+    public int SelectedCellColumn { get; set; } = 14;
+    public int SelectedCellRow { get; set; } = 9;
+
     public int ScannerCount { get; set; } = 8;
     public double FirstScannerCenterX { get; set; } = 479.7;
     public double FirstScannerCenterY { get; set; } = 1640.1;
@@ -39,6 +41,12 @@ public sealed class CoordinateInput
     public double EvenScannerYOffset { get; set; } = 45;
     public double ScannerFieldHalfX { get; set; } = 55;
     public double ScannerFieldHalfY { get; set; } = 55;
+
+    public string HighlightScannerHeads { get; set; } = "1,5";
+    public int ReviewBasisScannerHead { get; set; } = 5;
+    public int ReviewBasisDoeBeam { get; set; } = 1;
+    public double DoeBeamPitchX { get; set; } = 0.18;
+    public double DoeBeamPitchY { get; set; } = 0.18;
 
     public double ProcessOffsetGlobalX { get; set; } = 0;
     public double ProcessOffsetGlobalY { get; set; } = 0;
@@ -53,23 +61,66 @@ public sealed class ScannerModel
     public double CenterY { get; init; }
     public double FieldHalfX { get; init; }
     public double FieldHalfY { get; init; }
+    public bool IsHighlighted { get; init; }
+}
+
+public sealed class DoeBeamModel
+{
+    public int BeamNo { get; init; }
+    public int Row { get; init; }
+    public int Column { get; init; }
+    public double ScannerOffsetX { get; init; }
+    public double ScannerOffsetY { get; init; }
+
+    public string MatrixCoordinate => FormatPair(ScannerOffsetX, ScannerOffsetY);
+
+    public static string FormatPair(double x, double y) => $"({x:0.###}, {y:0.###})";
 }
 
 public sealed class CellCommand
 {
     public int Column { get; init; }
     public int Row { get; init; }
+    public bool IsSelectedCell { get; init; }
+    public bool IsHighlightedScanner { get; init; }
+
     public double LocalX { get; init; }
     public double LocalY { get; init; }
-    public double StageX { get; init; }
-    public double StageY { get; init; }
+    public double DesignStageX { get; init; }
+    public double DesignStageY { get; init; }
+    public double ProcessStageX { get; init; }
+    public double ProcessStageY { get; init; }
+
     public string ScannerName { get; init; } = "";
+    public int ScannerIndex { get; init; }
     public string ScannerType { get; init; } = "";
     public double RelativeX { get; init; }
     public double RelativeY { get; init; }
     public double Gx { get; init; }
     public double Gy { get; init; }
     public bool InField { get; init; }
+
+    public int ReviewBasisHead { get; init; }
+    public int ReviewBasisBeam { get; init; }
+    public double ReviewReferenceStageX { get; init; }
+    public double ReviewReferenceStageY { get; init; }
+    public double ReviewCoordinateX { get; init; }
+    public double ReviewCoordinateY { get; init; }
+    public double ReviewPixelU { get; init; }
+    public double ReviewPixelV { get; init; }
+
+    public string CellIndex => $"R{Row:00}-C{Column:00}";
+    public string DesignLocalMatrix => FormatPair(LocalX, LocalY);
+    public string DesignStageMatrix => FormatPair(DesignStageX, DesignStageY);
+    public string ProcessStageMatrix => FormatPair(ProcessStageX, ProcessStageY);
+    public string ProcessGMatrix => FormatPair(Gx, Gy);
+    public string ScannerRelativeMatrix => FormatPair(RelativeX, RelativeY);
+    public string ReviewReferenceMatrix => FormatPair(ReviewReferenceStageX, ReviewReferenceStageY);
+    public string ReviewMatrix => FormatPair(ReviewCoordinateX, ReviewCoordinateY);
+    public string ReviewPixelMatrix => FormatPair(ReviewPixelU, ReviewPixelV);
+    public string DoeSelection => $"H{ReviewBasisHead} / DOE{ReviewBasisBeam:00}";
+
+    private static string FormatPair(double x, double y) => $"({x:0.###}, {y:0.###})";
 }
 
 public sealed class CoordinateResult
@@ -77,5 +128,8 @@ public sealed class CoordinateResult
     public double Ak1GlobalX { get; init; }
     public double Ak1GlobalY { get; init; }
     public IReadOnlyList<ScannerModel> Scanners { get; init; } = Array.Empty<ScannerModel>();
+    public IReadOnlyList<DoeBeamModel> DoeBeams { get; init; } = Array.Empty<DoeBeamModel>();
+    public DoeBeamModel SelectedDoeBeam { get; init; } = new();
+    public ScannerModel SelectedReviewScanner { get; init; } = new();
     public IReadOnlyList<CellCommand> Commands { get; init; } = Array.Empty<CellCommand>();
 }

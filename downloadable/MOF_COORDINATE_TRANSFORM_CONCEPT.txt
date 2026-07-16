@@ -227,3 +227,36 @@ Recipe / Cell Definition
 - Review Offset은 Stage Global 기준으로 누적/관리하는 것이 추적성이 좋다.
 - 최종 MOF Command는 `Stage Target -> Scanner Relative -> Gx/Gy` 순서로 생성한다.
 
+## 7. UI 개선 및 DOE16 리뷰 좌표계
+
+WPF 예제는 첨부 예시 이미지와 같은 방식으로 다음 상태를 시각적으로 구분한다.
+
+- 흰색 Cell: 일반 Cell.
+- 주황색 Cell: 선택된 Scanner Head가 담당하는 Cell 또는 사용자가 선택한 Cell.
+- 녹색 Scanner Box: 사용자가 강조 표시한 Scanner Head 또는 Review 기준 Scanner Head.
+- 파란 테두리 Scanner Box: DOE16 Review 좌표계 기준으로 선택된 Scanner Head.
+
+결과 Grid는 좌표 성격별로 분리한다.
+
+| Tab | Meaning | Matrix Format |
+|---|---|---|
+| Design Coordinate | Recipe Local 및 설계 Stage 좌표 | `(x, y)` |
+| Process Coordinate | 보정 적용 후 Stage 좌표, Scanner 상대좌표, MOF Gx/Gy | `(x, y)` |
+| Review Coordinate | 선택한 Scanner Head + DOE16 Beam 기준 리뷰 좌표계 | `(x, y)` |
+| DOE 16 Matrix | DOE 4 x 4 Beam 내부 Offset | `(x, y)` |
+
+DOE16 리뷰 좌표계는 다음 절차로 계산한다.
+
+```text
+SelectedHead = 사용자가 선택한 Scanner Head
+SelectedBeam = DOE 1~16 중 사용자가 선택한 Beam
+
+BeamOffsetScanner = DOE 4x4 Matrix 내부 Offset
+BeamOffsetStage   = Scanner Odd/Even 부호 규칙의 역변환 결과
+
+ReviewReferenceStage = SelectedHead.CenterStage + BeamOffsetStage
+ReviewCoordinate     = ProcessStageTarget - ReviewReferenceStage
+ReviewPixel          = ReviewPixelCenter + ReviewCoordinate / PixelScale
+```
+
+따라서 사용자가 `Scanner #5`와 `DOE Beam #7`을 선택하면, 모든 Cell의 리뷰 좌표는 `H5 DOE7` 위치를 원점처럼 보고 표현된다. 동시에 각 Row에는 실제 가공을 담당하는 `Process Scanner`가 함께 표시되므로 Scanner Head별 구분도 가능하다.

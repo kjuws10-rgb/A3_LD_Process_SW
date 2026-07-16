@@ -34,164 +34,226 @@ public partial class MainWindow : Window
     private void GenerateAndRender()
     {
         _lastResult = _service.Generate(_input);
-        CommandGrid.ItemsSource = _lastResult.Commands;
 
+        DesignGrid.ItemsSource = _lastResult.Commands;
+        ProcessGrid.ItemsSource = _lastResult.Commands;
+        ReviewGrid.ItemsSource = _lastResult.Commands
+            .OrderBy(x => x.ScannerIndex)
+            .ThenBy(x => x.Row)
+            .ThenBy(x => x.Column)
+            .ToList();
+        DoeGrid.ItemsSource = _lastResult.DoeBeams;
+
+        var selected = _lastResult.Commands.FirstOrDefault(x => x.IsSelectedCell);
         var inFieldCount = _lastResult.Commands.Count(x => x.InField);
         SummaryText.Text =
-            $"AK1 Stage Anchor = ({_lastResult.Ak1GlobalX:F6}, {_lastResult.Ak1GlobalY:F6}) mm, " +
-            $"Cell Commands = {_lastResult.Commands.Count}, In-field = {inFieldCount}, " +
-            $"Scanner Count = {_lastResult.Scanners.Count}";
+            $"AK1 Stage Anchor = ({_lastResult.Ak1GlobalX:0.######}, {_lastResult.Ak1GlobalY:0.######}) mm   " +
+            $"Cells = {_lastResult.Commands.Count}, In-field = {inFieldCount}   " +
+            $"Review Basis = H{_lastResult.SelectedReviewScanner.Index} DOE{_lastResult.SelectedDoeBeam.BeamNo:00}";
+
+        FormulaText.Text =
+            "Design: Pstage = AK1 + R(theta) * Plocal.  " +
+            "Process: Pprocess = Pstage + review offset, then GxGy = sign(head) * (Pprocess - scanner center).  " +
+            "Review: every result is expressed from the selected head and DOE16 beam reference, so each row shows one 2D matrix value as (x, y).";
+
+        if (selected is not null)
+        {
+            ProcessGrid.ScrollIntoView(selected);
+            ReviewGrid.ScrollIntoView(selected);
+        }
 
         DrawLayout();
     }
 
     private void DrawLayout()
     {
-        if (_lastResult is null || LayoutCanvas.ActualWidth < 10 || LayoutCanvas.ActualHeight < 10)
+        if (_lastResult is null || LayoutCanvas.ActualWidth < 20 || LayoutCanvas.ActualHeight < 20)
         {
             return;
         }
 
         LayoutCanvas.Children.Clear();
 
-        var margin = 28.0;
-        var scaleX = (LayoutCanvas.ActualWidth - margin * 2) / Math.Max(1, _input.BoardSizeX);
-        var scaleY = (LayoutCanvas.ActualHeight - margin * 2) / Math.Max(1, _input.BoardSizeY);
-        var scale = Math.Min(scaleX, scaleY);
+        DrawTitle("Board cell selection and zigzag scanner layout", 20, 8, 21, FontWeights.Bold);
 
-        double ToCanvasX(double stageX)
-        {
-            var localX = stageX - _lastResult.Ak1GlobalX;
-            return margin + localX * scale;
-        }
+        var boardLeft = 24.0;
+        var boardTop = 52.0;
+        var boardWidth = LayoutCanvas.ActualWidth - 48.0;
+        var boardHeight = Math.Max(220.0, LayoutCanvas.ActualHeight - 180.0);
 
-        double ToCanvasY(double stageY)
-        {
-            var localY = stageY - _lastResult.Ak1GlobalY;
-            return margin + localY * scale;
-        }
+        DrawBoardFrame(boardLeft, boardTop, boardWidth, boardHeight);
+        DrawCellBlocks(boardLeft, boardTop, boardWidth, boardHeight);
+        DrawScannerHeads(boardLeft, boardTop + boardHeight + 22.0, boardWidth);
+        DrawLegend(boardLeft, LayoutCanvas.ActualHeight - 32.0);
+    }
 
-        var board = new Rectangle
+    private void DrawBoardFrame(double left, double top, double width, double height)
+    {
+        var frame = new Rectangle
         {
-            Width = _input.BoardSizeX * scale,
-            Height = _input.BoardSizeY * scale,
-            Fill = new SolidColorBrush(Color.FromRgb(248, 251, 255)),
-            Stroke = new SolidColorBrush(Color.FromRgb(45, 59, 79)),
-            StrokeThickness = 2
+            Width = width,
+            Height = height,
+            Fill = Brushes.White,
+            Stroke = new SolidColorBrush(Color.FromRgb(183, 160, 37)),
+            StrokeThickness = 1.2
         };
-        Canvas.SetLeft(board, margin);
-        Canvas.SetTop(board, margin);
-        LayoutCanvas.Children.Add(board);
+        Canvas.SetLeft(frame, left);
+        Canvas.SetTop(frame, top);
+        LayoutCanvas.Children.Add(frame);
 
-        DrawAlignKey(margin, margin, "AK1");
-        DrawAlignKey(margin, margin + (_input.BoardSizeY - _input.AlignMarginY * 2) * scale, "AK2");
-        DrawAlignKey(margin + (_input.BoardSizeX - _input.AlignMarginX * 2) * scale, margin, "AK3");
-        DrawAlignKey(margin + (_input.BoardSizeX - _input.AlignMarginX * 2) * scale, margin + (_input.BoardSizeY - _input.AlignMarginY * 2) * scale, "AK4");
+        DrawAlignKey(left + 10, top + 10, "AK1");
+        DrawAlignKey(left + 10, top + height - 18, "AK2");
+        DrawAlignKey(left + width - 18, top + 10, "AK3");
+        DrawAlignKey(left + width - 18, top + height - 18, "AK4");
+    }
 
-        foreach (var command in _lastResult.Commands.Where((_, index) => index % 2 == 0))
+    private void DrawCellBlocks(double boardLeft, double boardTop, double boardWidth, double boardHeight)
+    {
+        if (_lastResult is null)
         {
-            var x = ToCanvasX(command.StageX);
-            var y = ToCanvasY(command.StageY);
-            var dot = new Ellipse
-            {
-                Width = 4,
-                Height = 4,
-                Fill = command.InField
-                    ? new SolidColorBrush(Color.FromRgb(42, 127, 191))
-                    : new SolidColorBrush(Color.FromRgb(180, 190, 202))
-            };
-            Canvas.SetLeft(dot, x - 2);
-            Canvas.SetTop(dot, y - 2);
-            LayoutCanvas.Children.Add(dot);
+            return;
         }
+
+        var maxLocalX = _input.CellFirstX + Math.Max(1, _input.CellColumns - 1) * _input.CellPitchX + _input.PatternOffsetX;
+        var maxLocalY = _input.CellFirstY + Math.Max(1, _input.CellRows - 1) * _input.CellPitchY + _input.PatternOffsetY;
+        var scaleX = (boardWidth - 60) / Math.Max(maxLocalX + _input.CellPitchX, 1);
+        var scaleY = (boardHeight - 42) / Math.Max(maxLocalY + _input.CellPitchY, 1);
+        var scale = Math.Min(scaleX, scaleY);
+        var cellW = Math.Max(8, _input.CellPitchX * scale * 0.72);
+        var cellH = Math.Max(8, _input.CellPitchY * scale * 0.72);
+
+        foreach (var command in _lastResult.Commands)
+        {
+            var x = boardLeft + 28 + command.LocalX * scale;
+            var y = boardTop + 20 + command.LocalY * scale;
+            var isSelected = command.IsSelectedCell;
+            var isHeadSelected = command.IsHighlightedScanner;
+
+            var fill = Brushes.White;
+            if (isHeadSelected)
+            {
+                fill = new SolidColorBrush(Color.FromRgb(247, 180, 132));
+            }
+            if (isSelected)
+            {
+                fill = new SolidColorBrush(Color.FromRgb(255, 168, 104));
+            }
+
+            var stroke = command.ScannerIndex % 2 == 1
+                ? new SolidColorBrush(Color.FromRgb(178, 158, 47))
+                : new SolidColorBrush(Color.FromRgb(93, 143, 169));
+
+            var rect = new Rectangle
+            {
+                Width = cellW,
+                Height = cellH,
+                Fill = fill,
+                Stroke = stroke,
+                StrokeThickness = isSelected ? 2.2 : 1.0
+            };
+            Canvas.SetLeft(rect, x);
+            Canvas.SetTop(rect, y);
+            LayoutCanvas.Children.Add(rect);
+        }
+    }
+
+    private void DrawScannerHeads(double left, double top, double width)
+    {
+        if (_lastResult is null)
+        {
+            return;
+        }
+
+        var count = _lastResult.Scanners.Count;
+        var gap = width / Math.Max(1, count);
+        var boxWidth = Math.Min(86, Math.Max(54, gap * 0.72));
+        var boxHeight = 64.0;
 
         foreach (var scanner in _lastResult.Scanners)
         {
-            var x = ToCanvasX(scanner.CenterX);
-            var y = ToCanvasY(scanner.CenterY);
-            var width = scanner.FieldHalfX * 2 * scale;
-            var height = scanner.FieldHalfY * 2 * scale;
-            var isOdd = scanner.MountType == "Odd";
+            var indexZero = scanner.Index - 1;
+            var x = left + gap * indexZero + gap * 0.5 - boxWidth * 0.5;
+            var y = top + (scanner.Index % 2 == 0 ? 78 : 0);
+            var isReviewBasis = scanner.Index == _input.ReviewBasisScannerHead;
+            var fill = scanner.IsHighlighted || isReviewBasis
+                ? new SolidColorBrush(Color.FromRgb(144, 211, 78))
+                : Brushes.White;
 
-            var field = new Rectangle
+            var box = new Rectangle
             {
-                Width = Math.Max(16, width),
-                Height = Math.Max(16, height),
-                Fill = new SolidColorBrush(isOdd ? Color.FromArgb(80, 140, 205, 125) : Color.FromArgb(80, 245, 180, 95)),
-                Stroke = new SolidColorBrush(isOdd ? Color.FromRgb(64, 130, 62) : Color.FromRgb(165, 92, 0)),
-                StrokeThickness = 1.5
+                Width = boxWidth,
+                Height = boxHeight,
+                Fill = fill,
+                Stroke = isReviewBasis
+                    ? new SolidColorBrush(Color.FromRgb(30, 91, 190))
+                    : Brushes.Black,
+                StrokeThickness = isReviewBasis ? 2.8 : 2
             };
-            Canvas.SetLeft(field, x - field.Width / 2);
-            Canvas.SetTop(field, y - field.Height / 2);
-            LayoutCanvas.Children.Add(field);
+            Canvas.SetLeft(box, x);
+            Canvas.SetTop(box, y);
+            LayoutCanvas.Children.Add(box);
 
-            var label = new TextBlock
-            {
-                Text = $"{scanner.Name} {scanner.MountType}",
-                Foreground = new SolidColorBrush(Color.FromRgb(23, 32, 51)),
-                FontSize = 12,
-                FontWeight = FontWeights.SemiBold
-            };
-            Canvas.SetLeft(label, x - 24);
-            Canvas.SetTop(label, y - 8);
-            LayoutCanvas.Children.Add(label);
+            DrawText($"Scanner\n#{scanner.Index}", x + 8, y + 17, 15, FontWeights.Normal, Brushes.Black);
         }
+    }
 
-        var example = _lastResult.Commands.FirstOrDefault(x => x.Column == 14 && x.Row == 9)
-                      ?? _lastResult.Commands.FirstOrDefault();
-        if (example is not null)
+    private void DrawLegend(double left, double top)
+    {
+        DrawLegendBox(left, top, Color.FromRgb(255, 168, 104), "Selected cell");
+        DrawLegendBox(left + 150, top, Color.FromRgb(247, 180, 132), "Cells handled by highlighted heads");
+        DrawLegendBox(left + 425, top, Color.FromRgb(144, 211, 78), "Highlighted / review head");
+    }
+
+    private void DrawLegendBox(double x, double y, Color color, string text)
+    {
+        var box = new Rectangle
         {
-            var x = ToCanvasX(example.StageX);
-            var y = ToCanvasY(example.StageY);
-            var target = new Ellipse
-            {
-                Width = 12,
-                Height = 12,
-                Fill = new SolidColorBrush(Color.FromRgb(214, 0, 75)),
-                Stroke = Brushes.White,
-                StrokeThickness = 2
-            };
-            Canvas.SetLeft(target, x - 6);
-            Canvas.SetTop(target, y - 6);
-            LayoutCanvas.Children.Add(target);
-
-            var targetLabel = new TextBlock
-            {
-                Text = $"Cell({example.Column},{example.Row}) {example.ScannerName} G=({example.Gx:F3},{example.Gy:F3})",
-                Foreground = new SolidColorBrush(Color.FromRgb(214, 0, 75)),
-                FontSize = 13,
-                FontWeight = FontWeights.Bold
-            };
-            Canvas.SetLeft(targetLabel, x + 8);
-            Canvas.SetTop(targetLabel, y - 18);
-            LayoutCanvas.Children.Add(targetLabel);
-        }
+            Width = 18,
+            Height = 18,
+            Fill = new SolidColorBrush(color),
+            Stroke = Brushes.Black,
+            StrokeThickness = 1
+        };
+        Canvas.SetLeft(box, x);
+        Canvas.SetTop(box, y);
+        LayoutCanvas.Children.Add(box);
+        DrawText(text, x + 25, y - 1, 13, FontWeights.Normal, new SolidColorBrush(Color.FromRgb(37, 54, 77)));
     }
 
     private void DrawAlignKey(double x, double y, string text)
     {
         var ak = new Ellipse
         {
-            Width = 12,
-            Height = 12,
+            Width = 10,
+            Height = 10,
             Fill = new SolidColorBrush(Color.FromRgb(255, 204, 77)),
             Stroke = new SolidColorBrush(Color.FromRgb(117, 85, 0)),
-            StrokeThickness = 1.5
+            StrokeThickness = 1
         };
-        Canvas.SetLeft(ak, x - 6);
-        Canvas.SetTop(ak, y - 6);
+        Canvas.SetLeft(ak, x);
+        Canvas.SetTop(ak, y);
         LayoutCanvas.Children.Add(ak);
+        DrawText(text, x + 13, y - 4, 12, FontWeights.Bold, new SolidColorBrush(Color.FromRgb(80, 58, 0)));
+    }
 
-        var label = new TextBlock
+    private void DrawTitle(string text, double x, double y, double size, FontWeight weight)
+    {
+        DrawText(text, x, y, size, weight, new SolidColorBrush(Color.FromRgb(23, 32, 51)));
+    }
+
+    private void DrawText(string text, double x, double y, double size, FontWeight weight, Brush brush)
+    {
+        var block = new TextBlock
         {
             Text = text,
-            FontSize = 12,
-            FontWeight = FontWeights.Bold,
-            Foreground = new SolidColorBrush(Color.FromRgb(80, 58, 0))
+            FontSize = size,
+            FontWeight = weight,
+            Foreground = brush,
+            TextAlignment = TextAlignment.Center
         };
-        Canvas.SetLeft(label, x + 8);
-        Canvas.SetTop(label, y - 8);
-        LayoutCanvas.Children.Add(label);
+        Canvas.SetLeft(block, x);
+        Canvas.SetTop(block, y);
+        LayoutCanvas.Children.Add(block);
     }
 
     private void LoadInputToScreen(CoordinateInput input)
@@ -217,19 +279,30 @@ public partial class MainWindow : Window
         PatternOffsetYBox.Text = Format(input.PatternOffsetY);
         CellColumnsBox.Text = input.CellColumns.ToString(CultureInfo.InvariantCulture);
         CellRowsBox.Text = input.CellRows.ToString(CultureInfo.InvariantCulture);
+        SelectedCellColumnBox.Text = input.SelectedCellColumn.ToString(CultureInfo.InvariantCulture);
+        SelectedCellRowBox.Text = input.SelectedCellRow.ToString(CultureInfo.InvariantCulture);
         ScannerCountBox.Text = input.ScannerCount.ToString(CultureInfo.InvariantCulture);
+        HighlightHeadsBox.Text = input.HighlightScannerHeads;
         FirstScannerXBox.Text = Format(input.FirstScannerCenterX);
         FirstScannerYBox.Text = Format(input.FirstScannerCenterY);
         ScannerPitchXBox.Text = Format(input.ScannerPitchX);
         EvenYOffsetBox.Text = Format(input.EvenScannerYOffset);
         FieldHalfXBox.Text = Format(input.ScannerFieldHalfX);
         FieldHalfYBox.Text = Format(input.ScannerFieldHalfY);
+        ReviewBasisHeadBox.Text = input.ReviewBasisScannerHead.ToString(CultureInfo.InvariantCulture);
+        ReviewBasisBeamBox.Text = input.ReviewBasisDoeBeam.ToString(CultureInfo.InvariantCulture);
+        DoePitchXBox.Text = Format(input.DoeBeamPitchX);
+        DoePitchYBox.Text = Format(input.DoeBeamPitchY);
         OffsetXBox.Text = Format(input.ProcessOffsetGlobalX);
         OffsetYBox.Text = Format(input.ProcessOffsetGlobalY);
     }
 
     private CoordinateInput ReadInputFromScreen()
     {
+        var columns = ReadInt(CellColumnsBox, _input.CellColumns);
+        var rows = ReadInt(CellRowsBox, _input.CellRows);
+        var scannerCount = ReadInt(ScannerCountBox, _input.ScannerCount);
+
         return new CoordinateInput
         {
             BoardSizeX = ReadDouble(BoardXBox, _input.BoardSizeX),
@@ -251,21 +324,30 @@ public partial class MainWindow : Window
             CellPitchY = ReadDouble(CellPitchYBox, _input.CellPitchY),
             PatternOffsetX = ReadDouble(PatternOffsetXBox, _input.PatternOffsetX),
             PatternOffsetY = ReadDouble(PatternOffsetYBox, _input.PatternOffsetY),
-            CellColumns = ReadInt(CellColumnsBox, _input.CellColumns),
-            CellRows = ReadInt(CellRowsBox, _input.CellRows),
-            ScannerCount = ReadInt(ScannerCountBox, _input.ScannerCount),
+            CellColumns = columns,
+            CellRows = rows,
+            SelectedCellColumn = Clamp(ReadZeroBasedInt(SelectedCellColumnBox, _input.SelectedCellColumn), 0, Math.Max(0, columns - 1)),
+            SelectedCellRow = Clamp(ReadZeroBasedInt(SelectedCellRowBox, _input.SelectedCellRow), 0, Math.Max(0, rows - 1)),
+            ScannerCount = scannerCount,
+            HighlightScannerHeads = HighlightHeadsBox.Text,
             FirstScannerCenterX = ReadDouble(FirstScannerXBox, _input.FirstScannerCenterX),
             FirstScannerCenterY = ReadDouble(FirstScannerYBox, _input.FirstScannerCenterY),
             ScannerPitchX = ReadDouble(ScannerPitchXBox, _input.ScannerPitchX),
             EvenScannerYOffset = ReadDouble(EvenYOffsetBox, _input.EvenScannerYOffset),
             ScannerFieldHalfX = ReadDouble(FieldHalfXBox, _input.ScannerFieldHalfX),
             ScannerFieldHalfY = ReadDouble(FieldHalfYBox, _input.ScannerFieldHalfY),
+            ReviewBasisScannerHead = Clamp(ReadInt(ReviewBasisHeadBox, _input.ReviewBasisScannerHead), 1, scannerCount),
+            ReviewBasisDoeBeam = Clamp(ReadInt(ReviewBasisBeamBox, _input.ReviewBasisDoeBeam), 1, 16),
+            DoeBeamPitchX = ReadDouble(DoePitchXBox, _input.DoeBeamPitchX),
+            DoeBeamPitchY = ReadDouble(DoePitchYBox, _input.DoeBeamPitchY),
             ProcessOffsetGlobalX = ReadDouble(OffsetXBox, _input.ProcessOffsetGlobalX),
             ProcessOffsetGlobalY = ReadDouble(OffsetYBox, _input.ProcessOffsetGlobalY)
         };
     }
 
     private static string Format(double value) => value.ToString("0.######", CultureInfo.InvariantCulture);
+
+    private static int Clamp(int value, int min, int max) => Math.Min(max, Math.Max(min, value));
 
     private static double ReadDouble(TextBox textBox, double fallback)
     {
@@ -283,6 +365,17 @@ public partial class MainWindow : Window
         if (int.TryParse(textBox.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var value))
         {
             return Math.Max(1, value);
+        }
+
+        textBox.Text = fallback.ToString(CultureInfo.InvariantCulture);
+        return fallback;
+    }
+
+    private static int ReadZeroBasedInt(TextBox textBox, int fallback)
+    {
+        if (int.TryParse(textBox.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var value))
+        {
+            return Math.Max(0, value);
         }
 
         textBox.Text = fallback.ToString(CultureInfo.InvariantCulture);
