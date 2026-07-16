@@ -3,7 +3,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
@@ -21,7 +20,6 @@ public partial class MainWindow : Window
     private double _matrixCellSize = 86;
     private double _boardZoom = 1.0;
     private string? _lastConfigPath;
-    private bool _suppressMatrixSelection;
     private readonly HashSet<string> _selectedPointKeys = new();
 
     public MainWindow()
@@ -90,6 +88,32 @@ public partial class MainWindow : Window
         GenerateAndRender();
     }
 
+    private void SaveConfigButton_Click(object sender, RoutedEventArgs e)
+    {
+        _input = ReadInputFromScreen();
+
+        if (string.IsNullOrWhiteSpace(_lastConfigPath))
+        {
+            var dialog = new SaveFileDialog
+            {
+                Title = "Save Current CSV Config",
+                Filter = "Excel CSV (*.csv)|*.csv|All files (*.*)|*.*",
+                FileName = "CELL_LAYOUT_CONFIG_CURRENT.csv"
+            };
+
+            if (dialog.ShowDialog(this) != true)
+            {
+                return;
+            }
+
+            _lastConfigPath = dialog.FileName;
+        }
+
+        SaveConfigCsv(_lastConfigPath);
+        LoadInputToScreen(_input);
+        GenerateAndRender();
+    }
+
     private void GenerateAndRender()
     {
         _lastResult = _service.Generate(_input);
@@ -98,9 +122,9 @@ public partial class MainWindow : Window
             ResetSelectionFromInput();
         }
 
-        BuildMatrixGrid(DesignMatrixGrid, "Design");
-        BuildMatrixGrid(ProcessMatrixGrid, "Process");
-        BuildMatrixGrid(ReviewMatrixGrid, "Review");
+        BuildMatrixCanvas(DesignMatrixCanvas, "Design");
+        BuildMatrixCanvas(ProcessMatrixCanvas, "Process");
+        BuildMatrixCanvas(ReviewMatrixCanvas, "Review");
         DoeGrid.ItemsSource = _lastResult.DoeBeams;
 
         var selected = _lastResult.Commands.FirstOrDefault(x => x.IsSelectedCell);
@@ -188,8 +212,12 @@ public partial class MainWindow : Window
         var scaleX = (boardWidth - 60) / Math.Max(maxLocalX + _input.CellPitchX, 1);
         var scaleY = (boardHeight - 42) / Math.Max(maxLocalY + _input.CellPitchY, 1);
         var scale = Math.Min(scaleX, scaleY);
-        var cellW = Math.Max(8, _input.CellPitchX * scale * 0.72);
-        var cellH = Math.Max(8, _input.CellPitchY * scale * 0.72);
+        var visualPitchX = Math.Max(1.0, _input.CellPitchX * scale);
+        var visualPitchY = Math.Max(1.0, _input.CellPitchY * scale);
+        var cellW = Math.Max(0.8, Math.Min(visualPitchX * 0.72, visualPitchX - 0.2));
+        var cellH = Math.Max(0.8, Math.Min(visualPitchY * 0.72, visualPitchY - 0.2));
+
+        DrawHighlightedScannerAreas(boardLeft, boardTop, scale);
 
         foreach (var command in _lastResult.Commands)
         {
@@ -285,6 +313,46 @@ public partial class MainWindow : Window
         }
     }
 
+    private void DrawHighlightedScannerAreas(double boardLeft, double boardTop, double scale)
+    {
+        if (_lastResult is null)
+        {
+            return;
+        }
+
+        var theta = _input.ThetaAlignDeg * Math.PI / 180.0;
+        var cos = Math.Cos(theta);
+        var sin = Math.Sin(theta);
+
+        foreach (var scanner in _lastResult.Scanners.Where(x => x.IsHighlighted))
+        {
+            var dx = scanner.CenterX - _lastResult.Ak1GlobalX;
+            var dy = scanner.CenterY - _lastResult.Ak1GlobalY;
+            var localX = cos * dx + sin * dy;
+            var localY = -sin * dx + cos * dy;
+
+            var x = boardLeft + 28 + (localX - scanner.FieldHalfX) * scale;
+            var y = boardTop + 20 + (localY - scanner.FieldHalfY) * scale;
+            var width = scanner.FieldHalfX * 2 * scale;
+            var height = scanner.FieldHalfY * 2 * scale;
+
+            var area = new Rectangle
+            {
+                Width = Math.Max(3, width),
+                Height = Math.Max(3, height),
+                Fill = new SolidColorBrush(Color.FromArgb(34, 80, 170, 255)),
+                Stroke = new SolidColorBrush(Color.FromRgb(30, 91, 190)),
+                StrokeDashArray = new DoubleCollection { 5, 4 },
+                StrokeThickness = 2
+            };
+            Canvas.SetLeft(area, x);
+            Canvas.SetTop(area, y);
+            LayoutCanvas.Children.Add(area);
+
+            DrawText($"{scanner.Name} process area", x + 6, y - 18, 12, FontWeights.Bold, new SolidColorBrush(Color.FromRgb(30, 91, 190)));
+        }
+    }
+
     private void CellRect_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         if (sender is FrameworkElement { Tag: CellCommand command })
@@ -322,7 +390,7 @@ public partial class MainWindow : Window
         }
     }
 
-    private void MatrixGrid_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+    private void MatrixScrollViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
     {
         if ((Keyboard.Modifiers & ModifierKeys.Control) != ModifierKeys.Control)
         {
@@ -332,12 +400,102 @@ public partial class MainWindow : Window
         _matrixCellSize = Math.Clamp(_matrixCellSize + (e.Delta > 0 ? 8 : -8), 48, 180);
         if (_lastResult is not null)
         {
-            BuildMatrixGrid(DesignMatrixGrid, "Design");
-            BuildMatrixGrid(ProcessMatrixGrid, "Process");
-            BuildMatrixGrid(ReviewMatrixGrid, "Review");
+            BuildMatrixCanvas(DesignMatrixCanvas, "Design");
+            BuildMatrixCanvas(ProcessMatrixCanvas, "Process");
+            BuildMatrixCanvas(ReviewMatrixCanvas, "Review");
         }
 
         e.Handled = true;
+    }
+
+    private void DrawMatrixHeader(Canvas canvas, string text, double x, double y, double width, double height, double fontSize, Brush fill)
+    {
+        var rect = new Rectangle
+        {
+            Width = width,
+            Height = height,
+            Fill = fill,
+            Stroke = new SolidColorBrush(Color.FromRgb(207, 216, 226)),
+            StrokeThickness = 1
+        };
+        Canvas.SetLeft(rect, x);
+        Canvas.SetTop(rect, y);
+        canvas.Children.Add(rect);
+
+        DrawCanvasText(canvas, text, x + 4, y + 4, width - 8, height - 8, fontSize, FontWeights.SemiBold, new SolidColorBrush(Color.FromRgb(37, 54, 77)));
+    }
+
+    private void DrawMatrixCell(Canvas canvas, CellCommand command, string mode, double x, double y, double width, double height, double fontSize)
+    {
+        var selected = IsPointSelected(command);
+        var fill = selected
+            ? new SolidColorBrush(Color.FromRgb(255, 168, 104))
+            : command.IsHighlightedScanner
+                ? new SolidColorBrush(Color.FromRgb(247, 180, 132))
+                : Brushes.White;
+
+        var rect = new Rectangle
+        {
+            Width = width,
+            Height = height,
+            Fill = fill,
+            Stroke = new SolidColorBrush(Color.FromRgb(174, 184, 196)),
+            StrokeThickness = selected ? 2.2 : 1,
+            Tag = command,
+            Cursor = Cursors.Hand
+        };
+        rect.MouseLeftButtonDown += MatrixCell_MouseLeftButtonDown;
+        Canvas.SetLeft(rect, x);
+        Canvas.SetTop(rect, y);
+        canvas.Children.Add(rect);
+
+        var text = FormatMatrixCell(command, mode);
+        DrawCanvasText(canvas, text, x + 4, y + 4, width - 8, height - 8, fontSize, FontWeights.Normal, Brushes.Black);
+    }
+
+    private void MatrixCell_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is FrameworkElement { Tag: CellCommand command })
+        {
+            if ((Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
+            {
+                var key = PointKey(command);
+                if (!_selectedPointKeys.Add(key))
+                {
+                    _selectedPointKeys.Remove(key);
+                }
+            }
+            else
+            {
+                _selectedPointKeys.Clear();
+                _selectedPointKeys.Add(PointKey(command));
+            }
+
+            _input.SelectedCellBlock = command.CellBlock;
+            _input.SelectedCellColumn = command.Column;
+            _input.SelectedCellRow = command.Row;
+            LoadInputToScreen(_input);
+            GenerateAndRender();
+        }
+    }
+
+    private static void DrawCanvasText(Canvas canvas, string text, double x, double y, double width, double height, double fontSize, FontWeight weight, Brush brush)
+    {
+        var block = new TextBlock
+        {
+            Text = text,
+            FontSize = fontSize,
+            FontWeight = weight,
+            Foreground = brush,
+            Width = Math.Max(1, width),
+            Height = Math.Max(1, height),
+            TextAlignment = TextAlignment.Center,
+            TextWrapping = TextWrapping.Wrap,
+            VerticalAlignment = VerticalAlignment.Center
+        };
+        Canvas.SetLeft(block, x);
+        Canvas.SetTop(block, y);
+        canvas.Children.Add(block);
     }
 
     private void LayoutScrollViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
@@ -352,134 +510,49 @@ public partial class MainWindow : Window
         e.Handled = true;
     }
 
-    private void MatrixGrid_SelectedCellsChanged(object sender, SelectedCellsChangedEventArgs e)
-    {
-        if (_suppressMatrixSelection || sender is not DataGrid grid || grid.SelectedCells.Count == 0)
-        {
-            return;
-        }
-
-        var selected = new List<CellCommand>();
-        foreach (var cell in grid.SelectedCells)
-        {
-            if (cell.Item is not MatrixRow row || row.IsGroupHeader)
-            {
-                continue;
-            }
-
-            var header = cell.Column.Header?.ToString();
-            var columnIndex = ColumnLetterToIndex(header);
-            if (columnIndex < 0)
-            {
-                continue;
-            }
-
-            var command = _lastResult?.Commands.FirstOrDefault(x =>
-                x.CellBlock == row.CellBlock &&
-                x.Row == row.PointRow &&
-                x.Column == columnIndex);
-
-            if (command is not null)
-            {
-                selected.Add(command);
-            }
-        }
-
-        if (selected.Count == 0)
-        {
-            return;
-        }
-
-        _selectedPointKeys.Clear();
-        foreach (var command in selected)
-        {
-            _selectedPointKeys.Add(PointKey(command));
-        }
-
-        var first = selected[0];
-        _input.SelectedCellBlock = first.CellBlock;
-        _input.SelectedCellColumn = first.Column;
-        _input.SelectedCellRow = first.Row;
-        LoadInputToScreen(_input);
-        GenerateAndRender();
-    }
-
-    private void BuildMatrixGrid(DataGrid grid, string mode)
+    private void BuildMatrixCanvas(Canvas canvas, string mode)
     {
         if (_lastResult is null)
         {
             return;
         }
 
-        _suppressMatrixSelection = true;
-        grid.Columns.Clear();
-        grid.RowHeight = _matrixCellSize;
-        grid.ColumnWidth = _matrixCellSize;
+        canvas.Children.Clear();
 
-        grid.Columns.Add(new DataGridTextColumn
+        var headerWidth = Math.Max(72, _matrixCellSize * 0.88);
+        var cellWidth = _matrixCellSize;
+        var cellHeight = _matrixCellSize;
+        var rowHeaderHeight = 26.0;
+        var fontSize = Math.Clamp(_matrixCellSize / 6.2, 8, 18);
+        var blockHeaderHeight = 28.0;
+        var y = rowHeaderHeight;
+
+        DrawMatrixHeader(canvas, "Cell#", 0, 0, headerWidth, rowHeaderHeight, fontSize, Brushes.WhiteSmoke);
+        for (var column = 0; column < _input.CellColumns; column++)
         {
-            Header = "Cell#",
-            Binding = new Binding(nameof(MatrixRow.RowHeader)),
-            Width = Math.Max(70, _matrixCellSize * 0.82)
-        });
-
-        var columns = Enumerable.Range(0, Math.Max(1, _input.CellColumns))
-            .Select(ToColumnLetter)
-            .ToList();
-
-        foreach (var column in columns)
-        {
-            var textBlockFactory = new FrameworkElementFactory(typeof(TextBlock));
-            textBlockFactory.SetBinding(TextBlock.TextProperty, new Binding($"[{column}]"));
-            textBlockFactory.SetValue(TextBlock.TextAlignmentProperty, TextAlignment.Center);
-            textBlockFactory.SetValue(TextBlock.VerticalAlignmentProperty, VerticalAlignment.Center);
-            textBlockFactory.SetValue(TextBlock.TextWrappingProperty, TextWrapping.Wrap);
-            textBlockFactory.SetValue(TextBlock.FontSizeProperty, Math.Clamp(_matrixCellSize / 6.2, 8, 18));
-
-            grid.Columns.Add(new DataGridTemplateColumn
-            {
-                Header = column,
-                Width = _matrixCellSize,
-                CellTemplate = new DataTemplate { VisualTree = textBlockFactory }
-            });
+            DrawMatrixHeader(canvas, ToColumnLetter(column), headerWidth + column * cellWidth, 0, cellWidth, rowHeaderHeight, fontSize, Brushes.WhiteSmoke);
         }
 
-        grid.ItemsSource = BuildMatrixRows(mode, columns);
-        _suppressMatrixSelection = false;
-    }
-
-    private IReadOnlyList<MatrixRow> BuildMatrixRows(string mode, IReadOnlyList<string> columns)
-    {
-        if (_lastResult is null)
-        {
-            return Array.Empty<MatrixRow>();
-        }
-
-        var rows = new List<MatrixRow>();
         foreach (var blockGroup in _lastResult.Commands.GroupBy(x => x.CellBlock).OrderBy(x => x.Key))
         {
-            var header = new MatrixRow { RowHeader = $"Cell#{blockGroup.Key}", IsGroupHeader = true };
-            rows.Add(header);
+            DrawMatrixHeader(canvas, $"Cell#{blockGroup.Key}", 0, y, headerWidth + _input.CellColumns * cellWidth, blockHeaderHeight, fontSize, new SolidColorBrush(Color.FromRgb(248, 250, 252)));
+            y += blockHeaderHeight;
 
             foreach (var rowGroup in blockGroup.GroupBy(x => x.Row).OrderBy(x => x.Key))
             {
-                var matrixRow = new MatrixRow
-                {
-                    RowHeader = (rowGroup.Key + 1).ToString(CultureInfo.InvariantCulture),
-                    CellBlock = blockGroup.Key,
-                    PointRow = rowGroup.Key
-                };
+                DrawMatrixHeader(canvas, (rowGroup.Key + 1).ToString(CultureInfo.InvariantCulture), 0, y, headerWidth, cellHeight, fontSize, Brushes.White);
+
                 foreach (var command in rowGroup.OrderBy(x => x.Column))
                 {
-                    var column = ToColumnLetter(command.Column);
-                    matrixRow[column] = FormatMatrixCell(command, mode);
+                    DrawMatrixCell(canvas, command, mode, headerWidth + command.Column * cellWidth, y, cellWidth, cellHeight, fontSize);
                 }
 
-                rows.Add(matrixRow);
+                y += cellHeight;
             }
         }
 
-        return rows;
+        canvas.Width = headerWidth + _input.CellColumns * cellWidth + 20;
+        canvas.Height = y + 20;
     }
 
     private static string FormatMatrixCell(CellCommand command, string mode)
@@ -752,6 +825,65 @@ public partial class MainWindow : Window
         }
     }
 
+    private void SaveConfigCsv(string path)
+    {
+        var lines = new[]
+        {
+            "Key,Value",
+            CsvLine(nameof(CoordinateInput.BoardSizeX), _input.BoardSizeX),
+            CsvLine(nameof(CoordinateInput.BoardSizeY), _input.BoardSizeY),
+            CsvLine(nameof(CoordinateInput.AlignMarginX), _input.AlignMarginX),
+            CsvLine(nameof(CoordinateInput.AlignMarginY), _input.AlignMarginY),
+            CsvLine(nameof(CoordinateInput.ReviewCenterGlobalX), _input.ReviewCenterGlobalX),
+            CsvLine(nameof(CoordinateInput.ReviewCenterGlobalY), _input.ReviewCenterGlobalY),
+            CsvLine(nameof(CoordinateInput.ReviewPixelCenterU), _input.ReviewPixelCenterU),
+            CsvLine(nameof(CoordinateInput.ReviewPixelCenterV), _input.ReviewPixelCenterV),
+            CsvLine(nameof(CoordinateInput.PixelScaleX), _input.PixelScaleX),
+            CsvLine(nameof(CoordinateInput.PixelScaleY), _input.PixelScaleY),
+            CsvLine(nameof(CoordinateInput.MeasuredAk1U), _input.MeasuredAk1U),
+            CsvLine(nameof(CoordinateInput.MeasuredAk1V), _input.MeasuredAk1V),
+            CsvLine(nameof(CoordinateInput.ThetaAlignDeg), _input.ThetaAlignDeg),
+            CsvLine(nameof(CoordinateInput.CellFirstX), _input.CellFirstX),
+            CsvLine(nameof(CoordinateInput.CellFirstY), _input.CellFirstY),
+            CsvLine(nameof(CoordinateInput.CellPitchX), _input.CellPitchX),
+            CsvLine(nameof(CoordinateInput.CellPitchY), _input.CellPitchY),
+            CsvLine(nameof(CoordinateInput.PatternOffsetX), _input.PatternOffsetX),
+            CsvLine(nameof(CoordinateInput.PatternOffsetY), _input.PatternOffsetY),
+            CsvLine(nameof(CoordinateInput.CellColumns), _input.CellColumns),
+            CsvLine(nameof(CoordinateInput.CellRows), _input.CellRows),
+            CsvLine(nameof(CoordinateInput.CellBlockColumns), _input.CellBlockColumns),
+            CsvLine(nameof(CoordinateInput.CellBlockRows), _input.CellBlockRows),
+            CsvLine(nameof(CoordinateInput.CellBlockPitchX), _input.CellBlockPitchX),
+            CsvLine(nameof(CoordinateInput.CellBlockPitchY), _input.CellBlockPitchY),
+            CsvLine(nameof(CoordinateInput.ScannerCount), _input.ScannerCount),
+            CsvLine(nameof(CoordinateInput.HighlightScannerHeads), _input.HighlightScannerHeads),
+            CsvLine(nameof(CoordinateInput.FirstScannerCenterX), _input.FirstScannerCenterX),
+            CsvLine(nameof(CoordinateInput.FirstScannerCenterY), _input.FirstScannerCenterY),
+            CsvLine(nameof(CoordinateInput.ScannerPitchX), _input.ScannerPitchX),
+            CsvLine(nameof(CoordinateInput.EvenScannerYOffset), _input.EvenScannerYOffset),
+            CsvLine(nameof(CoordinateInput.ScannerFieldHalfX), _input.ScannerFieldHalfX),
+            CsvLine(nameof(CoordinateInput.ScannerFieldHalfY), _input.ScannerFieldHalfY),
+            CsvLine(nameof(CoordinateInput.ReviewBasisScannerHead), _input.ReviewBasisScannerHead),
+            CsvLine(nameof(CoordinateInput.ReviewBasisDoeBeam), _input.ReviewBasisDoeBeam),
+            CsvLine(nameof(CoordinateInput.DoeBeamPitchX), _input.DoeBeamPitchX),
+            CsvLine(nameof(CoordinateInput.DoeBeamPitchY), _input.DoeBeamPitchY),
+            CsvLine(nameof(CoordinateInput.ProcessOffsetGlobalX), _input.ProcessOffsetGlobalX),
+            CsvLine(nameof(CoordinateInput.ProcessOffsetGlobalY), _input.ProcessOffsetGlobalY)
+        };
+
+        File.WriteAllLines(path, lines);
+    }
+
+    private static string CsvLine(string key, double value) => $"{key},{Format(value)}";
+
+    private static string CsvLine(string key, int value) => $"{key},{value.ToString(CultureInfo.InvariantCulture)}";
+
+    private static string CsvLine(string key, string value)
+    {
+        var escaped = value.Replace("\"", "\"\"");
+        return $"{key},\"{escaped}\"";
+    }
+
     private void ApplyConfigValue(string key, string value)
     {
         value = value.Trim().Trim('"');
@@ -762,6 +894,17 @@ public partial class MainWindow : Window
         {
             case nameof(CoordinateInput.BoardSizeX): _input.BoardSizeX = number; break;
             case nameof(CoordinateInput.BoardSizeY): _input.BoardSizeY = number; break;
+            case nameof(CoordinateInput.AlignMarginX): _input.AlignMarginX = number; break;
+            case nameof(CoordinateInput.AlignMarginY): _input.AlignMarginY = number; break;
+            case nameof(CoordinateInput.ReviewCenterGlobalX): _input.ReviewCenterGlobalX = number; break;
+            case nameof(CoordinateInput.ReviewCenterGlobalY): _input.ReviewCenterGlobalY = number; break;
+            case nameof(CoordinateInput.ReviewPixelCenterU): _input.ReviewPixelCenterU = number; break;
+            case nameof(CoordinateInput.ReviewPixelCenterV): _input.ReviewPixelCenterV = number; break;
+            case nameof(CoordinateInput.PixelScaleX): _input.PixelScaleX = number; break;
+            case nameof(CoordinateInput.PixelScaleY): _input.PixelScaleY = number; break;
+            case nameof(CoordinateInput.MeasuredAk1U): _input.MeasuredAk1U = number; break;
+            case nameof(CoordinateInput.MeasuredAk1V): _input.MeasuredAk1V = number; break;
+            case nameof(CoordinateInput.ThetaAlignDeg): _input.ThetaAlignDeg = number; break;
             case nameof(CoordinateInput.CellFirstX): _input.CellFirstX = number; break;
             case nameof(CoordinateInput.CellFirstY): _input.CellFirstY = number; break;
             case nameof(CoordinateInput.CellPitchX): _input.CellPitchX = number; break;
@@ -776,10 +919,18 @@ public partial class MainWindow : Window
             case nameof(CoordinateInput.CellBlockPitchY): _input.CellBlockPitchY = number; break;
             case nameof(CoordinateInput.ScannerCount): _input.ScannerCount = Math.Max(1, integer); break;
             case nameof(CoordinateInput.HighlightScannerHeads): _input.HighlightScannerHeads = value; break;
+            case nameof(CoordinateInput.FirstScannerCenterX): _input.FirstScannerCenterX = number; break;
+            case nameof(CoordinateInput.FirstScannerCenterY): _input.FirstScannerCenterY = number; break;
+            case nameof(CoordinateInput.ScannerPitchX): _input.ScannerPitchX = number; break;
+            case nameof(CoordinateInput.EvenScannerYOffset): _input.EvenScannerYOffset = number; break;
             case nameof(CoordinateInput.ScannerFieldHalfX): _input.ScannerFieldHalfX = number; break;
             case nameof(CoordinateInput.ScannerFieldHalfY): _input.ScannerFieldHalfY = number; break;
             case nameof(CoordinateInput.ReviewBasisScannerHead): _input.ReviewBasisScannerHead = Math.Max(1, integer); break;
             case nameof(CoordinateInput.ReviewBasisDoeBeam): _input.ReviewBasisDoeBeam = Clamp(integer, 1, 16); break;
+            case nameof(CoordinateInput.DoeBeamPitchX): _input.DoeBeamPitchX = number; break;
+            case nameof(CoordinateInput.DoeBeamPitchY): _input.DoeBeamPitchY = number; break;
+            case nameof(CoordinateInput.ProcessOffsetGlobalX): _input.ProcessOffsetGlobalX = number; break;
+            case nameof(CoordinateInput.ProcessOffsetGlobalY): _input.ProcessOffsetGlobalY = number; break;
         }
     }
 

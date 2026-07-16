@@ -112,6 +112,11 @@
                   Margin="0,6,0,0"
                   Content="Reload Current CSV"
                   Click="ReloadConfigButton_Click"/>
+          <Button x:Name="SaveConfigButton"
+                  Height="36"
+                  Margin="0,6,0,0"
+                  Content="Save Current CSV"
+                  Click="SaveConfigButton_Click"/>
         </StackPanel>
       </ScrollViewer>
     </Border>
@@ -151,40 +156,25 @@
       <Border Grid.Row="2" Background="White" BorderBrush="#D5DEE8" BorderThickness="1" CornerRadius="8" Padding="8">
         <TabControl>
           <TabItem Header="Design 2D Matrix">
-            <DataGrid x:Name="DesignMatrixGrid"
-                      AutoGenerateColumns="False"
-                      CanUserAddRows="False"
-                      IsReadOnly="True"
-                      SelectionMode="Extended"
-                      SelectionUnit="Cell"
-                      HeadersVisibility="Column"
-                      GridLinesVisibility="All"
-                      SelectedCellsChanged="MatrixGrid_SelectedCellsChanged"
-                      PreviewMouseWheel="MatrixGrid_PreviewMouseWheel"/>
+            <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                          VerticalScrollBarVisibility="Auto"
+                          PreviewMouseWheel="MatrixScrollViewer_PreviewMouseWheel">
+              <Canvas x:Name="DesignMatrixCanvas" Background="White"/>
+            </ScrollViewer>
           </TabItem>
           <TabItem Header="Process 2D Matrix">
-            <DataGrid x:Name="ProcessMatrixGrid"
-                      AutoGenerateColumns="False"
-                      CanUserAddRows="False"
-                      IsReadOnly="True"
-                      SelectionMode="Extended"
-                      SelectionUnit="Cell"
-                      HeadersVisibility="Column"
-                      GridLinesVisibility="All"
-                      SelectedCellsChanged="MatrixGrid_SelectedCellsChanged"
-                      PreviewMouseWheel="MatrixGrid_PreviewMouseWheel"/>
+            <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                          VerticalScrollBarVisibility="Auto"
+                          PreviewMouseWheel="MatrixScrollViewer_PreviewMouseWheel">
+              <Canvas x:Name="ProcessMatrixCanvas" Background="White"/>
+            </ScrollViewer>
           </TabItem>
           <TabItem Header="Review 2D Matrix">
-            <DataGrid x:Name="ReviewMatrixGrid"
-                      AutoGenerateColumns="False"
-                      CanUserAddRows="False"
-                      IsReadOnly="True"
-                      SelectionMode="Extended"
-                      SelectionUnit="Cell"
-                      HeadersVisibility="Column"
-                      GridLinesVisibility="All"
-                      SelectedCellsChanged="MatrixGrid_SelectedCellsChanged"
-                      PreviewMouseWheel="MatrixGrid_PreviewMouseWheel"/>
+            <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                          VerticalScrollBarVisibility="Auto"
+                          PreviewMouseWheel="MatrixScrollViewer_PreviewMouseWheel">
+              <Canvas x:Name="ReviewMatrixCanvas" Background="White"/>
+            </ScrollViewer>
           </TabItem>
           <TabItem Header="DOE 16 Matrix">
             <DataGrid x:Name="DoeGrid"

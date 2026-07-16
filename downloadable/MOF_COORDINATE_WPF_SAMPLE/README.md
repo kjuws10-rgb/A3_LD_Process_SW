@@ -33,6 +33,7 @@ dotnet run
 - `Open CSV Template in Excel`: 기본 CSV 템플릿을 Excel 또는 Windows 기본 CSV 앱으로 연다.
 - `Load Saved CSV Config`: 사용자가 저장한 CSV를 선택해서 화면에 반영한다.
 - `Reload Current CSV`: 마지막으로 열거나 로드한 CSV를 다시 읽어 화면을 갱신한다.
+- `Save Current CSV`: 현재 화면 입력값을 마지막 CSV 파일에 저장한다. 마지막 CSV가 없으면 저장 위치를 선택한다.
 
 주요 항목:
 
@@ -42,6 +43,10 @@ dotnet run
 - `CellBlockColumns`, `CellBlockRows`: 기판 안에 배치되는 Cell# 블록의 열/행 수.
 - `CellBlockPitchX`, `CellBlockPitchY`: Cell# 블록 사이의 X/Y pitch. 0이면 내부 Matrix 크기를 기준으로 자동 배치 pitch를 계산해 겹침을 방지한다.
 - `ScannerFieldHalfX`, `ScannerFieldHalfY`: Scanner가 가공 가능한 X/Y 반폭. Scanner를 클릭하면 이 영역 안의 가공점이 강조 표시된다.
+
+## Performance
+
+좌표 Matrix는 대량 좌표에서 느려지는 `DataGrid` 대신 Canvas 기반 Matrix 뷰로 렌더링한다. 각 좌표 칸은 직접 그려지고 클릭 이벤트만 붙기 때문에 행/열 수가 늘어도 훨씬 가볍게 동작한다.
 
 ## 주요 코드
 
