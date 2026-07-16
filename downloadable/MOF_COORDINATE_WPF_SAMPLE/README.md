@@ -16,6 +16,7 @@ dotnet run
 ## 화면 구성
 
 - 좌측 입력 패널: Board, Review Camera, Cell, Scanner, DOE16 Beam, Review Offset 변수 입력.
+- Parameter Tooltip: 각 입력칸 또는 버튼 위에 마우스를 올리면 해당 파라미터가 어느 좌표계/계산식에 쓰이는지 말풍선으로 설명한다. Board, Review, Cell, Scanner, DOE 항목은 작은 도식도 함께 표시한다.
 - 상단 Canvas: Board Cell 블록, 선택 Cell, Highlight Scanner가 담당하는 Cell, Zigzag Scanner Head 시각화.
 - 마우스 클릭: 화면의 Cell 또는 Scanner Head를 클릭하면 선택 상태와 결과 Matrix가 즉시 갱신된다.
 - 복수 선택: Matrix DataGrid에서 여러 칸을 선택하면 해당 가공점들이 상단 Board UI에 함께 표시된다.

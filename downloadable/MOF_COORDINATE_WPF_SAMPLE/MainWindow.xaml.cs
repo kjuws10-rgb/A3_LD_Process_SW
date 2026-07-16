@@ -28,6 +28,7 @@ public partial class MainWindow : Window
         Loaded += (_, _) =>
         {
             LoadInputToScreen(_input);
+            ConfigureParameterTooltips();
             GenerateAndRender();
         };
         SizeChanged += (_, _) => DrawLayout();
@@ -634,6 +635,222 @@ public partial class MainWindow : Window
         Canvas.SetLeft(block, x);
         Canvas.SetTop(block, y);
         LayoutCanvas.Children.Add(block);
+    }
+
+    private void ConfigureParameterTooltips()
+    {
+        SetTip(BoardXBox, "Board X", "기판의 전체 X 방향 길이입니다. Board 표시 영역과 AK3/AK4 방향 기준 폭을 결정합니다.", "AK 유효 X 거리 = BoardX - 2 * AK Margin X", "Board");
+        SetTip(BoardYBox, "Board Y", "기판의 전체 Y 방향 길이입니다. Board 표시 영역과 AK2/AK4 방향 기준 높이를 결정합니다.", "AK 유효 Y 거리 = BoardY - 2 * AK Margin Y", "Board");
+        SetTip(AkMarginXBox, "AK Margin X", "기판 Edge에서 Align Key까지의 X 방향 설계 여유거리입니다.", "AK1~AK3 거리 계산과 Board 설명에 사용", "Board");
+        SetTip(AkMarginYBox, "AK Margin Y", "기판 Edge에서 Align Key까지의 Y 방향 설계 여유거리입니다.", "AK1~AK2 거리 계산과 Board 설명에 사용", "Board");
+
+        SetTip(ReviewCenterXBox, "Review Center X", "Review Camera 중심이 Stage 좌표계에서 가지는 X 좌표입니다. AK1 pixel 측정값을 Stage 좌표로 환산할 때 기준점입니다.", "AK1_X = ReviewCenterX + (AK1_U - U0) * PixelScaleX", "Review");
+        SetTip(ReviewCenterYBox, "Review Center Y", "Review Camera 중심이 Stage 좌표계에서 가지는 Y 좌표입니다. AK1 pixel 측정값을 Stage 좌표로 환산할 때 기준점입니다.", "AK1_Y = ReviewCenterY + (AK1_V - V0) * PixelScaleY", "Review");
+        SetTip(U0Box, "Review U0", "Review 영상의 중심 U pixel 좌표입니다. 실제 측정 AK1 U와의 차이가 X 방향 mm offset으로 변환됩니다.", "dU = AK1_U - U0", "Review");
+        SetTip(V0Box, "Review V0", "Review 영상의 중심 V pixel 좌표입니다. 실제 측정 AK1 V와의 차이가 Y 방향 mm offset으로 변환됩니다.", "dV = AK1_V - V0", "Review");
+        SetTip(ScaleXBox, "Pixel Scale X", "Review Camera pixel 1개가 Stage X 방향으로 몇 mm인지 나타내는 환산 계수입니다.", "Stage dX = dU * PixelScaleX", "Review");
+        SetTip(ScaleYBox, "Pixel Scale Y", "Review Camera pixel 1개가 Stage Y 방향으로 몇 mm인지 나타내는 환산 계수입니다.", "Stage dY = dV * PixelScaleY", "Review");
+        SetTip(Ak1UBox, "Measured AK1 U", "Review Camera 화면에서 측정된 AK1의 U pixel 좌표입니다. AK1 Stage Anchor를 만드는 실제 측정값입니다.", "AK1_X = ReviewCenterX + (AK1_U - U0) * ScaleX", "Review");
+        SetTip(Ak1VBox, "Measured AK1 V", "Review Camera 화면에서 측정된 AK1의 V pixel 좌표입니다. AK1 Stage Anchor를 만드는 실제 측정값입니다.", "AK1_Y = ReviewCenterY + (AK1_V - V0) * ScaleY", "Review");
+        SetTip(ThetaBox, "Theta Align", "Review 측정으로 계산된 기판 회전 보정각입니다. Recipe Local 좌표를 Stage 좌표로 변환할 때 회전 행렬에 적용됩니다.", "Pstage = AK1 + R(theta) * Plocal", "Review");
+
+        SetTip(CellFirstXBox, "Cell First X", "AK1을 기준으로 첫 번째 Cell#의 첫 번째 가공점 A1까지 떨어진 X 거리입니다.", "A1_X = CellFirstX + PatternOffsetX", "Cell");
+        SetTip(CellFirstYBox, "Cell First Y", "AK1을 기준으로 첫 번째 Cell#의 첫 번째 가공점 A1까지 떨어진 Y 거리입니다.", "A1_Y = CellFirstY + PatternOffsetY", "Cell");
+        SetTip(CellPitchXBox, "Cell Pitch X", "Cell# 내부 가공홀 Matrix에서 열 방향 간격입니다. A열, B열, C열 사이 거리를 의미합니다.", "B1_X = A1_X + CellPitchX", "Cell");
+        SetTip(CellPitchYBox, "Cell Pitch Y", "Cell# 내부 가공홀 Matrix에서 행 방향 간격입니다. 1행, 2행, 3행 사이 거리를 의미합니다.", "A2_Y = A1_Y + CellPitchY", "Cell");
+        SetTip(PatternOffsetXBox, "Pattern Offset X", "Cell 내부에서 실제 가공 Pattern이 첫 기준점에서 추가로 이동하는 X offset입니다.", "Plocal.X = BlockOriginX + FirstX + Col*PitchX + PatternOffsetX", "Cell");
+        SetTip(PatternOffsetYBox, "Pattern Offset Y", "Cell 내부에서 실제 가공 Pattern이 첫 기준점에서 추가로 이동하는 Y offset입니다.", "Plocal.Y = BlockOriginY + FirstY + Row*PitchY + PatternOffsetY", "Cell");
+        SetTip(CellColumnsBox, "Cell Columns", "Cell# 하나 안에 들어가는 가공점 Matrix의 열 개수입니다. 화면에는 A, B, C... 알파벳 열로 표시됩니다.", "예: 3이면 A/B/C 열 생성", "Cell");
+        SetTip(CellRowsBox, "Cell Rows", "Cell# 하나 안에 들어가는 가공점 Matrix의 행 개수입니다. 화면에는 1, 2, 3... 숫자 행으로 표시됩니다.", "예: 4이면 1/2/3/4 행 생성", "Cell");
+        SetTip(CellBlockColumnsBox, "Cell Block Columns", "기판 위에 Cell# 블록을 X 방향으로 몇 개 배치할지 설정합니다.", "전체 Cell# 수 = BlockColumns * BlockRows", "Cell");
+        SetTip(CellBlockRowsBox, "Cell Block Rows", "기판 위에 Cell# 블록을 Y 방향으로 몇 개 배치할지 설정합니다.", "Cell# 번호는 위에서 아래, 왼쪽에서 오른쪽 순서로 생성됩니다.", "Cell");
+        SetTip(CellBlockPitchXBox, "Cell Block Pitch X", "Cell# 블록과 다음 Cell# 블록 사이의 X 방향 거리입니다. 0이면 내부 Matrix 폭을 기준으로 자동 계산해 겹침을 방지합니다.", "BlockOriginX = BlockColumn * EffectiveBlockPitchX", "Cell");
+        SetTip(CellBlockPitchYBox, "Cell Block Pitch Y", "Cell# 블록과 다음 Cell# 블록 사이의 Y 방향 거리입니다. 0이면 내부 Matrix 높이를 기준으로 자동 계산합니다.", "BlockOriginY = BlockRow * EffectiveBlockPitchY", "Cell");
+        SetTip(SelectedCellBlockBox, "Selected Cell#", "현재 선택된 Cell# 번호입니다. Board나 Matrix에서 Cell을 클릭하면 자동으로 갱신됩니다.", "예: Cell#2의 B3 선택", "Cell");
+        SetTip(SelectedCellColumnBox, "Selected Col", "현재 선택된 가공점의 열 Index입니다. 내부 계산은 0부터 시작하고, 화면 표시는 A, B, C로 변환됩니다.", "0=A, 1=B, 2=C", "Cell");
+        SetTip(SelectedCellRowBox, "Selected Row", "현재 선택된 가공점의 행 Index입니다. 내부 계산은 0부터 시작하고, 화면 표시는 1, 2, 3으로 변환됩니다.", "0=1행, 1=2행", "Cell");
+
+        SetTip(ScannerCountBox, "Scanner Count", "장비에 배치된 Scanner Head 개수입니다. 하단 Zigzag Scanner UI의 Head 수를 결정합니다.", "H1, H2, H3... 생성", "Scanner");
+        SetTip(HighlightHeadsBox, "Highlight Heads", "Board UI에서 가공 가능 영역을 강조할 Scanner 번호 목록입니다. 콤마로 여러 개를 입력할 수 있습니다.", "예: 1,5 또는 2,4,6", "Scanner");
+        SetTip(FirstScannerXBox, "First Scanner Center X", "H1 Scanner 중심의 Stage X 좌표입니다. 나머지 Scanner는 Scanner Pitch X를 더해 배치됩니다.", "Hn_X = H1_X + (n-1)*ScannerPitchX", "Scanner");
+        SetTip(FirstScannerYBox, "First Scanner Center Y", "H1 Scanner 중심의 Stage Y 좌표입니다. 짝수 Head는 Even Y Offset을 추가해 Zigzag로 배치됩니다.", "Odd: Y=H1_Y, Even: Y=H1_Y+EvenYOffset", "Scanner");
+        SetTip(ScannerPitchXBox, "Scanner Pitch X", "인접 Scanner Head 사이의 X 방향 중심 간격입니다.", "H2_X - H1_X", "Scanner");
+        SetTip(EvenYOffsetBox, "Even Y Offset", "짝수 Scanner Head가 홀수 Head 기준선에서 Y 방향으로 얼마나 어긋나 배치되는지 나타냅니다.", "Zigzag 배치용 Y offset", "Scanner");
+        SetTip(FieldHalfXBox, "Process Area Half X", "Scanner가 가공 가능한 영역의 X 반폭입니다. Scanner를 클릭하면 CenterX ± HalfX 범위 안의 가공점이 강조됩니다.", "abs(TargetX - ScannerCenterX) <= HalfX", "Scanner");
+        SetTip(FieldHalfYBox, "Process Area Half Y", "Scanner가 가공 가능한 영역의 Y 반폭입니다. Scanner를 클릭하면 CenterY ± HalfY 범위 안의 가공점이 강조됩니다.", "abs(TargetY - ScannerCenterY) <= HalfY", "Scanner");
+        SetTip(ReviewBasisHeadBox, "Review Basis Head", "Review 좌표계를 어느 Scanner Head의 DOE Beam을 기준으로 표현할지 선택합니다.", "ReviewCoordinate = ProcessStage - SelectedHeadDoeStage", "Scanner");
+        SetTip(ReviewBasisBeamBox, "DOE Beam 1-16", "DOE 4x4 Beam 중 Review 좌표계의 기준으로 사용할 Beam 번호입니다.", "1~16, 좌상단부터 행 우선 순서", "Doe");
+        SetTip(DoePitchXBox, "DOE Pitch X", "DOE 16 Beam 내부에서 Beam 간 X 방향 간격입니다.", "BeamOffsetX = (Column - 1.5) * DoePitchX", "Doe");
+        SetTip(DoePitchYBox, "DOE Pitch Y", "DOE 16 Beam 내부에서 Beam 간 Y 방향 간격입니다.", "BeamOffsetY = (Row - 1.5) * DoePitchY", "Doe");
+
+        SetTip(OffsetXBox, "Offset Global X", "Review 측정 후 보정할 X 방향 Stage offset입니다. 설계 좌표에 더해져 최종 가공 좌표가 됩니다.", "Pprocess.X = Pdesign.X + OffsetX", "Offset");
+        SetTip(OffsetYBox, "Offset Global Y", "Review 측정 후 보정할 Y 방향 Stage offset입니다. 설계 좌표에 더해져 최종 가공 좌표가 됩니다.", "Pprocess.Y = Pdesign.Y + OffsetY", "Offset");
+
+        SetTip(GenerateButton, "Generate / Refresh", "현재 입력값을 기준으로 Cell 배치, Stage 좌표, Scanner 가공좌표, Review 좌표계를 다시 계산합니다.", "입력값 변경 후 누르면 화면 전체 갱신", "Csv");
+        SetTip(OpenConfigButton, "Open CSV Template in Excel", "CSV 템플릿을 Excel 또는 Windows 기본 CSV 앱으로 엽니다. 값을 저장한 뒤 Reload 또는 Load로 화면에 반영합니다.", "Excel에서 저장 -> Reload Current CSV", "Csv");
+        SetTip(LoadConfigButton, "Load Saved CSV Config", "저장된 CSV 설정 파일을 선택해 화면 입력값과 좌표 배치를 갱신합니다.", "Key,Value 형식 CSV", "Csv");
+        SetTip(ReloadConfigButton, "Reload Current CSV", "마지막으로 열거나 로드한 CSV 파일을 다시 읽어 화면을 갱신합니다.", "Excel에서 수정 저장 후 바로 Reload", "Csv");
+        SetTip(SaveConfigButton, "Save Current CSV", "현재 화면 입력값을 CSV 파일에 저장합니다. CSV 설정을 수정한 뒤 파일까지 업데이트할 때 사용합니다.", "화면 입력값 -> CSV 저장", "Csv");
+    }
+
+    private void SetTip(Control control, string title, string description, string formula, string diagramKind)
+    {
+        ToolTipService.SetInitialShowDelay(control, 250);
+        ToolTipService.SetShowDuration(control, 30000);
+
+        var panel = new StackPanel { MaxWidth = 420 };
+        panel.Children.Add(new TextBlock
+        {
+            Text = title,
+            FontWeight = FontWeights.Bold,
+            FontSize = 15,
+            Foreground = new SolidColorBrush(Color.FromRgb(23, 32, 51)),
+            Margin = new Thickness(0, 0, 0, 6)
+        });
+        panel.Children.Add(new TextBlock
+        {
+            Text = description,
+            TextWrapping = TextWrapping.Wrap,
+            FontSize = 13,
+            Foreground = new SolidColorBrush(Color.FromRgb(37, 54, 77))
+        });
+        panel.Children.Add(new Border
+        {
+            Background = new SolidColorBrush(Color.FromRgb(244, 247, 251)),
+            BorderBrush = new SolidColorBrush(Color.FromRgb(210, 219, 230)),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(4),
+            Margin = new Thickness(0, 8, 0, 8),
+            Padding = new Thickness(7),
+            Child = new TextBlock
+            {
+                Text = formula,
+                TextWrapping = TextWrapping.Wrap,
+                FontFamily = new FontFamily("Consolas"),
+                FontSize = 12,
+                Foreground = new SolidColorBrush(Color.FromRgb(32, 44, 60))
+            }
+        });
+        panel.Children.Add(CreateTooltipDiagram(diagramKind));
+
+        control.ToolTip = new ToolTip { Content = panel };
+    }
+
+    private Canvas CreateTooltipDiagram(string kind)
+    {
+        var canvas = new Canvas { Width = 300, Height = 112, Background = Brushes.White };
+
+        if (kind == "Board")
+        {
+            DrawDiagramRect(canvas, 30, 25, 230, 62, Brushes.White, Color.FromRgb(183, 160, 37));
+            DrawDiagramDot(canvas, 42, 36, "AK1");
+            DrawDiagramDot(canvas, 242, 36, "AK3");
+            DrawDiagramDot(canvas, 42, 74, "AK2");
+            DrawDiagramDot(canvas, 242, 74, "AK4");
+            DrawDiagramText(canvas, "Board X", 126, 8, 12);
+            DrawDiagramText(canvas, "Board Y", 262, 51, 12);
+        }
+        else if (kind == "Review")
+        {
+            DrawDiagramRect(canvas, 38, 22, 92, 68, Brushes.White, Color.FromRgb(93, 143, 169));
+            DrawDiagramText(canvas, "Review\nCamera", 54, 42, 12);
+            DrawDiagramDot(canvas, 190, 55, "AK1");
+            DrawDiagramText(canvas, "pixel offset -> mm\nAK1 Stage Anchor", 145, 75, 12);
+        }
+        else if (kind == "Cell")
+        {
+            DrawDiagramDot(canvas, 28, 22, "AK1");
+            for (var row = 0; row < 3; row++)
+            {
+                for (var col = 0; col < 4; col++)
+                {
+                    DrawDiagramRect(canvas, 88 + col * 42, 28 + row * 24, 24, 14, Brushes.White, Color.FromRgb(178, 158, 47));
+                }
+            }
+            DrawDiagramText(canvas, "First X/Y", 42, 58, 12);
+            DrawDiagramText(canvas, "Pitch X", 128, 8, 12);
+            DrawDiagramText(canvas, "Pitch Y", 224, 55, 12);
+        }
+        else if (kind == "Scanner")
+        {
+            DrawDiagramRect(canvas, 34, 34, 54, 42, new SolidColorBrush(Color.FromRgb(144, 211, 78)), Colors.Black);
+            DrawDiagramText(canvas, "H1", 52, 47, 13);
+            DrawDiagramRect(canvas, 122, 57, 54, 42, Brushes.White, Colors.Black);
+            DrawDiagramText(canvas, "H2", 140, 70, 13);
+            DrawDiagramRect(canvas, 205, 34, 62, 42, new SolidColorBrush(Color.FromArgb(40, 80, 170, 255)), Color.FromRgb(30, 91, 190));
+            DrawDiagramText(canvas, "Process\nArea", 214, 42, 12);
+        }
+        else if (kind == "Doe")
+        {
+            for (var row = 0; row < 4; row++)
+            {
+                for (var col = 0; col < 4; col++)
+                {
+                    var beam = row * 4 + col + 1;
+                    DrawDiagramRect(canvas, 78 + col * 34, 16 + row * 22, 28, 18, Brushes.White, Color.FromRgb(93, 143, 169));
+                    DrawDiagramText(canvas, beam.ToString(CultureInfo.InvariantCulture), 87 + col * 34, 18 + row * 22, 10);
+                }
+            }
+            DrawDiagramText(canvas, "DOE 4x4 Beam", 84, 95, 12);
+        }
+        else if (kind == "Offset")
+        {
+            DrawDiagramDot(canvas, 85, 58, "Target");
+            DrawDiagramDot(canvas, 190, 42, "Corrected");
+            DrawDiagramText(canvas, "Review Error 반대 방향\nProcess Offset 적용", 82, 78, 12);
+        }
+        else
+        {
+            DrawDiagramRect(canvas, 54, 25, 190, 60, Brushes.White, Color.FromRgb(93, 143, 169));
+            DrawDiagramText(canvas, "CSV\nKey,Value", 116, 44, 13);
+        }
+
+        return canvas;
+    }
+
+    private static void DrawDiagramRect(Canvas canvas, double x, double y, double width, double height, Brush fill, Color stroke)
+    {
+        var rect = new Rectangle
+        {
+            Width = width,
+            Height = height,
+            Fill = fill,
+            Stroke = new SolidColorBrush(stroke),
+            StrokeThickness = 1.2
+        };
+        Canvas.SetLeft(rect, x);
+        Canvas.SetTop(rect, y);
+        canvas.Children.Add(rect);
+    }
+
+    private static void DrawDiagramDot(Canvas canvas, double x, double y, string text)
+    {
+        var dot = new Ellipse
+        {
+            Width = 8,
+            Height = 8,
+            Fill = new SolidColorBrush(Color.FromRgb(255, 204, 77)),
+            Stroke = new SolidColorBrush(Color.FromRgb(117, 85, 0)),
+            StrokeThickness = 1
+        };
+        Canvas.SetLeft(dot, x);
+        Canvas.SetTop(dot, y);
+        canvas.Children.Add(dot);
+        DrawDiagramText(canvas, text, x + 11, y - 4, 11);
+    }
+
+    private static void DrawDiagramText(Canvas canvas, string text, double x, double y, double fontSize)
+    {
+        var block = new TextBlock
+        {
+            Text = text,
+            FontSize = fontSize,
+            Foreground = new SolidColorBrush(Color.FromRgb(37, 54, 77)),
+            TextWrapping = TextWrapping.Wrap
+        };
+        Canvas.SetLeft(block, x);
+        Canvas.SetTop(block, y);
+        canvas.Children.Add(block);
     }
 
     private void LoadInputToScreen(CoordinateInput input)
