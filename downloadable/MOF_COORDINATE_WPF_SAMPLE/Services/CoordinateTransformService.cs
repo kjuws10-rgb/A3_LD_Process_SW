@@ -162,8 +162,7 @@ public sealed class CoordinateTransformService
         var selected = SelectScanner(processStageX, processStageY, scanners, out var inField);
         var isInHighlightedScannerArea = scanners.Any(scanner =>
             scanner.IsHighlighted &&
-            Math.Abs(processStageX - scanner.CenterX) <= scanner.FieldHalfX &&
-            Math.Abs(processStageY - scanner.CenterY) <= scanner.FieldHalfY);
+            Math.Abs(processStageX - scanner.CenterX) <= scanner.FieldHalfX);
         var relativeX = processStageX - selected.CenterX;
         var relativeY = processStageY - selected.CenterY;
 
@@ -221,14 +220,13 @@ public sealed class CoordinateTransformService
         foreach (var scanner in scanners)
         {
             var dx = stageX - scanner.CenterX;
-            var dy = stageY - scanner.CenterY;
-            if (Math.Abs(dx) <= scanner.FieldHalfX && Math.Abs(dy) <= scanner.FieldHalfY)
+            if (Math.Abs(dx) <= scanner.FieldHalfX)
             {
                 inField = true;
                 return scanner;
             }
 
-            var distance = dx * dx + dy * dy;
+            var distance = dx * dx;
             if (distance < nearestDistance)
             {
                 nearestDistance = distance;

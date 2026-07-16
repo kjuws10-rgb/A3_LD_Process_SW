@@ -177,18 +177,21 @@
             </ScrollViewer>
           </TabItem>
           <TabItem Header="DOE 16 Matrix">
-            <DataGrid x:Name="DoeGrid"
-                      AutoGenerateColumns="False"
-                      CanUserAddRows="False"
-                      IsReadOnly="True"
-                      RowHeight="28">
-              <DataGrid.Columns>
-                <DataGridTextColumn Header="Beam" Binding="{Binding BeamNo}" Width="80"/>
-                <DataGridTextColumn Header="Row" Binding="{Binding Row}" Width="70"/>
-                <DataGridTextColumn Header="Column" Binding="{Binding Column}" Width="80"/>
-                <DataGridTextColumn Header="Scanner Offset (x, y)" Binding="{Binding MatrixCoordinate}" Width="220"/>
-              </DataGrid.Columns>
-            </DataGrid>
+            <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                          VerticalScrollBarVisibility="Auto">
+              <StackPanel Margin="12">
+                <TextBlock Text="DOE 16 Beam Matrix"
+                           FontSize="16"
+                           FontWeight="Bold"
+                           Foreground="#172033"
+                           Margin="0,0,0,8"/>
+                <UniformGrid x:Name="DoeMatrixPanel"
+                             Rows="4"
+                             Columns="4"
+                             Width="440"
+                             Height="300"/>
+              </StackPanel>
+            </ScrollViewer>
           </TabItem>
         </TabControl>
       </Border>

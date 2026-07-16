@@ -20,6 +20,7 @@ public partial class MainWindow : Window
     private double _matrixCellSize = 86;
     private double _boardZoom = 1.0;
     private string? _lastConfigPath;
+    private bool _suppressDoeChange;
     private readonly HashSet<string> _selectedPointKeys = new();
 
     public MainWindow()
@@ -126,7 +127,7 @@ public partial class MainWindow : Window
         BuildMatrixCanvas(DesignMatrixCanvas, "Design");
         BuildMatrixCanvas(ProcessMatrixCanvas, "Process");
         BuildMatrixCanvas(ReviewMatrixCanvas, "Review");
-        DoeGrid.ItemsSource = _lastResult.DoeBeams;
+        BuildDoeMatrixPanel();
 
         var selected = _lastResult.Commands.FirstOrDefault(x => x.IsSelectedCell);
         var inFieldCount = _lastResult.Commands.Count(x => x.InField);
@@ -136,8 +137,8 @@ public partial class MainWindow : Window
             $"Review Basis = H{_lastResult.SelectedReviewScanner.Index} DOE{_lastResult.SelectedDoeBeam.BeamNo:00}";
 
         FormulaText.Text =
-            "Click board/matrix cells to select one or more points. Click a scanner to highlight processable points in its configured process area. " +
-            "Hold Ctrl and use mouse-wheel over the board or matrix to zoom. CSV can be opened in Excel, saved, then loaded or reloaded.";
+            "MOF concept: scanners are fixed in zigzag layout, the board moves along Y, so scanner processability is judged by X coverage. " +
+            "Click a scanner to show its full-Y process band. Hold Ctrl and use mouse-wheel over board/matrix to zoom.";
 
         DrawLayout();
     }
@@ -200,19 +201,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        var blockPitchX = EffectiveBlockPitchX(_input);
-        var blockPitchY = EffectiveBlockPitchY(_input);
-        var maxLocalX = (_input.CellBlockColumns - 1) * blockPitchX
-                        + _input.CellFirstX
-                        + Math.Max(1, _input.CellColumns - 1) * _input.CellPitchX
-                        + _input.PatternOffsetX;
-        var maxLocalY = (_input.CellBlockRows - 1) * blockPitchY
-                        + _input.CellFirstY
-                        + Math.Max(1, _input.CellRows - 1) * _input.CellPitchY
-                        + _input.PatternOffsetY;
-        var scaleX = (boardWidth - 60) / Math.Max(maxLocalX + _input.CellPitchX, 1);
-        var scaleY = (boardHeight - 42) / Math.Max(maxLocalY + _input.CellPitchY, 1);
-        var scale = Math.Min(scaleX, scaleY);
+        var scale = GetBoardScale(boardWidth, boardHeight);
         var visualPitchX = Math.Max(1.0, _input.CellPitchX * scale);
         var visualPitchY = Math.Max(1.0, _input.CellPitchY * scale);
         var cellW = Math.Max(0.8, Math.Min(visualPitchX * 0.72, visualPitchX - 0.2));
@@ -271,6 +260,25 @@ public partial class MainWindow : Window
         }
     }
 
+    private double GetBoardScale(double boardWidth, double boardHeight)
+    {
+        var blockPitchX = EffectiveBlockPitchX(_input);
+        var blockPitchY = EffectiveBlockPitchY(_input);
+        var maxLocalX = (_input.CellBlockColumns - 1) * blockPitchX
+                        + _input.CellFirstX
+                        + Math.Max(1, _input.CellColumns - 1) * _input.CellPitchX
+                        + _input.PatternOffsetX;
+        var maxLocalY = (_input.CellBlockRows - 1) * blockPitchY
+                        + _input.CellFirstY
+                        + Math.Max(1, _input.CellRows - 1) * _input.CellPitchY
+                        + _input.PatternOffsetY;
+        var scannerMaxLocalX = _lastResult?.Scanners.Max(x => Math.Abs(x.CenterX - _lastResult.Ak1GlobalX) + x.FieldHalfX) ?? 0;
+        maxLocalX = Math.Max(maxLocalX, scannerMaxLocalX);
+        var scaleX = (boardWidth - 60) / Math.Max(maxLocalX + _input.CellPitchX, 1);
+        var scaleY = (boardHeight - 42) / Math.Max(maxLocalY + _input.CellPitchY, 1);
+        return Math.Min(scaleX, scaleY);
+    }
+
     private void DrawScannerHeads(double left, double top, double width)
     {
         if (_lastResult is null)
@@ -278,16 +286,16 @@ public partial class MainWindow : Window
             return;
         }
 
-        var count = _lastResult.Scanners.Count;
-        var gap = width / Math.Max(1, count);
-        var boxWidth = Math.Min(86, Math.Max(54, gap * 0.72));
+        var boardScale = GetBoardScale(width, Math.Max(260.0, LayoutCanvas.Height - 310.0));
+        var minScannerY = _lastResult.Scanners.Min(x => x.CenterY);
+        var boxWidth = 74.0;
         var boxHeight = 64.0;
 
         foreach (var scanner in _lastResult.Scanners)
         {
-            var indexZero = scanner.Index - 1;
-            var x = left + gap * indexZero + gap * 0.5 - boxWidth * 0.5;
-            var y = top + (scanner.Index % 2 == 0 ? 78 : 0);
+            var localX = scanner.CenterX - _lastResult.Ak1GlobalX;
+            var x = left + 28 + localX * boardScale - boxWidth * 0.5;
+            var y = top + Math.Max(0, (scanner.CenterY - minScannerY) * boardScale);
             var isReviewBasis = scanner.Index == _input.ReviewBasisScannerHead;
             var fill = scanner.IsHighlighted || isReviewBasis
                 ? new SolidColorBrush(Color.FromRgb(144, 211, 78))
@@ -310,7 +318,8 @@ public partial class MainWindow : Window
             Canvas.SetTop(box, y);
             LayoutCanvas.Children.Add(box);
 
-            DrawText($"Scanner\n#{scanner.Index}", x + 8, y + 17, 15, FontWeights.Normal, Brushes.Black);
+            DrawText($"Scanner\n#{scanner.Index}", x + 8, y + 14, 15, FontWeights.Normal, Brushes.Black);
+            DrawText($"({scanner.CenterX:0.#}, {scanner.CenterY:0.#})", x - 4, y + boxHeight + 4, 10, FontWeights.Normal, new SolidColorBrush(Color.FromRgb(37, 54, 77)));
         }
     }
 
@@ -325,17 +334,18 @@ public partial class MainWindow : Window
         var cos = Math.Cos(theta);
         var sin = Math.Sin(theta);
 
+        var boardHeight = Math.Max(260.0, LayoutCanvas.Height - 310.0);
+
         foreach (var scanner in _lastResult.Scanners.Where(x => x.IsHighlighted))
         {
             var dx = scanner.CenterX - _lastResult.Ak1GlobalX;
-            var dy = scanner.CenterY - _lastResult.Ak1GlobalY;
-            var localX = cos * dx + sin * dy;
-            var localY = -sin * dx + cos * dy;
+            var dyAtAk1 = 0.0;
+            var localX = cos * dx + sin * dyAtAk1;
 
             var x = boardLeft + 28 + (localX - scanner.FieldHalfX) * scale;
-            var y = boardTop + 20 + (localY - scanner.FieldHalfY) * scale;
+            var y = boardTop + 20;
             var width = scanner.FieldHalfX * 2 * scale;
-            var height = scanner.FieldHalfY * 2 * scale;
+            var height = Math.Max(8, boardHeight - 40);
 
             var area = new Rectangle
             {
@@ -350,7 +360,7 @@ public partial class MainWindow : Window
             Canvas.SetTop(area, y);
             LayoutCanvas.Children.Add(area);
 
-            DrawText($"{scanner.Name} process area", x + 6, y - 18, 12, FontWeights.Bold, new SolidColorBrush(Color.FromRgb(30, 91, 190)));
+            DrawText($"{scanner.Name} X process band\nY covered by board motion", x + 6, y + 6, 12, FontWeights.Bold, new SolidColorBrush(Color.FromRgb(30, 91, 190)));
         }
     }
 
@@ -556,6 +566,64 @@ public partial class MainWindow : Window
         canvas.Height = y + 20;
     }
 
+    private void BuildDoeMatrixPanel()
+    {
+        if (_lastResult is null)
+        {
+            return;
+        }
+
+        _suppressDoeChange = true;
+        DoeMatrixPanel.Children.Clear();
+
+        foreach (var beam in _lastResult.DoeBeams.OrderBy(x => x.BeamNo))
+        {
+            var radio = new RadioButton
+            {
+                GroupName = "Doe16",
+                IsChecked = beam.BeamNo == _input.ReviewBasisDoeBeam,
+                Tag = beam,
+                Margin = new Thickness(6),
+                HorizontalContentAlignment = HorizontalAlignment.Stretch,
+                VerticalContentAlignment = VerticalAlignment.Stretch,
+                Content = new Border
+                {
+                    BorderBrush = new SolidColorBrush(Color.FromRgb(93, 143, 169)),
+                    BorderThickness = new Thickness(1.4),
+                    CornerRadius = new CornerRadius(4),
+                    Padding = new Thickness(8),
+                    Background = beam.BeamNo == _input.ReviewBasisDoeBeam
+                        ? new SolidColorBrush(Color.FromRgb(255, 226, 184))
+                        : Brushes.White,
+                    Child = new TextBlock
+                    {
+                        Text = $"DOE{beam.BeamNo:00}\nR{beam.Row} C{beam.Column}\n{beam.MatrixCoordinate}",
+                        TextAlignment = TextAlignment.Center,
+                        TextWrapping = TextWrapping.Wrap,
+                        FontSize = 13,
+                        FontWeight = beam.BeamNo == _input.ReviewBasisDoeBeam ? FontWeights.Bold : FontWeights.Normal
+                    }
+                }
+            };
+            radio.Checked += DoeRadio_Checked;
+            DoeMatrixPanel.Children.Add(radio);
+        }
+
+        _suppressDoeChange = false;
+    }
+
+    private void DoeRadio_Checked(object sender, RoutedEventArgs e)
+    {
+        if (_suppressDoeChange || sender is not FrameworkElement { Tag: DoeBeamModel beam })
+        {
+            return;
+        }
+
+        _input.ReviewBasisDoeBeam = beam.BeamNo;
+        LoadInputToScreen(_input);
+        GenerateAndRender();
+    }
+
     private static string FormatMatrixCell(CellCommand command, string mode)
     {
         var coordinate = mode switch
@@ -677,7 +745,7 @@ public partial class MainWindow : Window
         SetTip(ScannerPitchXBox, "Scanner Pitch X", "인접 Scanner Head 사이의 X 방향 중심 간격입니다.", "H2_X - H1_X", "Scanner");
         SetTip(EvenYOffsetBox, "Even Y Offset", "짝수 Scanner Head가 홀수 Head 기준선에서 Y 방향으로 얼마나 어긋나 배치되는지 나타냅니다.", "Zigzag 배치용 Y offset", "Scanner");
         SetTip(FieldHalfXBox, "Process Area Half X", "Scanner가 가공 가능한 영역의 X 반폭입니다. Scanner를 클릭하면 CenterX ± HalfX 범위 안의 가공점이 강조됩니다.", "abs(TargetX - ScannerCenterX) <= HalfX", "Scanner");
-        SetTip(FieldHalfYBox, "Process Area Half Y", "Scanner가 가공 가능한 영역의 Y 반폭입니다. Scanner를 클릭하면 CenterY ± HalfY 범위 안의 가공점이 강조됩니다.", "abs(TargetY - ScannerCenterY) <= HalfY", "Scanner");
+        SetTip(FieldHalfYBox, "Process Area Half Y", "Scanner Head의 설계상 Y 방향 field 반폭 참고값입니다. MOF에서는 기판이 Y 방향으로 이동하므로 가공 가능 여부는 X 커버리지로 판단하고, UI process band는 Board Y 전체로 표시합니다.", "MOF processability = abs(TargetX - ScannerCenterX) <= HalfX", "Scanner");
         SetTip(ReviewBasisHeadBox, "Review Basis Head", "Review 좌표계를 어느 Scanner Head의 DOE Beam을 기준으로 표현할지 선택합니다.", "ReviewCoordinate = ProcessStage - SelectedHeadDoeStage", "Scanner");
         SetTip(ReviewBasisBeamBox, "DOE Beam 1-16", "DOE 4x4 Beam 중 Review 좌표계의 기준으로 사용할 Beam 번호입니다.", "1~16, 좌상단부터 행 우선 순서", "Doe");
         SetTip(DoePitchXBox, "DOE Pitch X", "DOE 16 Beam 내부에서 Beam 간 X 방향 간격입니다.", "BeamOffsetX = (Column - 1.5) * DoePitchX", "Doe");
@@ -686,11 +754,11 @@ public partial class MainWindow : Window
         SetTip(OffsetXBox, "Offset Global X", "Review 측정 후 보정할 X 방향 Stage offset입니다. 설계 좌표에 더해져 최종 가공 좌표가 됩니다.", "Pprocess.X = Pdesign.X + OffsetX", "Offset");
         SetTip(OffsetYBox, "Offset Global Y", "Review 측정 후 보정할 Y 방향 Stage offset입니다. 설계 좌표에 더해져 최종 가공 좌표가 됩니다.", "Pprocess.Y = Pdesign.Y + OffsetY", "Offset");
 
-        SetTip(GenerateButton, "Generate / Refresh", "현재 입력값을 기준으로 Cell 배치, Stage 좌표, Scanner 가공좌표, Review 좌표계를 다시 계산합니다.", "입력값 변경 후 누르면 화면 전체 갱신", "Csv");
-        SetTip(OpenConfigButton, "Open CSV Template in Excel", "CSV 템플릿을 Excel 또는 Windows 기본 CSV 앱으로 엽니다. 값을 저장한 뒤 Reload 또는 Load로 화면에 반영합니다.", "Excel에서 저장 -> Reload Current CSV", "Csv");
-        SetTip(LoadConfigButton, "Load Saved CSV Config", "저장된 CSV 설정 파일을 선택해 화면 입력값과 좌표 배치를 갱신합니다.", "Key,Value 형식 CSV", "Csv");
-        SetTip(ReloadConfigButton, "Reload Current CSV", "마지막으로 열거나 로드한 CSV 파일을 다시 읽어 화면을 갱신합니다.", "Excel에서 수정 저장 후 바로 Reload", "Csv");
-        SetTip(SaveConfigButton, "Save Current CSV", "현재 화면 입력값을 CSV 파일에 저장합니다. CSV 설정을 수정한 뒤 파일까지 업데이트할 때 사용합니다.", "화면 입력값 -> CSV 저장", "Csv");
+        SetTip(GenerateButton, "Generate / Refresh", "현재 입력값을 기준으로 Cell 배치, Stage 좌표, Scanner 가공좌표, Review 좌표계를 다시 계산합니다.", "입력값 변경 후 누르면 화면 전체 갱신", "None");
+        SetTip(OpenConfigButton, "Open CSV Template in Excel", "CSV 템플릿을 Excel 또는 Windows 기본 CSV 앱으로 엽니다. 값을 저장한 뒤 Reload 또는 Load로 화면에 반영합니다.", "Excel에서 저장 -> Reload Current CSV", "None");
+        SetTip(LoadConfigButton, "Load Saved CSV Config", "저장된 CSV 설정 파일을 선택해 화면 입력값과 좌표 배치를 갱신합니다.", "Key,Value 형식 CSV", "None");
+        SetTip(ReloadConfigButton, "Reload Current CSV", "마지막으로 열거나 로드한 CSV 파일을 다시 읽어 화면을 갱신합니다.", "Excel에서 수정 저장 후 바로 Reload", "None");
+        SetTip(SaveConfigButton, "Save Current CSV", "현재 화면 입력값을 CSV 파일에 저장합니다. CSV 설정을 수정한 뒤 파일까지 업데이트할 때 사용합니다.", "화면 입력값 -> CSV 저장", "None");
     }
 
     private void SetTip(Control control, string title, string description, string formula, string diagramKind)
@@ -731,7 +799,10 @@ public partial class MainWindow : Window
                 Foreground = new SolidColorBrush(Color.FromRgb(32, 44, 60))
             }
         });
-        panel.Children.Add(CreateTooltipDiagram(diagramKind));
+        if (diagramKind != "None")
+        {
+            panel.Children.Add(CreateTooltipDiagram(diagramKind));
+        }
 
         control.ToolTip = new ToolTip { Content = panel };
     }
