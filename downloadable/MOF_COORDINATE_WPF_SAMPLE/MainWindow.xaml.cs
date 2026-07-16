@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
@@ -18,6 +19,10 @@ public partial class MainWindow : Window
     private CoordinateInput _input = new();
     private CoordinateResult? _lastResult;
     private double _matrixCellSize = 86;
+    private double _boardZoom = 1.0;
+    private string? _lastConfigPath;
+    private bool _suppressMatrixSelection;
+    private readonly HashSet<string> _selectedPointKeys = new();
 
     public MainWindow()
     {
@@ -46,15 +51,52 @@ public partial class MainWindow : Window
 
         if (dialog.ShowDialog(this) == true)
         {
+            _lastConfigPath = dialog.FileName;
             ApplyConfigCsv(dialog.FileName);
             LoadInputToScreen(_input);
+            ResetSelectionFromInput();
             GenerateAndRender();
         }
+    }
+
+    private void OpenConfigButton_Click(object sender, RoutedEventArgs e)
+    {
+        var template = System.IO.Path.Combine(AppContext.BaseDirectory, "CELL_LAYOUT_CONFIG_TEMPLATE.csv");
+        if (!File.Exists(template))
+        {
+            template = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "CELL_LAYOUT_CONFIG_TEMPLATE.csv");
+        }
+
+        if (!File.Exists(template))
+        {
+            template = System.IO.Path.Combine(Environment.CurrentDirectory, "CELL_LAYOUT_CONFIG_TEMPLATE.csv");
+        }
+
+        _lastConfigPath = template;
+        Process.Start(new ProcessStartInfo(template) { UseShellExecute = true });
+    }
+
+    private void ReloadConfigButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(_lastConfigPath) || !File.Exists(_lastConfigPath))
+        {
+            LoadConfigButton_Click(sender, e);
+            return;
+        }
+
+        ApplyConfigCsv(_lastConfigPath);
+        LoadInputToScreen(_input);
+        ResetSelectionFromInput();
+        GenerateAndRender();
     }
 
     private void GenerateAndRender()
     {
         _lastResult = _service.Generate(_input);
+        if (_selectedPointKeys.Count == 0)
+        {
+            ResetSelectionFromInput();
+        }
 
         BuildMatrixGrid(DesignMatrixGrid, "Design");
         BuildMatrixGrid(ProcessMatrixGrid, "Process");
@@ -65,36 +107,45 @@ public partial class MainWindow : Window
         var inFieldCount = _lastResult.Commands.Count(x => x.InField);
         SummaryText.Text =
             $"AK1 Stage Anchor = ({_lastResult.Ak1GlobalX:0.######}, {_lastResult.Ak1GlobalY:0.######}) mm   " +
-            $"Cells = {_lastResult.Commands.Count}, In-field = {inFieldCount}   " +
+            $"Cells = {_lastResult.Commands.Count}, In-field = {inFieldCount}, Selected = {_selectedPointKeys.Count}   " +
             $"Review Basis = H{_lastResult.SelectedReviewScanner.Index} DOE{_lastResult.SelectedDoeBeam.BeamNo:00}";
 
         FormulaText.Text =
-            "Click a board cell or scanner head to update the selected point/head. Mouse-wheel over a matrix grid to resize cells. " +
-            "Rows are numbered and columns are alphabet letters like A1, B1, C1. Each matrix cell shows the point name and one (x, y) coordinate.";
+            "Click board/matrix cells to select one or more points. Click a scanner to highlight processable points in its configured process area. " +
+            "Hold Ctrl and use mouse-wheel over the board or matrix to zoom. CSV can be opened in Excel, saved, then loaded or reloaded.";
 
         DrawLayout();
     }
 
     private void DrawLayout()
     {
-        if (_lastResult is null || LayoutCanvas.ActualWidth < 20 || LayoutCanvas.ActualHeight < 20)
+        if (_lastResult is null)
         {
             return;
         }
 
         LayoutCanvas.Children.Clear();
+        ResizeLayoutCanvas();
 
         DrawTitle("Board cell selection and zigzag scanner layout", 20, 8, 21, FontWeights.Bold);
 
         var boardLeft = 24.0;
         var boardTop = 52.0;
-        var boardWidth = LayoutCanvas.ActualWidth - 48.0;
-        var boardHeight = Math.Max(220.0, LayoutCanvas.ActualHeight - 180.0);
+        var boardWidth = LayoutCanvas.Width - 48.0;
+        var boardHeight = Math.Max(260.0, LayoutCanvas.Height - 310.0);
 
         DrawBoardFrame(boardLeft, boardTop, boardWidth, boardHeight);
         DrawCellBlocks(boardLeft, boardTop, boardWidth, boardHeight);
-        DrawScannerHeads(boardLeft, boardTop + boardHeight + 22.0, boardWidth);
-        DrawLegend(boardLeft, LayoutCanvas.ActualHeight - 32.0);
+        DrawScannerHeads(boardLeft, boardTop + boardHeight + 26.0, boardWidth);
+        DrawLegend(boardLeft + 410, 12);
+    }
+
+    private void ResizeLayoutCanvas()
+    {
+        var viewportWidth = Math.Max(980, LayoutScrollViewer.ViewportWidth);
+        var viewportHeight = Math.Max(430, LayoutScrollViewer.ViewportHeight);
+        LayoutCanvas.Width = Math.Max(viewportWidth, 1280) * _boardZoom;
+        LayoutCanvas.Height = Math.Max(viewportHeight, 560) * _boardZoom;
     }
 
     private void DrawBoardFrame(double left, double top, double width, double height)
@@ -124,11 +175,13 @@ public partial class MainWindow : Window
             return;
         }
 
-        var maxLocalX = (_input.CellBlockColumns - 1) * _input.CellBlockPitchX
+        var blockPitchX = EffectiveBlockPitchX(_input);
+        var blockPitchY = EffectiveBlockPitchY(_input);
+        var maxLocalX = (_input.CellBlockColumns - 1) * blockPitchX
                         + _input.CellFirstX
                         + Math.Max(1, _input.CellColumns - 1) * _input.CellPitchX
                         + _input.PatternOffsetX;
-        var maxLocalY = (_input.CellBlockRows - 1) * _input.CellBlockPitchY
+        var maxLocalY = (_input.CellBlockRows - 1) * blockPitchY
                         + _input.CellFirstY
                         + Math.Max(1, _input.CellRows - 1) * _input.CellPitchY
                         + _input.PatternOffsetY;
@@ -142,13 +195,13 @@ public partial class MainWindow : Window
         {
             var x = boardLeft + 28 + command.LocalX * scale;
             var y = boardTop + 20 + command.LocalY * scale;
-            var isSelected = command.IsSelectedCell;
+            var isSelected = IsPointSelected(command);
             var isHeadSelected = command.IsHighlightedScanner;
 
             var fill = Brushes.White;
             if (isHeadSelected)
             {
-                fill = new SolidColorBrush(Color.FromRgb(247, 180, 132));
+                fill = new SolidColorBrush(command.InField ? Color.FromRgb(247, 180, 132) : Color.FromRgb(255, 224, 198));
             }
             if (isSelected)
             {
@@ -236,6 +289,20 @@ public partial class MainWindow : Window
     {
         if (sender is FrameworkElement { Tag: CellCommand command })
         {
+            if ((Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
+            {
+                var key = PointKey(command);
+                if (!_selectedPointKeys.Add(key))
+                {
+                    _selectedPointKeys.Remove(key);
+                }
+            }
+            else
+            {
+                _selectedPointKeys.Clear();
+                _selectedPointKeys.Add(PointKey(command));
+            }
+
             _input.SelectedCellBlock = command.CellBlock;
             _input.SelectedCellColumn = command.Column;
             _input.SelectedCellRow = command.Row;
@@ -257,6 +324,11 @@ public partial class MainWindow : Window
 
     private void MatrixGrid_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
     {
+        if ((Keyboard.Modifiers & ModifierKeys.Control) != ModifierKeys.Control)
+        {
+            return;
+        }
+
         _matrixCellSize = Math.Clamp(_matrixCellSize + (e.Delta > 0 ? 8 : -8), 48, 180);
         if (_lastResult is not null)
         {
@@ -268,6 +340,70 @@ public partial class MainWindow : Window
         e.Handled = true;
     }
 
+    private void LayoutScrollViewer_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        if ((Keyboard.Modifiers & ModifierKeys.Control) != ModifierKeys.Control)
+        {
+            return;
+        }
+
+        _boardZoom = Math.Clamp(_boardZoom + (e.Delta > 0 ? 0.12 : -0.12), 0.35, 4.0);
+        DrawLayout();
+        e.Handled = true;
+    }
+
+    private void MatrixGrid_SelectedCellsChanged(object sender, SelectedCellsChangedEventArgs e)
+    {
+        if (_suppressMatrixSelection || sender is not DataGrid grid || grid.SelectedCells.Count == 0)
+        {
+            return;
+        }
+
+        var selected = new List<CellCommand>();
+        foreach (var cell in grid.SelectedCells)
+        {
+            if (cell.Item is not MatrixRow row || row.IsGroupHeader)
+            {
+                continue;
+            }
+
+            var header = cell.Column.Header?.ToString();
+            var columnIndex = ColumnLetterToIndex(header);
+            if (columnIndex < 0)
+            {
+                continue;
+            }
+
+            var command = _lastResult?.Commands.FirstOrDefault(x =>
+                x.CellBlock == row.CellBlock &&
+                x.Row == row.PointRow &&
+                x.Column == columnIndex);
+
+            if (command is not null)
+            {
+                selected.Add(command);
+            }
+        }
+
+        if (selected.Count == 0)
+        {
+            return;
+        }
+
+        _selectedPointKeys.Clear();
+        foreach (var command in selected)
+        {
+            _selectedPointKeys.Add(PointKey(command));
+        }
+
+        var first = selected[0];
+        _input.SelectedCellBlock = first.CellBlock;
+        _input.SelectedCellColumn = first.Column;
+        _input.SelectedCellRow = first.Row;
+        LoadInputToScreen(_input);
+        GenerateAndRender();
+    }
+
     private void BuildMatrixGrid(DataGrid grid, string mode)
     {
         if (_lastResult is null)
@@ -275,6 +411,7 @@ public partial class MainWindow : Window
             return;
         }
 
+        _suppressMatrixSelection = true;
         grid.Columns.Clear();
         grid.RowHeight = _matrixCellSize;
         grid.ColumnWidth = _matrixCellSize;
@@ -308,6 +445,7 @@ public partial class MainWindow : Window
         }
 
         grid.ItemsSource = BuildMatrixRows(mode, columns);
+        _suppressMatrixSelection = false;
     }
 
     private IReadOnlyList<MatrixRow> BuildMatrixRows(string mode, IReadOnlyList<string> columns)
@@ -325,7 +463,12 @@ public partial class MainWindow : Window
 
             foreach (var rowGroup in blockGroup.GroupBy(x => x.Row).OrderBy(x => x.Key))
             {
-                var matrixRow = new MatrixRow { RowHeader = (rowGroup.Key + 1).ToString(CultureInfo.InvariantCulture) };
+                var matrixRow = new MatrixRow
+                {
+                    RowHeader = (rowGroup.Key + 1).ToString(CultureInfo.InvariantCulture),
+                    CellBlock = blockGroup.Key,
+                    PointRow = rowGroup.Key
+                };
                 foreach (var command in rowGroup.OrderBy(x => x.Column))
                 {
                     var column = ToColumnLetter(command.Column);
@@ -539,6 +682,57 @@ public partial class MainWindow : Window
         return text;
     }
 
+    private static int ColumnLetterToIndex(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text) || text == "Cell#")
+        {
+            return -1;
+        }
+
+        var value = 0;
+        foreach (var ch in text.Trim().ToUpperInvariant())
+        {
+            if (ch < 'A' || ch > 'Z')
+            {
+                return -1;
+            }
+
+            value = value * 26 + (ch - 'A' + 1);
+        }
+
+        return value - 1;
+    }
+
+    private static string PointKey(CellCommand command) => $"{command.CellBlock}:{command.Column}:{command.Row}";
+
+    private bool IsPointSelected(CellCommand command) => _selectedPointKeys.Contains(PointKey(command));
+
+    private void ResetSelectionFromInput()
+    {
+        _selectedPointKeys.Clear();
+        _selectedPointKeys.Add($"{_input.SelectedCellBlock}:{_input.SelectedCellColumn}:{_input.SelectedCellRow}");
+    }
+
+    private static double EffectiveBlockPitchX(CoordinateInput input)
+    {
+        if (input.CellBlockPitchX > 0)
+        {
+            return input.CellBlockPitchX;
+        }
+
+        return Math.Max(1, input.CellColumns) * Math.Max(1, input.CellPitchX) + Math.Max(1, input.CellPitchX);
+    }
+
+    private static double EffectiveBlockPitchY(CoordinateInput input)
+    {
+        if (input.CellBlockPitchY > 0)
+        {
+            return input.CellBlockPitchY;
+        }
+
+        return Math.Max(1, input.CellRows) * Math.Max(1, input.CellPitchY) + Math.Max(1, input.CellPitchY);
+    }
+
     private void ApplyConfigCsv(string path)
     {
         foreach (var line in File.ReadAllLines(path))
@@ -582,6 +776,8 @@ public partial class MainWindow : Window
             case nameof(CoordinateInput.CellBlockPitchY): _input.CellBlockPitchY = number; break;
             case nameof(CoordinateInput.ScannerCount): _input.ScannerCount = Math.Max(1, integer); break;
             case nameof(CoordinateInput.HighlightScannerHeads): _input.HighlightScannerHeads = value; break;
+            case nameof(CoordinateInput.ScannerFieldHalfX): _input.ScannerFieldHalfX = number; break;
+            case nameof(CoordinateInput.ScannerFieldHalfY): _input.ScannerFieldHalfY = number; break;
             case nameof(CoordinateInput.ReviewBasisScannerHead): _input.ReviewBasisScannerHead = Math.Max(1, integer); break;
             case nameof(CoordinateInput.ReviewBasisDoeBeam): _input.ReviewBasisDoeBeam = Clamp(integer, 1, 16); break;
         }

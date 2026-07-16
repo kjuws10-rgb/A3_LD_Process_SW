@@ -153,6 +153,8 @@ public sealed class MatrixRow
 
     public string RowHeader { get; set; } = "";
     public bool IsGroupHeader { get; set; }
+    public int CellBlock { get; set; }
+    public int PointRow { get; set; }
 
     public string this[string column]
     {

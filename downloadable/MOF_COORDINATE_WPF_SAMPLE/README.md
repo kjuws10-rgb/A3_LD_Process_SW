@@ -18,7 +18,9 @@ dotnet run
 - 좌측 입력 패널: Board, Review Camera, Cell, Scanner, DOE16 Beam, Review Offset 변수 입력.
 - 상단 Canvas: Board Cell 블록, 선택 Cell, Highlight Scanner가 담당하는 Cell, Zigzag Scanner Head 시각화.
 - 마우스 클릭: 화면의 Cell 또는 Scanner Head를 클릭하면 선택 상태와 결과 Matrix가 즉시 갱신된다.
-- Matrix 확대/축소: Matrix DataGrid 위에서 마우스 휠을 돌리면 Cell 크기와 글자 크기가 함께 조정된다.
+- 복수 선택: Matrix DataGrid에서 여러 칸을 선택하면 해당 가공점들이 상단 Board UI에 함께 표시된다.
+- 확대/축소: `Ctrl + Mouse Wheel`일 때만 Board 또는 Matrix가 확대/축소된다. 일반 Mouse Wheel은 스크롤로 동작한다.
+- Board Scroll: Board를 확대하면 상하좌우 ScrollBar로 원하는 위치를 이동해서 볼 수 있다.
 - Design 2D Matrix 탭: Cell#별 A/B/C 열, 1/2/3 행 형태로 Recipe Local 좌표를 `(x, y)`로 표시.
 - Process 2D Matrix 탭: 동일 Matrix 구조로 최종 MOF `Gx/Gy`를 `(x, y)`로 표시.
 - Review 2D Matrix 탭: 사용자가 선택한 Scanner Head와 DOE16 Beam 기준으로 모든 Cell의 리뷰 좌표계를 `(x, y)`로 표시.
@@ -26,7 +28,11 @@ dotnet run
 
 ## Excel CSV 설정
 
-`CELL_LAYOUT_CONFIG_TEMPLATE.csv`를 Excel에서 열어 값을 바꾼 뒤 저장하고, 화면의 `Load Excel CSV Config` 버튼으로 불러온다.
+`CELL_LAYOUT_CONFIG_TEMPLATE.csv`를 Excel에서 열어 값을 바꾼 뒤 저장하고, 화면의 `Load Saved CSV Config` 또는 `Reload Current CSV` 버튼으로 불러온다.
+
+- `Open CSV Template in Excel`: 기본 CSV 템플릿을 Excel 또는 Windows 기본 CSV 앱으로 연다.
+- `Load Saved CSV Config`: 사용자가 저장한 CSV를 선택해서 화면에 반영한다.
+- `Reload Current CSV`: 마지막으로 열거나 로드한 CSV를 다시 읽어 화면을 갱신한다.
 
 주요 항목:
 
@@ -34,7 +40,8 @@ dotnet run
 - `CellPitchX`, `CellPitchY`: Cell# 내부 가공점 Matrix의 X/Y pitch.
 - `CellColumns`, `CellRows`: Cell# 내부 가공점 Matrix 열/행 수. 화면에는 A/B/C 열과 1/2/3 행으로 표시된다.
 - `CellBlockColumns`, `CellBlockRows`: 기판 안에 배치되는 Cell# 블록의 열/행 수.
-- `CellBlockPitchX`, `CellBlockPitchY`: Cell# 블록 사이의 X/Y pitch.
+- `CellBlockPitchX`, `CellBlockPitchY`: Cell# 블록 사이의 X/Y pitch. 0이면 내부 Matrix 크기를 기준으로 자동 배치 pitch를 계산해 겹침을 방지한다.
+- `ScannerFieldHalfX`, `ScannerFieldHalfY`: Scanner가 가공 가능한 X/Y 반폭. Scanner를 클릭하면 이 영역 안의 가공점이 강조 표시된다.
 
 ## 주요 코드
 

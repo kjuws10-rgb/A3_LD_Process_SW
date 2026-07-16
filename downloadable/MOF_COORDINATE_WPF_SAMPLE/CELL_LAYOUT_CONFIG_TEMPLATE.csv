@@ -15,5 +15,7 @@ CellBlockPitchX,0
 CellBlockPitchY,140
 ScannerCount,8
 HighlightScannerHeads,"1,5"
+ScannerFieldHalfX,55
+ScannerFieldHalfY,55
 ReviewBasisScannerHead,5
 ReviewBasisDoeBeam,1

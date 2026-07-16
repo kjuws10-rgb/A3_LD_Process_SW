@@ -31,6 +31,8 @@ public sealed class CoordinateTransformService
         var sin = Math.Sin(theta);
         var blockColumns = Math.Max(1, input.CellBlockColumns);
         var blockRows = Math.Max(1, input.CellBlockRows);
+        var blockPitchX = EffectiveBlockPitchX(input);
+        var blockPitchY = EffectiveBlockPitchY(input);
         var commands = new List<CellCommand>(input.CellColumns * input.CellRows * blockColumns * blockRows);
 
         for (var blockRow = 0; blockRow < blockRows; blockRow++)
@@ -38,8 +40,8 @@ public sealed class CoordinateTransformService
             for (var blockColumn = 0; blockColumn < blockColumns; blockColumn++)
             {
                 var cellBlock = blockRow * blockColumns + blockColumn + 1;
-                var blockOriginX = blockColumn * input.CellBlockPitchX;
-                var blockOriginY = blockRow * input.CellBlockPitchY;
+                var blockOriginX = blockColumn * blockPitchX;
+                var blockOriginY = blockRow * blockPitchY;
 
                 for (var row = 0; row < input.CellRows; row++)
                 {
@@ -158,6 +160,10 @@ public sealed class CoordinateTransformService
         (double X, double Y) reviewReference)
     {
         var selected = SelectScanner(processStageX, processStageY, scanners, out var inField);
+        var isInHighlightedScannerArea = scanners.Any(scanner =>
+            scanner.IsHighlighted &&
+            Math.Abs(processStageX - scanner.CenterX) <= scanner.FieldHalfX &&
+            Math.Abs(processStageY - scanner.CenterY) <= scanner.FieldHalfY);
         var relativeX = processStageX - selected.CenterX;
         var relativeY = processStageY - selected.CenterY;
 
@@ -180,7 +186,7 @@ public sealed class CoordinateTransformService
             CellBlockColumn = blockColumn,
             CellBlockRow = blockRow,
             IsSelectedCell = cellBlock == input.SelectedCellBlock && column == input.SelectedCellColumn && row == input.SelectedCellRow,
-            IsHighlightedScanner = selected.IsHighlighted,
+            IsHighlightedScanner = isInHighlightedScannerArea,
             LocalX = Round(localX),
             LocalY = Round(localY),
             DesignStageX = Round(designStageX),
@@ -259,4 +265,24 @@ public sealed class CoordinateTransformService
     private static int Clamp(int value, int min, int max) => Math.Min(max, Math.Max(min, value));
 
     private static double Round(double value) => Math.Round(value, 6);
+
+    private static double EffectiveBlockPitchX(CoordinateInput input)
+    {
+        if (input.CellBlockPitchX > 0)
+        {
+            return input.CellBlockPitchX;
+        }
+
+        return Math.Max(1, input.CellColumns) * Math.Max(1, input.CellPitchX) + Math.Max(1, input.CellPitchX);
+    }
+
+    private static double EffectiveBlockPitchY(CoordinateInput input)
+    {
+        if (input.CellBlockPitchY > 0)
+        {
+            return input.CellBlockPitchY;
+        }
+
+        return Math.Max(1, input.CellRows) * Math.Max(1, input.CellPitchY) + Math.Max(1, input.CellPitchY);
+    }
 }

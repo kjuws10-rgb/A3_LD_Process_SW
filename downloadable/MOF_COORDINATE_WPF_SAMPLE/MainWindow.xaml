@@ -78,8 +78,8 @@
             <StackPanel Margin="0,0,0,8"><TextBlock Text="First Center Y"/><TextBox x:Name="FirstScannerYBox"/></StackPanel>
             <StackPanel Margin="0,0,8,8"><TextBlock Text="Pitch X"/><TextBox x:Name="ScannerPitchXBox"/></StackPanel>
             <StackPanel Margin="0,0,0,8"><TextBlock Text="Even Y Offset"/><TextBox x:Name="EvenYOffsetBox"/></StackPanel>
-            <StackPanel Margin="0,0,8,8"><TextBlock Text="Field Half X"/><TextBox x:Name="FieldHalfXBox"/></StackPanel>
-            <StackPanel Margin="0,0,0,8"><TextBlock Text="Field Half Y"/><TextBox x:Name="FieldHalfYBox"/></StackPanel>
+            <StackPanel Margin="0,0,8,8"><TextBlock Text="Process Area Half X"/><TextBox x:Name="FieldHalfXBox"/></StackPanel>
+            <StackPanel Margin="0,0,0,8"><TextBlock Text="Process Area Half Y"/><TextBox x:Name="FieldHalfYBox"/></StackPanel>
             <StackPanel Margin="0,0,8,8"><TextBlock Text="Review Head"/><TextBox x:Name="ReviewBasisHeadBox"/></StackPanel>
             <StackPanel Margin="0,0,0,8"><TextBlock Text="DOE Beam 1-16"/><TextBox x:Name="ReviewBasisBeamBox"/></StackPanel>
             <StackPanel Margin="0,0,8,8"><TextBlock Text="DOE Pitch X"/><TextBox x:Name="DoePitchXBox"/></StackPanel>
@@ -97,22 +97,32 @@
                   Content="Generate / Refresh"
                   FontWeight="Bold"
                   Click="GenerateButton_Click"/>
-          <Button x:Name="LoadConfigButton"
+          <Button x:Name="OpenConfigButton"
                   Height="36"
                   Margin="0,8,0,0"
-                  Content="Load Excel CSV Config"
+                  Content="Open CSV Template in Excel"
+                  Click="OpenConfigButton_Click"/>
+          <Button x:Name="LoadConfigButton"
+                  Height="36"
+                  Margin="0,6,0,0"
+                  Content="Load Saved CSV Config"
                   Click="LoadConfigButton_Click"/>
+          <Button x:Name="ReloadConfigButton"
+                  Height="36"
+                  Margin="0,6,0,0"
+                  Content="Reload Current CSV"
+                  Click="ReloadConfigButton_Click"/>
         </StackPanel>
       </ScrollViewer>
     </Border>
 
     <Grid Grid.Column="2">
       <Grid.RowDefinitions>
-        <RowDefinition Height="455"/>
+        <RowDefinition Height="2.1*"/>
         <RowDefinition Height="12"/>
-        <RowDefinition Height="*"/>
+        <RowDefinition Height="1.7*"/>
         <RowDefinition Height="12"/>
-        <RowDefinition Height="105"/>
+        <RowDefinition Height="92"/>
       </Grid.RowDefinitions>
 
       <Border Background="White" BorderBrush="#D5DEE8" BorderThickness="1" CornerRadius="8" Padding="12">
@@ -125,10 +135,16 @@
                      FontSize="15"
                      Foreground="#25364D"
                      Margin="0,0,0,8"/>
-          <Canvas x:Name="LayoutCanvas"
-                  Grid.Row="1"
-                  Background="#FFFFFF"
-                  ClipToBounds="True"/>
+          <ScrollViewer x:Name="LayoutScrollViewer"
+                        Grid.Row="1"
+                        HorizontalScrollBarVisibility="Auto"
+                        VerticalScrollBarVisibility="Auto"
+                        PreviewMouseWheel="LayoutScrollViewer_PreviewMouseWheel">
+            <Canvas x:Name="LayoutCanvas"
+                    Width="1280"
+                    Height="520"
+                    Background="#FFFFFF"/>
+          </ScrollViewer>
         </Grid>
       </Border>
 
@@ -139,8 +155,11 @@
                       AutoGenerateColumns="False"
                       CanUserAddRows="False"
                       IsReadOnly="True"
+                      SelectionMode="Extended"
+                      SelectionUnit="Cell"
                       HeadersVisibility="Column"
                       GridLinesVisibility="All"
+                      SelectedCellsChanged="MatrixGrid_SelectedCellsChanged"
                       PreviewMouseWheel="MatrixGrid_PreviewMouseWheel"/>
           </TabItem>
           <TabItem Header="Process 2D Matrix">
@@ -148,8 +167,11 @@
                       AutoGenerateColumns="False"
                       CanUserAddRows="False"
                       IsReadOnly="True"
+                      SelectionMode="Extended"
+                      SelectionUnit="Cell"
                       HeadersVisibility="Column"
                       GridLinesVisibility="All"
+                      SelectedCellsChanged="MatrixGrid_SelectedCellsChanged"
                       PreviewMouseWheel="MatrixGrid_PreviewMouseWheel"/>
           </TabItem>
           <TabItem Header="Review 2D Matrix">
@@ -157,8 +179,11 @@
                       AutoGenerateColumns="False"
                       CanUserAddRows="False"
                       IsReadOnly="True"
+                      SelectionMode="Extended"
+                      SelectionUnit="Cell"
                       HeadersVisibility="Column"
                       GridLinesVisibility="All"
+                      SelectedCellsChanged="MatrixGrid_SelectedCellsChanged"
                       PreviewMouseWheel="MatrixGrid_PreviewMouseWheel"/>
           </TabItem>
           <TabItem Header="DOE 16 Matrix">
