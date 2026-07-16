@@ -1,8 +1,12 @@
 using System.Globalization;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
+using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using Microsoft.Win32;
 using MofCoordinateDemo.Models;
 using MofCoordinateDemo.Services;
 
@@ -13,6 +17,7 @@ public partial class MainWindow : Window
     private readonly CoordinateTransformService _service = new();
     private CoordinateInput _input = new();
     private CoordinateResult? _lastResult;
+    private double _matrixCellSize = 86;
 
     public MainWindow()
     {
@@ -31,17 +36,29 @@ public partial class MainWindow : Window
         GenerateAndRender();
     }
 
+    private void LoadConfigButton_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFileDialog
+        {
+            Title = "Load Excel CSV Config",
+            Filter = "Excel CSV (*.csv)|*.csv|All files (*.*)|*.*"
+        };
+
+        if (dialog.ShowDialog(this) == true)
+        {
+            ApplyConfigCsv(dialog.FileName);
+            LoadInputToScreen(_input);
+            GenerateAndRender();
+        }
+    }
+
     private void GenerateAndRender()
     {
         _lastResult = _service.Generate(_input);
 
-        DesignGrid.ItemsSource = _lastResult.Commands;
-        ProcessGrid.ItemsSource = _lastResult.Commands;
-        ReviewGrid.ItemsSource = _lastResult.Commands
-            .OrderBy(x => x.ScannerIndex)
-            .ThenBy(x => x.Row)
-            .ThenBy(x => x.Column)
-            .ToList();
+        BuildMatrixGrid(DesignMatrixGrid, "Design");
+        BuildMatrixGrid(ProcessMatrixGrid, "Process");
+        BuildMatrixGrid(ReviewMatrixGrid, "Review");
         DoeGrid.ItemsSource = _lastResult.DoeBeams;
 
         var selected = _lastResult.Commands.FirstOrDefault(x => x.IsSelectedCell);
@@ -52,15 +69,8 @@ public partial class MainWindow : Window
             $"Review Basis = H{_lastResult.SelectedReviewScanner.Index} DOE{_lastResult.SelectedDoeBeam.BeamNo:00}";
 
         FormulaText.Text =
-            "Design: Pstage = AK1 + R(theta) * Plocal.  " +
-            "Process: Pprocess = Pstage + review offset, then GxGy = sign(head) * (Pprocess - scanner center).  " +
-            "Review: every result is expressed from the selected head and DOE16 beam reference, so each row shows one 2D matrix value as (x, y).";
-
-        if (selected is not null)
-        {
-            ProcessGrid.ScrollIntoView(selected);
-            ReviewGrid.ScrollIntoView(selected);
-        }
+            "Click a board cell or scanner head to update the selected point/head. Mouse-wheel over a matrix grid to resize cells. " +
+            "Rows are numbered and columns are alphabet letters like A1, B1, C1. Each matrix cell shows the point name and one (x, y) coordinate.";
 
         DrawLayout();
     }
@@ -114,8 +124,14 @@ public partial class MainWindow : Window
             return;
         }
 
-        var maxLocalX = _input.CellFirstX + Math.Max(1, _input.CellColumns - 1) * _input.CellPitchX + _input.PatternOffsetX;
-        var maxLocalY = _input.CellFirstY + Math.Max(1, _input.CellRows - 1) * _input.CellPitchY + _input.PatternOffsetY;
+        var maxLocalX = (_input.CellBlockColumns - 1) * _input.CellBlockPitchX
+                        + _input.CellFirstX
+                        + Math.Max(1, _input.CellColumns - 1) * _input.CellPitchX
+                        + _input.PatternOffsetX;
+        var maxLocalY = (_input.CellBlockRows - 1) * _input.CellBlockPitchY
+                        + _input.CellFirstY
+                        + Math.Max(1, _input.CellRows - 1) * _input.CellPitchY
+                        + _input.PatternOffsetY;
         var scaleX = (boardWidth - 60) / Math.Max(maxLocalX + _input.CellPitchX, 1);
         var scaleY = (boardHeight - 42) / Math.Max(maxLocalY + _input.CellPitchY, 1);
         var scale = Math.Min(scaleX, scaleY);
@@ -149,11 +165,27 @@ public partial class MainWindow : Window
                 Height = cellH,
                 Fill = fill,
                 Stroke = stroke,
-                StrokeThickness = isSelected ? 2.2 : 1.0
+                StrokeThickness = isSelected ? 2.2 : 1.0,
+                Tag = command,
+                Cursor = Cursors.Hand
             };
+            rect.MouseLeftButtonDown += CellRect_MouseLeftButtonDown;
             Canvas.SetLeft(rect, x);
             Canvas.SetTop(rect, y);
             LayoutCanvas.Children.Add(rect);
+
+            if (cellW > 34 && cellH > 24)
+            {
+                DrawText(command.MatrixPointName, x + 5, y + 4, Math.Min(13, Math.Max(8, cellH * 0.28)), FontWeights.SemiBold, Brushes.Black);
+            }
+        }
+
+        foreach (var blockGroup in _lastResult.Commands.GroupBy(x => x.CellBlock))
+        {
+            var first = blockGroup.OrderBy(x => x.Row).ThenBy(x => x.Column).First();
+            var x = boardLeft + 28 + first.LocalX * scale;
+            var y = boardTop + 20 + first.LocalY * scale - 22;
+            DrawText($"Cell#{first.CellBlock}", x, y, 13, FontWeights.Bold, new SolidColorBrush(Color.FromRgb(23, 32, 51)));
         }
     }
 
@@ -187,14 +219,146 @@ public partial class MainWindow : Window
                 Stroke = isReviewBasis
                     ? new SolidColorBrush(Color.FromRgb(30, 91, 190))
                     : Brushes.Black,
-                StrokeThickness = isReviewBasis ? 2.8 : 2
+                StrokeThickness = isReviewBasis ? 2.8 : 2,
+                Tag = scanner,
+                Cursor = Cursors.Hand
             };
+            box.MouseLeftButtonDown += ScannerRect_MouseLeftButtonDown;
             Canvas.SetLeft(box, x);
             Canvas.SetTop(box, y);
             LayoutCanvas.Children.Add(box);
 
             DrawText($"Scanner\n#{scanner.Index}", x + 8, y + 17, 15, FontWeights.Normal, Brushes.Black);
         }
+    }
+
+    private void CellRect_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is FrameworkElement { Tag: CellCommand command })
+        {
+            _input.SelectedCellBlock = command.CellBlock;
+            _input.SelectedCellColumn = command.Column;
+            _input.SelectedCellRow = command.Row;
+            LoadInputToScreen(_input);
+            GenerateAndRender();
+        }
+    }
+
+    private void ScannerRect_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is FrameworkElement { Tag: ScannerModel scanner })
+        {
+            _input.ReviewBasisScannerHead = scanner.Index;
+            _input.HighlightScannerHeads = scanner.Index.ToString(CultureInfo.InvariantCulture);
+            LoadInputToScreen(_input);
+            GenerateAndRender();
+        }
+    }
+
+    private void MatrixGrid_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        _matrixCellSize = Math.Clamp(_matrixCellSize + (e.Delta > 0 ? 8 : -8), 48, 180);
+        if (_lastResult is not null)
+        {
+            BuildMatrixGrid(DesignMatrixGrid, "Design");
+            BuildMatrixGrid(ProcessMatrixGrid, "Process");
+            BuildMatrixGrid(ReviewMatrixGrid, "Review");
+        }
+
+        e.Handled = true;
+    }
+
+    private void BuildMatrixGrid(DataGrid grid, string mode)
+    {
+        if (_lastResult is null)
+        {
+            return;
+        }
+
+        grid.Columns.Clear();
+        grid.RowHeight = _matrixCellSize;
+        grid.ColumnWidth = _matrixCellSize;
+
+        grid.Columns.Add(new DataGridTextColumn
+        {
+            Header = "Cell#",
+            Binding = new Binding(nameof(MatrixRow.RowHeader)),
+            Width = Math.Max(70, _matrixCellSize * 0.82)
+        });
+
+        var columns = Enumerable.Range(0, Math.Max(1, _input.CellColumns))
+            .Select(ToColumnLetter)
+            .ToList();
+
+        foreach (var column in columns)
+        {
+            var textBlockFactory = new FrameworkElementFactory(typeof(TextBlock));
+            textBlockFactory.SetBinding(TextBlock.TextProperty, new Binding($"[{column}]"));
+            textBlockFactory.SetValue(TextBlock.TextAlignmentProperty, TextAlignment.Center);
+            textBlockFactory.SetValue(TextBlock.VerticalAlignmentProperty, VerticalAlignment.Center);
+            textBlockFactory.SetValue(TextBlock.TextWrappingProperty, TextWrapping.Wrap);
+            textBlockFactory.SetValue(TextBlock.FontSizeProperty, Math.Clamp(_matrixCellSize / 6.2, 8, 18));
+
+            grid.Columns.Add(new DataGridTemplateColumn
+            {
+                Header = column,
+                Width = _matrixCellSize,
+                CellTemplate = new DataTemplate { VisualTree = textBlockFactory }
+            });
+        }
+
+        grid.ItemsSource = BuildMatrixRows(mode, columns);
+    }
+
+    private IReadOnlyList<MatrixRow> BuildMatrixRows(string mode, IReadOnlyList<string> columns)
+    {
+        if (_lastResult is null)
+        {
+            return Array.Empty<MatrixRow>();
+        }
+
+        var rows = new List<MatrixRow>();
+        foreach (var blockGroup in _lastResult.Commands.GroupBy(x => x.CellBlock).OrderBy(x => x.Key))
+        {
+            var header = new MatrixRow { RowHeader = $"Cell#{blockGroup.Key}", IsGroupHeader = true };
+            rows.Add(header);
+
+            foreach (var rowGroup in blockGroup.GroupBy(x => x.Row).OrderBy(x => x.Key))
+            {
+                var matrixRow = new MatrixRow { RowHeader = (rowGroup.Key + 1).ToString(CultureInfo.InvariantCulture) };
+                foreach (var command in rowGroup.OrderBy(x => x.Column))
+                {
+                    var column = ToColumnLetter(command.Column);
+                    matrixRow[column] = FormatMatrixCell(command, mode);
+                }
+
+                rows.Add(matrixRow);
+            }
+        }
+
+        return rows;
+    }
+
+    private static string FormatMatrixCell(CellCommand command, string mode)
+    {
+        var coordinate = mode switch
+        {
+            "Design" => command.DesignLocalMatrix,
+            "Process" => command.ProcessGMatrix,
+            "Review" => command.ReviewMatrix,
+            _ => command.DesignLocalMatrix
+        };
+
+        var extra = mode switch
+        {
+            "Process" => $"{command.ScannerName}",
+            "Review" => command.DoeSelection,
+            _ => ""
+        };
+
+        return string.IsNullOrWhiteSpace(extra)
+            ? $"{command.MatrixPointName}\n{coordinate}"
+            : $"{command.MatrixPointName}\n{coordinate}\n{extra}";
     }
 
     private void DrawLegend(double left, double top)
@@ -279,6 +443,11 @@ public partial class MainWindow : Window
         PatternOffsetYBox.Text = Format(input.PatternOffsetY);
         CellColumnsBox.Text = input.CellColumns.ToString(CultureInfo.InvariantCulture);
         CellRowsBox.Text = input.CellRows.ToString(CultureInfo.InvariantCulture);
+        CellBlockColumnsBox.Text = input.CellBlockColumns.ToString(CultureInfo.InvariantCulture);
+        CellBlockRowsBox.Text = input.CellBlockRows.ToString(CultureInfo.InvariantCulture);
+        CellBlockPitchXBox.Text = Format(input.CellBlockPitchX);
+        CellBlockPitchYBox.Text = Format(input.CellBlockPitchY);
+        SelectedCellBlockBox.Text = input.SelectedCellBlock.ToString(CultureInfo.InvariantCulture);
         SelectedCellColumnBox.Text = input.SelectedCellColumn.ToString(CultureInfo.InvariantCulture);
         SelectedCellRowBox.Text = input.SelectedCellRow.ToString(CultureInfo.InvariantCulture);
         ScannerCountBox.Text = input.ScannerCount.ToString(CultureInfo.InvariantCulture);
@@ -301,6 +470,8 @@ public partial class MainWindow : Window
     {
         var columns = ReadInt(CellColumnsBox, _input.CellColumns);
         var rows = ReadInt(CellRowsBox, _input.CellRows);
+        var blockColumns = ReadInt(CellBlockColumnsBox, _input.CellBlockColumns);
+        var blockRows = ReadInt(CellBlockRowsBox, _input.CellBlockRows);
         var scannerCount = ReadInt(ScannerCountBox, _input.ScannerCount);
 
         return new CoordinateInput
@@ -326,6 +497,11 @@ public partial class MainWindow : Window
             PatternOffsetY = ReadDouble(PatternOffsetYBox, _input.PatternOffsetY),
             CellColumns = columns,
             CellRows = rows,
+            CellBlockColumns = blockColumns,
+            CellBlockRows = blockRows,
+            CellBlockPitchX = ReadDouble(CellBlockPitchXBox, _input.CellBlockPitchX),
+            CellBlockPitchY = ReadDouble(CellBlockPitchYBox, _input.CellBlockPitchY),
+            SelectedCellBlock = Clamp(ReadInt(SelectedCellBlockBox, _input.SelectedCellBlock), 1, blockColumns * blockRows),
             SelectedCellColumn = Clamp(ReadZeroBasedInt(SelectedCellColumnBox, _input.SelectedCellColumn), 0, Math.Max(0, columns - 1)),
             SelectedCellRow = Clamp(ReadZeroBasedInt(SelectedCellRowBox, _input.SelectedCellRow), 0, Math.Max(0, rows - 1)),
             ScannerCount = scannerCount,
@@ -348,6 +524,68 @@ public partial class MainWindow : Window
     private static string Format(double value) => value.ToString("0.######", CultureInfo.InvariantCulture);
 
     private static int Clamp(int value, int min, int max) => Math.Min(max, Math.Max(min, value));
+
+    private static string ToColumnLetter(int zeroBasedColumn)
+    {
+        var value = zeroBasedColumn + 1;
+        var text = "";
+        while (value > 0)
+        {
+            value--;
+            text = (char)('A' + value % 26) + text;
+            value /= 26;
+        }
+
+        return text;
+    }
+
+    private void ApplyConfigCsv(string path)
+    {
+        foreach (var line in File.ReadAllLines(path))
+        {
+            if (string.IsNullOrWhiteSpace(line) || line.TrimStart().StartsWith("#", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            var parts = line.Split(',', 2);
+            if (parts.Length != 2 || parts[0].Equals("Key", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            ApplyConfigValue(parts[0].Trim(), parts[1].Trim());
+        }
+    }
+
+    private void ApplyConfigValue(string key, string value)
+    {
+        value = value.Trim().Trim('"');
+        var number = double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var d) ? d : 0;
+        var integer = int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var i) ? i : (int)Math.Round(number);
+
+        switch (key)
+        {
+            case nameof(CoordinateInput.BoardSizeX): _input.BoardSizeX = number; break;
+            case nameof(CoordinateInput.BoardSizeY): _input.BoardSizeY = number; break;
+            case nameof(CoordinateInput.CellFirstX): _input.CellFirstX = number; break;
+            case nameof(CoordinateInput.CellFirstY): _input.CellFirstY = number; break;
+            case nameof(CoordinateInput.CellPitchX): _input.CellPitchX = number; break;
+            case nameof(CoordinateInput.CellPitchY): _input.CellPitchY = number; break;
+            case nameof(CoordinateInput.PatternOffsetX): _input.PatternOffsetX = number; break;
+            case nameof(CoordinateInput.PatternOffsetY): _input.PatternOffsetY = number; break;
+            case nameof(CoordinateInput.CellColumns): _input.CellColumns = Math.Max(1, integer); break;
+            case nameof(CoordinateInput.CellRows): _input.CellRows = Math.Max(1, integer); break;
+            case nameof(CoordinateInput.CellBlockColumns): _input.CellBlockColumns = Math.Max(1, integer); break;
+            case nameof(CoordinateInput.CellBlockRows): _input.CellBlockRows = Math.Max(1, integer); break;
+            case nameof(CoordinateInput.CellBlockPitchX): _input.CellBlockPitchX = number; break;
+            case nameof(CoordinateInput.CellBlockPitchY): _input.CellBlockPitchY = number; break;
+            case nameof(CoordinateInput.ScannerCount): _input.ScannerCount = Math.Max(1, integer); break;
+            case nameof(CoordinateInput.HighlightScannerHeads): _input.HighlightScannerHeads = value; break;
+            case nameof(CoordinateInput.ReviewBasisScannerHead): _input.ReviewBasisScannerHead = Math.Max(1, integer); break;
+            case nameof(CoordinateInput.ReviewBasisDoeBeam): _input.ReviewBasisDoeBeam = Clamp(integer, 1, 16); break;
+        }
+    }
 
     private static double ReadDouble(TextBox textBox, double fallback)
     {

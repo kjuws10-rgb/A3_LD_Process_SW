@@ -29,39 +29,54 @@ public sealed class CoordinateTransformService
         var theta = input.ThetaAlignDeg * Math.PI / 180.0;
         var cos = Math.Cos(theta);
         var sin = Math.Sin(theta);
-        var commands = new List<CellCommand>(input.CellColumns * input.CellRows);
+        var blockColumns = Math.Max(1, input.CellBlockColumns);
+        var blockRows = Math.Max(1, input.CellBlockRows);
+        var commands = new List<CellCommand>(input.CellColumns * input.CellRows * blockColumns * blockRows);
 
-        for (var row = 0; row < input.CellRows; row++)
+        for (var blockRow = 0; blockRow < blockRows; blockRow++)
         {
-            for (var column = 0; column < input.CellColumns; column++)
+            for (var blockColumn = 0; blockColumn < blockColumns; blockColumn++)
             {
-                var localX = input.CellFirstX + column * input.CellPitchX + input.PatternOffsetX;
-                var localY = input.CellFirstY + row * input.CellPitchY + input.PatternOffsetY;
+                var cellBlock = blockRow * blockColumns + blockColumn + 1;
+                var blockOriginX = blockColumn * input.CellBlockPitchX;
+                var blockOriginY = blockRow * input.CellBlockPitchY;
 
-                // Design stage coordinate is the ideal target from AK1 and theta only.
-                var designStageX = ak1GlobalX + cos * localX - sin * localY;
-                var designStageY = ak1GlobalY + sin * localX + cos * localY;
+                for (var row = 0; row < input.CellRows; row++)
+                {
+                    for (var column = 0; column < input.CellColumns; column++)
+                    {
+                        var localX = blockOriginX + input.CellFirstX + column * input.CellPitchX + input.PatternOffsetX;
+                        var localY = blockOriginY + input.CellFirstY + row * input.CellPitchY + input.PatternOffsetY;
 
-                // Process stage coordinate includes the correction offset from review feedback.
-                var processStageX = designStageX + input.ProcessOffsetGlobalX;
-                var processStageY = designStageY + input.ProcessOffsetGlobalY;
+                        // Design stage coordinate is the ideal target from AK1 and theta only.
+                        var designStageX = ak1GlobalX + cos * localX - sin * localY;
+                        var designStageY = ak1GlobalY + sin * localX + cos * localY;
 
-                var command = CreateCommand(
-                    input,
-                    column,
-                    row,
-                    localX,
-                    localY,
-                    designStageX,
-                    designStageY,
-                    processStageX,
-                    processStageY,
-                    scanners,
-                    selectedReviewScanner,
-                    selectedDoeBeam,
-                    reviewReference);
+                        // Process stage coordinate includes the correction offset from review feedback.
+                        var processStageX = designStageX + input.ProcessOffsetGlobalX;
+                        var processStageY = designStageY + input.ProcessOffsetGlobalY;
 
-                commands.Add(command);
+                        var command = CreateCommand(
+                            input,
+                            column,
+                            row,
+                            cellBlock,
+                            blockColumn,
+                            blockRow,
+                            localX,
+                            localY,
+                            designStageX,
+                            designStageY,
+                            processStageX,
+                            processStageY,
+                            scanners,
+                            selectedReviewScanner,
+                            selectedDoeBeam,
+                            reviewReference);
+
+                        commands.Add(command);
+                    }
+                }
             }
         }
 
@@ -128,6 +143,9 @@ public sealed class CoordinateTransformService
         CoordinateInput input,
         int column,
         int row,
+        int cellBlock,
+        int blockColumn,
+        int blockRow,
         double localX,
         double localY,
         double designStageX,
@@ -158,7 +176,10 @@ public sealed class CoordinateTransformService
         {
             Column = column,
             Row = row,
-            IsSelectedCell = column == input.SelectedCellColumn && row == input.SelectedCellRow,
+            CellBlock = cellBlock,
+            CellBlockColumn = blockColumn,
+            CellBlockRow = blockRow,
+            IsSelectedCell = cellBlock == input.SelectedCellBlock && column == input.SelectedCellColumn && row == input.SelectedCellRow,
             IsHighlightedScanner = selected.IsHighlighted,
             LocalX = Round(localX),
             LocalY = Round(localY),

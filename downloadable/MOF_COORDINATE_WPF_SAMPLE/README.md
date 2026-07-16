@@ -4,6 +4,8 @@
 
 2026-07-16 업데이트에서는 첨부 예시 이미지처럼 기판 Cell과 Scanner Head 선택 상태를 색상으로 쉽게 파악할 수 있도록 UI를 개선했다. 또한 설계좌표, 가공좌표, 리뷰좌표계를 별도 탭으로 분리하고 모든 좌표 결과를 `(x, y)` 2D Matrix 형태로 표시한다.
 
+추가 업데이트에서는 AK1 기준 첫 번째 가공 위치, X/Y pitch, 내부 가공점 행/열, 기판 내 Cell# 블록 행/열과 pitch를 CSV 설정으로 읽을 수 있게 했다. CSV는 Excel에서 열고 저장할 수 있으므로 Recipe 설정표처럼 사용할 수 있다.
+
 ## 실행 방법
 
 ```powershell
@@ -15,10 +17,24 @@ dotnet run
 
 - 좌측 입력 패널: Board, Review Camera, Cell, Scanner, DOE16 Beam, Review Offset 변수 입력.
 - 상단 Canvas: Board Cell 블록, 선택 Cell, Highlight Scanner가 담당하는 Cell, Zigzag Scanner Head 시각화.
-- Design Coordinate 탭: Recipe Local 좌표와 설계 Stage 좌표를 `(x, y)`로 표시.
-- Process Coordinate 탭: 가공 Stage 좌표, Scanner 상대좌표, 최종 MOF `Gx/Gy`를 `(x, y)`로 표시.
-- Review Coordinate 탭: 사용자가 선택한 Scanner Head와 DOE16 Beam 기준으로 모든 Cell의 리뷰 좌표계를 `(x, y)`로 표시.
+- 마우스 클릭: 화면의 Cell 또는 Scanner Head를 클릭하면 선택 상태와 결과 Matrix가 즉시 갱신된다.
+- Matrix 확대/축소: Matrix DataGrid 위에서 마우스 휠을 돌리면 Cell 크기와 글자 크기가 함께 조정된다.
+- Design 2D Matrix 탭: Cell#별 A/B/C 열, 1/2/3 행 형태로 Recipe Local 좌표를 `(x, y)`로 표시.
+- Process 2D Matrix 탭: 동일 Matrix 구조로 최종 MOF `Gx/Gy`를 `(x, y)`로 표시.
+- Review 2D Matrix 탭: 사용자가 선택한 Scanner Head와 DOE16 Beam 기준으로 모든 Cell의 리뷰 좌표계를 `(x, y)`로 표시.
 - DOE 16 Matrix 탭: 4 x 4 DOE Beam의 Scanner 내부 Offset Matrix 표시.
+
+## Excel CSV 설정
+
+`CELL_LAYOUT_CONFIG_TEMPLATE.csv`를 Excel에서 열어 값을 바꾼 뒤 저장하고, 화면의 `Load Excel CSV Config` 버튼으로 불러온다.
+
+주요 항목:
+
+- `CellFirstX`, `CellFirstY`: AK1 기준 첫 번째 Cell# 블록의 첫 번째 가공점 A1 거리.
+- `CellPitchX`, `CellPitchY`: Cell# 내부 가공점 Matrix의 X/Y pitch.
+- `CellColumns`, `CellRows`: Cell# 내부 가공점 Matrix 열/행 수. 화면에는 A/B/C 열과 1/2/3 행으로 표시된다.
+- `CellBlockColumns`, `CellBlockRows`: 기판 안에 배치되는 Cell# 블록의 열/행 수.
+- `CellBlockPitchX`, `CellBlockPitchY`: Cell# 블록 사이의 X/Y pitch.
 
 ## 주요 코드
 

@@ -61,6 +61,11 @@
             <StackPanel Margin="0,0,0,8"><TextBlock Text="Pattern Off Y"/><TextBox x:Name="PatternOffsetYBox"/></StackPanel>
             <StackPanel Margin="0,0,8,8"><TextBlock Text="Columns"/><TextBox x:Name="CellColumnsBox"/></StackPanel>
             <StackPanel Margin="0,0,0,8"><TextBlock Text="Rows"/><TextBox x:Name="CellRowsBox"/></StackPanel>
+            <StackPanel Margin="0,0,8,8"><TextBlock Text="Cell Block Cols"/><TextBox x:Name="CellBlockColumnsBox"/></StackPanel>
+            <StackPanel Margin="0,0,0,8"><TextBlock Text="Cell Block Rows"/><TextBox x:Name="CellBlockRowsBox"/></StackPanel>
+            <StackPanel Margin="0,0,8,8"><TextBlock Text="Block Pitch X"/><TextBox x:Name="CellBlockPitchXBox"/></StackPanel>
+            <StackPanel Margin="0,0,0,8"><TextBlock Text="Block Pitch Y"/><TextBox x:Name="CellBlockPitchYBox"/></StackPanel>
+            <StackPanel Margin="0,0,8,8"><TextBlock Text="Selected Cell#"/><TextBox x:Name="SelectedCellBlockBox"/></StackPanel>
             <StackPanel Margin="0,0,8,8"><TextBlock Text="Selected Col"/><TextBox x:Name="SelectedCellColumnBox"/></StackPanel>
             <StackPanel Margin="0,0,0,8"><TextBlock Text="Selected Row"/><TextBox x:Name="SelectedCellRowBox"/></StackPanel>
           </UniformGrid>
@@ -92,6 +97,11 @@
                   Content="Generate / Refresh"
                   FontWeight="Bold"
                   Click="GenerateButton_Click"/>
+          <Button x:Name="LoadConfigButton"
+                  Height="36"
+                  Margin="0,8,0,0"
+                  Content="Load Excel CSV Config"
+                  Click="LoadConfigButton_Click"/>
         </StackPanel>
       </ScrollViewer>
     </Border>
@@ -124,52 +134,32 @@
 
       <Border Grid.Row="2" Background="White" BorderBrush="#D5DEE8" BorderThickness="1" CornerRadius="8" Padding="8">
         <TabControl>
-          <TabItem Header="Design Coordinate">
-            <DataGrid x:Name="DesignGrid"
+          <TabItem Header="Design 2D Matrix">
+            <DataGrid x:Name="DesignMatrixGrid"
                       AutoGenerateColumns="False"
                       CanUserAddRows="False"
                       IsReadOnly="True"
-                      RowHeight="28">
-              <DataGrid.Columns>
-                <DataGridTextColumn Header="Cell" Binding="{Binding CellIndex}" Width="90"/>
-                <DataGridTextColumn Header="Design Local (x, y)" Binding="{Binding DesignLocalMatrix}" Width="170"/>
-                <DataGridTextColumn Header="Design Stage (x, y)" Binding="{Binding DesignStageMatrix}" Width="210"/>
-                <DataGridTextColumn Header="Selected" Binding="{Binding IsSelectedCell}" Width="90"/>
-              </DataGrid.Columns>
-            </DataGrid>
+                      HeadersVisibility="Column"
+                      GridLinesVisibility="All"
+                      PreviewMouseWheel="MatrixGrid_PreviewMouseWheel"/>
           </TabItem>
-          <TabItem Header="Process Coordinate">
-            <DataGrid x:Name="ProcessGrid"
+          <TabItem Header="Process 2D Matrix">
+            <DataGrid x:Name="ProcessMatrixGrid"
                       AutoGenerateColumns="False"
                       CanUserAddRows="False"
                       IsReadOnly="True"
-                      RowHeight="28">
-              <DataGrid.Columns>
-                <DataGridTextColumn Header="Cell" Binding="{Binding CellIndex}" Width="90"/>
-                <DataGridTextColumn Header="Scanner" Binding="{Binding ScannerName}" Width="85"/>
-                <DataGridTextColumn Header="Type" Binding="{Binding ScannerType}" Width="80"/>
-                <DataGridTextColumn Header="Process Stage (x, y)" Binding="{Binding ProcessStageMatrix}" Width="210"/>
-                <DataGridTextColumn Header="Scanner Relative (x, y)" Binding="{Binding ScannerRelativeMatrix}" Width="210"/>
-                <DataGridTextColumn Header="MOF GxGy (x, y)" Binding="{Binding ProcessGMatrix}" Width="180"/>
-                <DataGridCheckBoxColumn Header="In Field" Binding="{Binding InField}" Width="85"/>
-              </DataGrid.Columns>
-            </DataGrid>
+                      HeadersVisibility="Column"
+                      GridLinesVisibility="All"
+                      PreviewMouseWheel="MatrixGrid_PreviewMouseWheel"/>
           </TabItem>
-          <TabItem Header="Review Coordinate">
-            <DataGrid x:Name="ReviewGrid"
+          <TabItem Header="Review 2D Matrix">
+            <DataGrid x:Name="ReviewMatrixGrid"
                       AutoGenerateColumns="False"
                       CanUserAddRows="False"
                       IsReadOnly="True"
-                      RowHeight="28">
-              <DataGrid.Columns>
-                <DataGridTextColumn Header="Head / DOE" Binding="{Binding DoeSelection}" Width="110"/>
-                <DataGridTextColumn Header="Cell" Binding="{Binding CellIndex}" Width="90"/>
-                <DataGridTextColumn Header="Process Scanner" Binding="{Binding ScannerName}" Width="115"/>
-                <DataGridTextColumn Header="Review Reference Stage (x, y)" Binding="{Binding ReviewReferenceMatrix}" Width="230"/>
-                <DataGridTextColumn Header="Review Coordinate mm (x, y)" Binding="{Binding ReviewMatrix}" Width="230"/>
-                <DataGridTextColumn Header="Review Pixel (u, v)" Binding="{Binding ReviewPixelMatrix}" Width="210"/>
-              </DataGrid.Columns>
-            </DataGrid>
+                      HeadersVisibility="Column"
+                      GridLinesVisibility="All"
+                      PreviewMouseWheel="MatrixGrid_PreviewMouseWheel"/>
           </TabItem>
           <TabItem Header="DOE 16 Matrix">
             <DataGrid x:Name="DoeGrid"
