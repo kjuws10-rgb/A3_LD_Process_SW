@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Diagnostics;
 using System.IO;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -21,11 +22,21 @@ public partial class MainWindow : Window
     private double _boardZoom = 1.0;
     private string? _lastConfigPath;
     private bool _suppressDoeChange;
+    private bool _isMatrixDragSelecting;
+    private bool _matrixDragAddMode = true;
+    private bool _matrixSelectionChangedDuringDrag;
+    private CellCommand? _selectionAnchor;
+    private readonly HashSet<string> _dragVisitedPointKeys = new();
     private readonly HashSet<string> _selectedPointKeys = new();
+    private static readonly string ViewStatePath = System.IO.Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "MofCoordinateDemo",
+        "view-state.json");
 
     public MainWindow()
     {
         InitializeComponent();
+        LoadViewState();
         Loaded += (_, _) =>
         {
             LoadInputToScreen(_input);
@@ -33,6 +44,8 @@ public partial class MainWindow : Window
             GenerateAndRender();
         };
         SizeChanged += (_, _) => DrawLayout();
+        PreviewMouseLeftButtonUp += (_, _) => CompleteMatrixDragSelection();
+        Closing += (_, _) => SaveViewState();
     }
 
     private void GenerateButton_Click(object sender, RoutedEventArgs e)
@@ -155,7 +168,8 @@ public partial class MainWindow : Window
 
         FormulaText.Text =
             "스캐너 박스 또는 주변 클릭 영역을 누르면 복수 선택/해제가 됩니다. 선택된 스캐너가 있으면 좌표 Matrix는 해당 스캐너의 X 가공 가능 범위에 포함되는 좌표만 표시합니다. " +
-            "All Scanner Select / Clear Scanner로 필터를 제어하고, Ctrl + 마우스 휠로 Board와 Matrix를 확대/축소합니다.";
+            "Matrix 셀은 드래그로 연속 선택하고, Shift 클릭으로 기준 셀부터 현재 셀까지 범위 선택하며, Ctrl 클릭/드래그로 추가 또는 해제할 수 있습니다. " +
+            "Ctrl + 마우스 휠로 Board와 Matrix를 확대/축소하면 마지막 비율이 다음 실행에도 유지됩니다.";
 
         DrawLayout();
     }
@@ -526,6 +540,7 @@ public partial class MainWindow : Window
         }
 
         _matrixCellSize = Math.Clamp(_matrixCellSize + (e.Delta > 0 ? 8 : -8), 48, 180);
+        SaveViewState();
         if (_lastResult is not null)
         {
             BuildMatrixCanvas(DesignMatrixCanvas, "Design");
@@ -575,6 +590,8 @@ public partial class MainWindow : Window
             Cursor = Cursors.Hand
         };
         rect.MouseLeftButtonDown += MatrixCell_MouseLeftButtonDown;
+        rect.MouseEnter += MatrixCell_MouseEnter;
+        rect.MouseLeftButtonUp += MatrixCell_MouseLeftButtonUp;
         Canvas.SetLeft(rect, x);
         Canvas.SetTop(rect, y);
         canvas.Children.Add(rect);
@@ -585,28 +602,166 @@ public partial class MainWindow : Window
 
     private void MatrixCell_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-        if (sender is FrameworkElement { Tag: CellCommand command })
+        if (sender is not FrameworkElement { Tag: CellCommand command })
         {
-            if ((Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control)
-            {
-                var key = PointKey(command);
-                if (!_selectedPointKeys.Add(key))
-                {
-                    _selectedPointKeys.Remove(key);
-                }
-            }
-            else
-            {
-                _selectedPointKeys.Clear();
-                _selectedPointKeys.Add(PointKey(command));
-            }
+            return;
+        }
 
-            _input.SelectedCellBlock = command.CellBlock;
-            _input.SelectedCellColumn = command.Column;
-            _input.SelectedCellRow = command.Row;
+        var modifiers = Keyboard.Modifiers;
+        var key = PointKey(command);
+        var wasSelected = _selectedPointKeys.Contains(key);
+
+        _isMatrixDragSelecting = true;
+        _matrixSelectionChangedDuringDrag = false;
+        _matrixDragAddMode = (modifiers & ModifierKeys.Control) == ModifierKeys.Control ? !wasSelected : true;
+        _dragVisitedPointKeys.Clear();
+        _dragVisitedPointKeys.Add(key);
+
+        if ((modifiers & ModifierKeys.Shift) == ModifierKeys.Shift)
+        {
+            SelectMatrixRange(command, additive: (modifiers & ModifierKeys.Control) == ModifierKeys.Control);
+            _matrixSelectionChangedDuringDrag = true;
+            CompleteMatrixDragSelection();
+            e.Handled = true;
+            return;
+        }
+
+        ApplySingleMatrixSelection(command, modifiers);
+        UpdateMatrixCellVisual(sender as Shape, command);
+        _matrixSelectionChangedDuringDrag = true;
+        e.Handled = true;
+    }
+
+    private void MatrixCell_MouseEnter(object sender, MouseEventArgs e)
+    {
+        if (!_isMatrixDragSelecting || e.LeftButton != MouseButtonState.Pressed || sender is not FrameworkElement { Tag: CellCommand command })
+        {
+            return;
+        }
+
+        var key = PointKey(command);
+        if (!_dragVisitedPointKeys.Add(key))
+        {
+            return;
+        }
+
+        if (_matrixDragAddMode)
+        {
+            _selectedPointKeys.Add(key);
+        }
+        else
+        {
+            _selectedPointKeys.Remove(key);
+        }
+
+        SetInputSelection(command);
+        UpdateMatrixCellVisual(sender as Shape, command);
+        _matrixSelectionChangedDuringDrag = true;
+        e.Handled = true;
+    }
+
+    private void MatrixCell_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        CompleteMatrixDragSelection();
+        e.Handled = true;
+    }
+
+    private void ApplySingleMatrixSelection(CellCommand command, ModifierKeys modifiers)
+    {
+        var key = PointKey(command);
+        if ((modifiers & ModifierKeys.Control) == ModifierKeys.Control)
+        {
+            if (!_selectedPointKeys.Add(key))
+            {
+                _selectedPointKeys.Remove(key);
+            }
+        }
+        else
+        {
+            _selectedPointKeys.Clear();
+            _selectedPointKeys.Add(key);
+        }
+
+        SetInputSelection(command);
+        _selectionAnchor = command;
+    }
+
+    private void SelectMatrixRange(CellCommand command, bool additive)
+    {
+        if (!additive)
+        {
+            _selectedPointKeys.Clear();
+        }
+
+        var anchor = _selectionAnchor ?? command;
+        var ordered = GetVisibleMatrixCommands()
+            .OrderBy(x => x.CellBlock)
+            .ThenBy(x => x.Row)
+            .ThenBy(x => x.Column)
+            .ToList();
+        var anchorIndex = ordered.FindIndex(x => PointKey(x) == PointKey(anchor));
+        var targetIndex = ordered.FindIndex(x => PointKey(x) == PointKey(command));
+
+        if (anchorIndex < 0 || targetIndex < 0)
+        {
+            _selectedPointKeys.Add(PointKey(command));
+        }
+        else
+        {
+            var start = Math.Min(anchorIndex, targetIndex);
+            var end = Math.Max(anchorIndex, targetIndex);
+            for (var index = start; index <= end; index++)
+            {
+                _selectedPointKeys.Add(PointKey(ordered[index]));
+            }
+        }
+
+        SetInputSelection(command);
+    }
+
+    private void CompleteMatrixDragSelection()
+    {
+        if (!_isMatrixDragSelecting)
+        {
+            return;
+        }
+
+        _isMatrixDragSelecting = false;
+        _dragVisitedPointKeys.Clear();
+
+        if (_matrixSelectionChangedDuringDrag)
+        {
             LoadInputToScreen(_input);
             GenerateAndRender();
         }
+
+        _matrixSelectionChangedDuringDrag = false;
+    }
+
+    private void SetInputSelection(CellCommand command)
+    {
+        _input.SelectedCellBlock = command.CellBlock;
+        _input.SelectedCellColumn = command.Column;
+        _input.SelectedCellRow = command.Row;
+    }
+
+    private void UpdateMatrixCellVisual(Shape? shape, CellCommand command)
+    {
+        if (shape is null)
+        {
+            return;
+        }
+
+        var selected = IsPointSelected(command);
+        shape.Fill = selected
+            ? new SolidColorBrush(Color.FromRgb(245, 158, 11))
+            : command.IsHighlightedScanner
+                ? new SolidColorBrush(Color.FromRgb(14, 116, 144))
+                : new SolidColorBrush(Color.FromRgb(30, 41, 59));
+        shape.Stroke = selected
+            ? new SolidColorBrush(Color.FromRgb(253, 230, 138))
+            : new SolidColorBrush(Color.FromRgb(51, 65, 85));
+        shape.StrokeThickness = selected ? 2.2 : 1;
     }
 
     private static void DrawCanvasText(Canvas canvas, string text, double x, double y, double width, double height, double fontSize, FontWeight weight, Brush brush)
@@ -637,6 +792,7 @@ public partial class MainWindow : Window
         }
 
         _boardZoom = Math.Clamp(_boardZoom + (e.Delta > 0 ? 0.12 : -0.12), 0.35, 4.0);
+        SaveViewState();
         DrawLayout();
         e.Handled = true;
     }
@@ -1134,6 +1290,53 @@ public partial class MainWindow : Window
         OffsetYBox.Text = Format(input.ProcessOffsetGlobalY);
     }
 
+    private void LoadViewState()
+    {
+        try
+        {
+            if (!File.Exists(ViewStatePath))
+            {
+                return;
+            }
+
+            var state = JsonSerializer.Deserialize<ViewState>(File.ReadAllText(ViewStatePath));
+            if (state is null)
+            {
+                return;
+            }
+
+            _boardZoom = Math.Clamp(state.BoardZoom, 0.35, 4.0);
+            _matrixCellSize = Math.Clamp(state.MatrixCellSize, 48, 180);
+        }
+        catch
+        {
+            // View scale is a convenience setting only; invalid files should not block the demo.
+        }
+    }
+
+    private void SaveViewState()
+    {
+        try
+        {
+            var directory = System.IO.Path.GetDirectoryName(ViewStatePath);
+            if (!string.IsNullOrWhiteSpace(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+
+            var state = new ViewState
+            {
+                BoardZoom = _boardZoom,
+                MatrixCellSize = _matrixCellSize
+            };
+            File.WriteAllText(ViewStatePath, JsonSerializer.Serialize(state, new JsonSerializerOptions { WriteIndented = true }));
+        }
+        catch
+        {
+            // Saving the last zoom level is non-critical; keep UI interaction uninterrupted.
+        }
+    }
+
     private CoordinateInput ReadInputFromScreen()
     {
         var columns = ReadInt(CellColumnsBox, _input.CellColumns);
@@ -1266,6 +1469,10 @@ public partial class MainWindow : Window
     {
         _selectedPointKeys.Clear();
         _selectedPointKeys.Add($"{_input.SelectedCellBlock}:{_input.SelectedCellColumn}:{_input.SelectedCellRow}");
+        _selectionAnchor = _lastResult?.Commands.FirstOrDefault(x =>
+            x.CellBlock == _input.SelectedCellBlock &&
+            x.Column == _input.SelectedCellColumn &&
+            x.Row == _input.SelectedCellRow);
     }
 
     private static double EffectiveBlockPitchX(CoordinateInput input)
@@ -1447,5 +1654,11 @@ public partial class MainWindow : Window
 
         textBox.Text = fallback.ToString(CultureInfo.InvariantCulture);
         return fallback;
+    }
+
+    private sealed class ViewState
+    {
+        public double BoardZoom { get; set; } = 1.0;
+        public double MatrixCellSize { get; set; } = 86;
     }
 }

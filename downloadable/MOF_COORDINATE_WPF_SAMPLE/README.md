@@ -12,6 +12,10 @@
 
 가공 가능 Band 설명 라벨은 Board 내부가 아니라 Board 아래 전용 라벨 영역에 표시된다. 여러 Scanner를 선택해도 라벨이 2줄로 분산 배치되며, Scanner 박스는 최소 Y 간격을 확보해 좌표 텍스트와 겹치지 않도록 했다.
 
+Board 확대 비율과 Matrix 셀 크기는 마지막 사용값을 로컬 사용자 설정으로 저장한다. 앱을 다시 실행해도 마지막으로 조정한 스케일이 유지된다.
+
+Matrix 선택 방식은 일반 데스크톱 UI에 가깝게 확장했다. 셀을 누른 채 드래그하면 지나간 셀이 연속 선택되고, `Shift + Click`은 마지막 기준 셀부터 현재 셀까지 범위 선택하며, `Ctrl + Click/Drag`는 기존 선택을 유지한 채 추가 또는 해제한다.
+
 ## 실행 방법
 
 ```powershell
@@ -25,8 +29,8 @@ dotnet run
 - Parameter Tooltip: 각 입력칸 또는 버튼 위에 마우스를 올리면 해당 파라미터가 어느 좌표계/계산식에 쓰이는지 말풍선으로 설명한다. Board, Review, Cell, Scanner, DOE 항목은 작은 도식도 함께 표시한다.
 - 상단 Canvas: Board Cell 블록, 선택 Cell, Highlight Scanner가 담당하는 Cell, Zigzag Scanner Head 시각화.
 - 마우스 클릭: 화면의 Cell 또는 Scanner Head를 클릭하면 선택 상태와 결과 Matrix가 즉시 갱신된다.
-- 복수 선택: Matrix View에서 여러 칸을 선택하면 해당 가공점들이 상단 Board UI에 함께 표시된다.
-- 확대/축소: `Ctrl + Mouse Wheel`일 때만 Board 또는 Matrix가 확대/축소된다. 일반 Mouse Wheel은 스크롤로 동작한다.
+- 복수 선택: Matrix View에서 여러 칸을 선택하면 해당 가공점들이 상단 Board UI에 함께 표시된다. 드래그 선택, `Shift + Click` 범위 선택, `Ctrl + Click/Drag` 추가/해제를 지원한다.
+- 확대/축소: `Ctrl + Mouse Wheel`일 때만 Board 또는 Matrix가 확대/축소된다. 일반 Mouse Wheel은 스크롤로 동작한다. 마지막 Board/Matrix 스케일은 다음 실행에도 유지된다.
 - Board Scroll: Board를 확대하면 상하좌우 ScrollBar로 원하는 위치를 이동해서 볼 수 있다.
 - Design 2D Matrix 탭: Cell#별 A/B/C 열, 1/2/3 행 형태로 Recipe Local 좌표를 `(x, y)`로 표시.
 - Process 2D Matrix 탭: 동일 Matrix 구조로 최종 MOF `Gx/Gy`를 `(x, y)`로 표시.
