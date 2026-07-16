@@ -1,0 +1,87 @@
+===== Review_MasterAK_MMULT =====
+Review Camera 기준 Master AK1 역참조 좌표계 생성 / 6GH(1500×925 mm) MMULT 계산 시뮬레이션
+1. 컨셉 검토 결과 / 적용 전제
+항목 | 내용 | 단위 | 비고
+검토 결론 | 방향성은 타당함 | - | Review Camera로 Master AK1 위치를 실측해 Recipe Local의 Translation Anchor로 사용하는 구조는 유효함
+핵심 전제 1 | Vision Alignment로 θ_align 확보 | deg | 사용자 조건대로 Vision Align에서 구한 기판 중심 기준 X/Y/θ 중 θ_align을 사용함
+핵심 전제 2 | Review / Align / Scanner 동일 Machine Global 정합 | mm | 같은 원점, 같은 축 방향, 같은 Calibration 기준이어야 함
+핵심 전제 3 | Head Center는 Review 기준 Offset + Install Offset으로 관리 | mm | 설계 Offset만 쓰지 말고 설치/Default Offset을 포함한 Virtual Center로 관리
+장점 | Review 기준 Global Offset을 모든 Head 공통 보정량으로 사용 가능 | mm | Review 결과를 Global Error로 변환하면 Head별 좌표계와 무관하게 공정 Offset 적용 가능
+주의 | Translation은 Review AK1 측정으로 대체 가능하나 θ는 별도 필요 | deg | θ를 무시하면 Master AK에서 멀어진 Cell일수록 위치 오차가 누적됨
+2. 권장 Global 기준 및 6GH 대상물 / Review 기준 기지값
+항목 | X / 값 | Y / 값 | 단위 | 설명
+Panel Size 6GH | 1500 | 925 | mm | 장변 Xg=1500 mm, 단변 Yg=925 mm / 주행방향은 단변 방향(+Yg, Front→Rear)
+Align Key Edge Margin | 55 | 45 | mm | AK는 4꼭지점 근처 배치. AK1 기준 X 방향 유효거리=1500-2×55, Y 방향 유효거리=925-2×45
+Review Camera Center Global | 105 | 1200 | mm | 현재 Review X / Main Y 위치에서 Review 이미지 중심점의 Machine Global 좌표
+Review Pixel Center | 1224 | 1024 | px | Review 이미지 중심 U0/V0
+Review Pixel Scale | 0.00345 | 0.00345 | mm/px | 예시 단순 2×2 Affine 모델. 실제는 H_review 또는 보정행렬 사용 권장
+Vision θ_align | 0.05 | deg | Vision Alignment 결과 중 회전값. Translation은 Review 측정 AK1 Anchor 사용
+Machine Global Origin | UVW Center @ Main Y=0, Review X=0 + Calibration Offset | mm | 설비 고정 공통 원점. 기판 중심은 Align마다 변하므로 Global 원점으로 사용하지 않음
+3. Review Camera로 Master AK1 측정 → AK1 Global Anchor 생성 [MMULT]
+입력/계산 | U 또는 X | V 또는 Y | 단위 | 설명 | A_review Matrix | Pixel Offset Vector | 결과 | 값
+Measured AK1 Pixel | 1282 | 1053 | px | Review 이미지에서 검출된 Master AK1 중심 Pixel | 0.00345 | 0 | 58 | AK1 Global X | 105.2001
+ΔPixel = Measured - Center | 58 | 29 | px | 이미지 중심 대비 Pixel Offset | 0 | 0.00345 | 29 | AK1 Global Y | 1200.10005
+Review Center Global | 105 | 1200 | mm | Review Camera 중심 Global 좌표 | Translation Anchor | P_AK1_global [mm]
+Pixel→Global Offset | 0.2001 | 0.10005 | mm | MMULT(A_review, ΔPixel) 결과
+AK1 Global Anchor | 105.2001 | 1200.10005 | mm | P_AK1_global = ReviewCenter + PixelOffsetGlobal
+비고 | AK1 Master(-Xp,-Yp) | Recipe Local 원점 | mm | 이 값이 전체 Recipe Local 좌표계의 Translation Anchor
+4. 4점 Align Key Design / Camera #1~#4 배치 및 θ_align 반영 Global 예측 [MMULT]
+AK | Camera | 위치 | Local X | Local Y | R·Local X | R·Local Y | Global X | Global Y | 단위 | R Matrix | 설명 | 값 | 단위
+AK1 | Cam#1 | Master Front | 0 | 0 | 0 | 0 | 105.2001 | 1200.10005 | mm | 0.9999996192282494 | -0.0008726645152351496 | AK1 = Master Front / Camera #1 | Origin | mm
+AK2 | Cam#2 | Master Rear | 0 | 835 | -0.7286748702213499 | 834.9996820555883 | 104.47142512977865 | 2035.0997320555884 | mm | 0.0008726645152351496 | 0.9999996192282494 | AK2 = Master Rear / Camera #2 | Y 방향 Rear | mm
+AK3 | Cam#3 | Slave Front | 1390 | 0 | 1389.9994707272667 | 1.213003676176858 | 1495.1995707272667 | 1201.3130536761769 | mm | AK3 = Slave Front / Camera #3 | X 방향 Slave | mm
+AK4 | Cam#4 | Slave Rear | 1390 | 835 | 1389.2707958570454 | 836.2126857317652 | 1494.4708958570454 | 2036.3127357317653 | mm | AK4 = Slave Rear / Camera #4 | 대각 위치 | mm
+5. Master AK1 기준 Recipe Local 가공좌표 → Align 반영 Target Global [MMULT]
+입력/계산 | X | Y | 단위 | 설명 | 결과 항목 | X | Y
+Cell First | 50 | 35 | mm | Master AK1 기준 첫 Cell 위치 | P_local [mm] | 760 | 440
+Cell Index | 14 | 9 | - | Column / Row Index | R·P_local [mm] | 759.6157382267661 | 440.6630574920084
+Pitch | 50 | 45 | mm | Cell 간 Pitch | Target Global [mm] | 864.8158382267661 | 1640.7631074920084
+Pattern Offset | 10 | 0 | mm | Cell 내부 가공점 Offset
+P_local | 760 | 440 | mm | Cell First + Index×Pitch + Pattern
+R·P_local | 759.6157382267661 | 440.6630574920084 | mm | MMULT(R, P_local)
+P_target_global | 864.8158382267661 | 1640.7631074920084 | mm | P_AK1_global + R·P_local
+Selected Example | Cell C14/R9 + Pattern | - | H5 영역에 들어오도록 설정한 예시 좌표
+6. Review 기준 설비 Offset → Scanner Head Virtual Center 및 Field 판정
+Head | Type | Review→Head Offset X | Review→Head Offset Y | Install/Default Offset X | Install/Default Offset Y | Center X | Center Y | Field Half X | Field Half Y | Sx | Sy | D_x | D_y | In Field
+H1 | Odd | 55 | 440 | 0.1 | -0.05 | 160.1 | 1639.95 | 65 | 60 | -1 | 1 | 704.7158382267661 | 0.8131074920083847 | 0
+H2 | Even | 235 | 460 | -0.2 | 0.1 | 339.8 | 1660.1 | 65 | 60 | 1 | -1 | 525.0158382267662 | -19.33689250799148 | 0
+H3 | Odd | 415 | 440 | 0.05 | -0.15 | 520.05 | 1639.85 | 65 | 60 | -1 | 1 | 344.76583822676616 | 0.9131074920085211 | 0
+H4 | Even | 595 | 460 | 0.15 | -0.1 | 700.15 | 1659.9 | 65 | 60 | 1 | -1 | 164.66583822676614 | -19.13689250799166 | 0
+H5 | Odd | 775 | 440 | -0.3 | 0.1 | 879.7 | 1640.1 | 65 | 60 | -1 | 1 | -14.884161773233927 | 0.6631074920085211 | 1
+H6 | Even | 955 | 460 | 0.2 | -0.2 | 1060.2 | 1659.8 | 65 | 60 | 1 | -1 | -195.38416177323393 | -19.036892507991524 | 0
+H7 | Odd | 1135 | 440 | -0.1 | 0.2 | 1239.9 | 1640.2 | 65 | 60 | -1 | 1 | -375.084161773234 | 0.5631074920083847 | 0
+H8 | Even | 1315 | 460 | 0.25 | -0.05 | 1420.25 | 1659.95 | 65 | 60 | 1 | -1 | -555.4341617732339 | -19.186892507991615 | 0
+7. Selected Head 기준 Gx/Gy Command 계산 [MMULT]
+항목 | X / 값 | Y / 값 | 단위 | S Matrix | D Vector | 결과 | 값
+Selected Head | H5 | Odd | - | -1 | 0 | -14.884161773233927 | Gx Field | 14.884161773233927
+Center C_i | 879.7 | 1640.1 | mm | 0 | 1 | 0.6631074920085211 | Gy Field | 0.6631074920085211
+Target Global | 864.8158382267661 | 1640.7631074920084 | mm | Gx Command | 14.896161773233928
+D = Target - C_i | -14.884161773233927 | 0.6631074920085211 | mm | Gy Command | 0.6571074920085211
+Pscanner = S·D | 14.884161773233927 | 0.6631074920085211 | mm | 비고 | H5 Odd / Field 내부
+Field Correction | 0.012 | -0.006 | mm
+Final Command | 14.896161773233928 | 0.6571074920085211 | mm
+Odd Sign Rule | +Gx=-Xp | +Gy=+Yp | -
+Even Sign Rule | +Gx=+Xp | +Gy=-Yp | -
+8. Review 측정 결과 → Global Error / Process Offset [MMULT]
+입력/계산 | X 또는 U | Y 또는 V | 단위 | 설명 | A_review Matrix | Pixel Offset Vector | 결과 | 값
+Target Global | 864.8158382267661 | 1640.7631074920084 | mm | 가공 목표 Global 좌표 | 0.00345 | 0 | 5.217391304347757 | Error X | 0.018000000000029104
+Review Center Global at Target | 864.8158382267661 | 1640.7631074920084 | mm | Review X / Main Y 이동 후 이미지 중심을 Target Global에 맞춘 상태 | 0 | 0.00345 | -3.478260869565247 | Error Y | -0.011999999999943611
+Measured Result Pixel | 1229.2173913043478 | 1020.5217391304348 | px | 가공 결과 Hole/Mark 검출 Pixel | Offset X | -0.018000000000029104
+Pixel Offset | 5.217391304347757 | -3.478260869565247 | px | Measured Pixel - Image Center | Offset Y | 0.011999999999943611
+Pixel→Global Offset | 0.01799999999999976 | -0.012000000000000103 | mm | MMULT(A_review, Pixel Offset) | 공통 적용 | Head와 무관한 Global Offset
+Measured Result Global | 864.8338382267661 | 1640.7511074920085 | mm | Target Center + Pixel Global Offset | 비고 | Offset_process [mm] = -E_global [mm]
+Global Error = Measured - Target | 0.018000000000029104 | -0.011999999999943611 | mm | 가공 결과 오차
+Process Offset = -Error | -0.018000000000029104 | 0.011999999999943611 | mm | 다음 가공에 적용할 Global Offset
+9. 최종 요약 / 검토 결론
+결론 항목 | 값 | 단위 | 비고 | 검증
+컨셉 적합성 | 적합(조건부) | - | Review Camera로 Master AK1 Global Anchor를 만드는 방식은 유효함 | 좌표계 통일 필요
+주행방향 | Front→Rear / +Yg | mm | 기판 단변 925 mm 방향이 Main Y 주행방향 | 반영
+AK 배치 | Cam#1 MF, Cam#2 MR, Cam#3 SF, Cam#4 SR | mm | 4꼭지점 근처 AK 기준 / AK1이 Recipe Local 원점 | 반영
+최종 Global 식 | Pglobal = P_AK1_global + R(θ_align)·Plocal | mm | Review 실측 AK1 Translation Anchor + Vision θ | MMULT 사용
+최종 Scanner 식 | Pscanner = S_i·(Pglobal-C_i) | mm | Head별 Virtual Center와 Odd/Even Sign Matrix 사용 | MMULT 사용
+Review 보정 | Offset_process = -E_global | mm | Review 결과를 Global Error로 환산해 다음 가공에 공통 Offset 적용 | MMULT 사용
+선택 Head | H5 | - | 예시 대상 가공점은 H5 Odd Field 내부 | 확인 필요
+Final Gx Command | 14.896161773233928 | mm | 최종 Gx Command | 계산
+Final Gy Command | 0.6571074920085211 | mm | 최종 Gy Command | 계산
+Process Offset X | -0.018000000000029104 | mm | 다음 가공 Global Offset X | 계산
+Process Offset Y | 0.011999999999943611 | mm | 다음 가공 Global Offset Y | 계산

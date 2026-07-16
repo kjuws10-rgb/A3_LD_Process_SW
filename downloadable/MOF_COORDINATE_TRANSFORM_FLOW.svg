@@ -1,0 +1,166 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="980" viewBox="0 0 1500 980">
+  <defs>
+    <style>
+      .title{font-family:Segoe UI,Arial,sans-serif;font-size:28px;font-weight:700;fill:#172033}
+      .sub{font-family:Segoe UI,Arial,sans-serif;font-size:15px;fill:#42526b}
+      .box{fill:#ffffff;stroke:#52637a;stroke-width:1.5;rx:8}
+      .box2{fill:#eef7ff;stroke:#2a6fbb;stroke-width:1.5;rx:8}
+      .box3{fill:#f7fff1;stroke:#5f8f24;stroke-width:1.5;rx:8}
+      .box4{fill:#fff7e8;stroke:#b36b00;stroke-width:1.5;rx:8}
+      .box5{fill:#fff1f5;stroke:#b82b58;stroke-width:1.5;rx:8}
+      .h{font-family:Segoe UI,Arial,sans-serif;font-size:18px;font-weight:700;fill:#172033}
+      .t{font-family:Segoe UI,Arial,sans-serif;font-size:14px;fill:#25364d}
+      .small{font-family:Consolas,Menlo,monospace;font-size:13px;fill:#25364d}
+      .arrow{stroke:#344563;stroke-width:2;fill:none;marker-end:url(#arrow)}
+      .dash{stroke:#778899;stroke-width:1.5;fill:none;stroke-dasharray:6 5}
+      .board{fill:#f9fbfd;stroke:#2d3b4f;stroke-width:2}
+      .ak{fill:#ffcc4d;stroke:#755500;stroke-width:1.5}
+      .cell{fill:#68b7ff;stroke:#075d9a;stroke-width:1;opacity:.78}
+      .scanOdd{fill:#dcf4d5;stroke:#4f8b29;stroke-width:2}
+      .scanEven{fill:#fde8cb;stroke:#a45c00;stroke-width:2}
+    </style>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 Z" fill="#344563"/>
+    </marker>
+  </defs>
+
+  <rect width="1500" height="980" fill="#f4f7fb"/>
+  <text x="40" y="50" class="title">Review AK1 기반 Stage / Scanner / MOF GxGy 좌표계 변환 Concept</text>
+  <text x="42" y="78" class="sub">엑셀 예제값: 6GH 1500 x 925 mm, AK1 Review 측정, H5 Odd Scanner 선택 예</text>
+
+  <rect x="40" y="115" width="270" height="145" class="box2"/>
+  <text x="62" y="147" class="h">1. Review AK1 Measurement</text>
+  <text x="62" y="178" class="t">Review Center Global</text>
+  <text x="62" y="201" class="small">(105, 1200) mm</text>
+  <text x="62" y="228" class="t">Measured AK1 Pixel</text>
+  <text x="62" y="251" class="small">U=1282, V=1053</text>
+
+  <rect x="375" y="115" width="290" height="145" class="box2"/>
+  <text x="397" y="147" class="h">2. AK1 Stage Anchor</text>
+  <text x="397" y="178" class="small">dU = U_AK1 - U0</text>
+  <text x="397" y="201" class="small">dV = V_AK1 - V0</text>
+  <text x="397" y="228" class="small">AK1 = ReviewCenter + dPixel*Scale</text>
+  <text x="397" y="251" class="small">AK1=(105.2001,1200.10005)</text>
+
+  <rect x="730" y="115" width="300" height="145" class="box3"/>
+  <text x="752" y="147" class="h">3. Cell Local Grid</text>
+  <text x="752" y="178" class="small">X = FirstX + Col*PitchX + OffsetX</text>
+  <text x="752" y="201" class="small">Y = FirstY + Row*PitchY + OffsetY</text>
+  <text x="752" y="228" class="small">Col=14, Row=9</text>
+  <text x="752" y="251" class="small">P_local=(760,440)</text>
+
+  <rect x="1095" y="115" width="330" height="145" class="box3"/>
+  <text x="1117" y="147" class="h">4. Stage Global Target</text>
+  <text x="1117" y="178" class="small">P_global = AK1 + R(theta)*P_local</text>
+  <text x="1117" y="201" class="small">theta_align = 0.05 deg</text>
+  <text x="1117" y="228" class="small">R*P=(759.615738,440.663057)</text>
+  <text x="1117" y="251" class="small">Target=(864.815838,1640.763107)</text>
+
+  <path class="arrow" d="M310 188 H375"/>
+  <path class="arrow" d="M665 188 H730"/>
+  <path class="arrow" d="M1030 188 H1095"/>
+
+  <rect x="40" y="320" width="1385" height="410" class="box"/>
+  <text x="65" y="355" class="h">Stage Global Layout: 기판은 고정 Scanner 위를 지나가고, Scanner는 Zigzag Odd/Even으로 배치된다</text>
+
+  <rect x="95" y="395" width="880" height="280" class="board"/>
+  <text x="105" y="385" class="small">Board local area projected to Stage Global</text>
+
+  <circle cx="145" cy="440" r="10" class="ak"/>
+  <circle cx="145" cy="628" r="10" class="ak"/>
+  <circle cx="920" cy="440" r="10" class="ak"/>
+  <circle cx="920" cy="628" r="10" class="ak"/>
+  <text x="158" y="435" class="small">AK1 anchor</text>
+  <text x="158" y="458" class="small">(105.2001,1200.10005)</text>
+
+  <g opacity=".65">
+    <rect x="188" y="461" width="16" height="13" class="cell"/>
+    <rect x="245" y="461" width="16" height="13" class="cell"/>
+    <rect x="302" y="461" width="16" height="13" class="cell"/>
+    <rect x="359" y="461" width="16" height="13" class="cell"/>
+    <rect x="416" y="461" width="16" height="13" class="cell"/>
+    <rect x="473" y="461" width="16" height="13" class="cell"/>
+    <rect x="530" y="461" width="16" height="13" class="cell"/>
+    <rect x="587" y="461" width="16" height="13" class="cell"/>
+    <rect x="644" y="461" width="16" height="13" class="cell"/>
+    <rect x="701" y="461" width="16" height="13" class="cell"/>
+    <rect x="758" y="461" width="16" height="13" class="cell"/>
+    <rect x="815" y="461" width="16" height="13" class="cell"/>
+    <rect x="188" y="512" width="16" height="13" class="cell"/>
+    <rect x="245" y="512" width="16" height="13" class="cell"/>
+    <rect x="302" y="512" width="16" height="13" class="cell"/>
+    <rect x="359" y="512" width="16" height="13" class="cell"/>
+    <rect x="416" y="512" width="16" height="13" class="cell"/>
+    <rect x="473" y="512" width="16" height="13" class="cell"/>
+    <rect x="530" y="512" width="16" height="13" class="cell"/>
+    <rect x="587" y="512" width="16" height="13" class="cell"/>
+    <rect x="644" y="512" width="16" height="13" class="cell"/>
+    <rect x="701" y="512" width="16" height="13" class="cell"/>
+    <rect x="758" y="512" width="16" height="13" class="cell"/>
+    <rect x="815" y="512" width="16" height="13" class="cell"/>
+    <rect x="188" y="563" width="16" height="13" class="cell"/>
+    <rect x="245" y="563" width="16" height="13" class="cell"/>
+    <rect x="302" y="563" width="16" height="13" class="cell"/>
+    <rect x="359" y="563" width="16" height="13" class="cell"/>
+    <rect x="416" y="563" width="16" height="13" class="cell"/>
+    <rect x="473" y="563" width="16" height="13" class="cell"/>
+    <rect x="530" y="563" width="16" height="13" class="cell"/>
+    <rect x="587" y="563" width="16" height="13" class="cell"/>
+    <rect x="644" y="563" width="16" height="13" class="cell"/>
+    <rect x="701" y="563" width="16" height="13" class="cell"/>
+    <rect x="758" y="563" width="16" height="13" class="cell"/>
+    <rect x="815" y="563" width="16" height="13" class="cell"/>
+  </g>
+
+  <circle cx="585" cy="530" r="8" fill="#e6004c"/>
+  <text x="598" y="527" class="small">Example target</text>
+  <text x="598" y="549" class="small">Cell(14,9) -> Stage Target</text>
+
+  <g>
+    <rect x="1045" y="420" width="95" height="60" class="scanOdd"/>
+    <rect x="1157" y="465" width="95" height="60" class="scanEven"/>
+    <rect x="1269" y="420" width="95" height="60" class="scanOdd"/>
+    <rect x="1045" y="570" width="95" height="60" class="scanOdd"/>
+    <rect x="1157" y="615" width="95" height="60" class="scanEven"/>
+    <rect x="1269" y="570" width="95" height="60" class="scanOdd"/>
+    <text x="1074" y="455" class="small">H1 Odd</text>
+    <text x="1181" y="500" class="small">H2 Even</text>
+    <text x="1298" y="455" class="small">H3 Odd</text>
+    <text x="1074" y="605" class="small">H5 Odd</text>
+    <text x="1181" y="650" class="small">H6 Even</text>
+    <text x="1298" y="605" class="small">H7 Odd</text>
+  </g>
+
+  <path class="dash" d="M585 530 C760 560, 905 610, 1092 600"/>
+  <circle cx="1092" cy="600" r="7" fill="#e6004c"/>
+  <text x="1038" y="705" class="small">Scanner H5 center = (879.7, 1640.1)</text>
+
+  <rect x="40" y="775" width="315" height="145" class="box4"/>
+  <text x="62" y="807" class="h">5. Scanner Relative</text>
+  <text x="62" y="838" class="small">D = Target - C_H5</text>
+  <text x="62" y="864" class="small">D=(-14.884162, 0.663107)</text>
+  <text x="62" y="890" class="small">Target이 Field 안이면 H5 선택</text>
+
+  <rect x="420" y="775" width="315" height="145" class="box4"/>
+  <text x="442" y="807" class="h">6. Odd / Even Sign</text>
+  <text x="442" y="838" class="small">Odd:  Gx=-Dx, Gy=+Dy</text>
+  <text x="442" y="864" class="small">Even: Gx=+Dx, Gy=-Dy</text>
+  <text x="442" y="890" class="small">H5 Odd -> (14.884162,0.663107)</text>
+
+  <rect x="800" y="775" width="315" height="145" class="box5"/>
+  <text x="822" y="807" class="h">7. MOF Command</text>
+  <text x="822" y="838" class="small">Gx/Gy = ScannerCoord + FineOffset</text>
+  <text x="822" y="864" class="small">Review Error 발생 시</text>
+  <text x="822" y="890" class="small">ProcessOffset = -GlobalError</text>
+
+  <rect x="1180" y="775" width="245" height="145" class="box5"/>
+  <text x="1202" y="807" class="h">Feedback Loop</text>
+  <text x="1202" y="838" class="small">Review 측정</text>
+  <text x="1202" y="864" class="small">Global Error 계산</text>
+  <text x="1202" y="890" class="small">다음 Plan Offset 반영</text>
+
+  <path class="arrow" d="M355 848 H420"/>
+  <path class="arrow" d="M735 848 H800"/>
+  <path class="arrow" d="M1115 848 H1180"/>
+  <path class="arrow" d="M1302 775 C1302 745, 1035 742, 957 775"/>
+</svg>
