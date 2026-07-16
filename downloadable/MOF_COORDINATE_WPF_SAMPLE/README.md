@@ -8,6 +8,8 @@
 
 최근 업데이트에서는 전체 화면을 Dark Theme로 조정하고, Clear Scanner 실행 시 선택된 Scanner Head 표시가 모두 해제되도록 정리했다. Scanner 선택 상태와 Review 기준 Head는 분리해서 표시하므로 `Highlight Heads` 값이 비어 있으면 Scanner 버튼은 활성 색상으로 남지 않는다.
 
+색상 체계는 Dark Theme 기준으로 재정리했다. 선택 좌표는 Amber, 선택 Scanner가 처리 가능한 좌표와 X 가공 가능 Band는 Cyan/Teal, Scanner Head 선택 상태는 Blue로 구분해 Board와 Matrix에서 동일한 의미가 같은 색으로 보이도록 했다.
+
 ## 실행 방법
 
 ```powershell
