@@ -10,6 +10,8 @@
 
 색상 체계는 Dark Theme 기준으로 재정리했다. 선택 좌표는 Amber, 선택 Scanner가 처리 가능한 좌표와 X 가공 가능 Band는 Cyan/Teal, Scanner Head 선택 상태는 Blue로 구분해 Board와 Matrix에서 동일한 의미가 같은 색으로 보이도록 했다.
 
+가공 가능 Band 설명 라벨은 Board 내부가 아니라 Board 아래 전용 라벨 영역에 표시된다. 여러 Scanner를 선택해도 라벨이 2줄로 분산 배치되며, Scanner 박스는 최소 Y 간격을 확보해 좌표 텍스트와 겹치지 않도록 했다.
+
 ## 실행 방법
 
 ```powershell

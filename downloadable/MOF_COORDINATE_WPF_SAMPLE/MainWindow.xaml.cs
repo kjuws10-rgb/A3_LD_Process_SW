@@ -173,14 +173,15 @@ public partial class MainWindow : Window
         DrawTitle("기판 셀 선택 및 지그재그 스캐너 배치", 20, 8, 21, FontWeights.Bold);
 
         var boardLeft = 24.0;
-        var boardTop = 52.0;
+        var boardTop = 82.0;
         var boardWidth = LayoutCanvas.Width - 48.0;
-        var boardHeight = Math.Max(260.0, LayoutCanvas.Height - 310.0);
+        var boardHeight = Math.Max(220.0, LayoutCanvas.Height - 390.0);
 
         DrawBoardFrame(boardLeft, boardTop, boardWidth, boardHeight);
         DrawCellBlocks(boardLeft, boardTop, boardWidth, boardHeight);
-        DrawScannerHeads(boardLeft, boardTop + boardHeight + 26.0, boardWidth);
-        DrawLegend(Math.Max(20, LayoutCanvas.Width - 610), 14);
+        DrawScannerBandLabels(boardLeft, boardTop + boardHeight + 10.0, boardWidth, boardHeight);
+        DrawScannerHeads(boardLeft, boardTop + boardHeight + 76.0, boardWidth);
+        DrawLegend(Math.Max(20, LayoutCanvas.Width - 610), LayoutCanvas.Width >= 880 ? 14 : 38);
     }
 
     private void ResizeLayoutCanvas()
@@ -288,8 +289,13 @@ public partial class MainWindow : Window
         {
             var first = blockGroup.OrderBy(x => x.Row).ThenBy(x => x.Column).First();
             var x = boardLeft + 28 + first.LocalX * scale;
-            var y = boardTop + 20 + first.LocalY * scale - 22;
-            DrawText($"Cell#{first.CellBlock}", x, y, 13, FontWeights.Bold, new SolidColorBrush(Color.FromRgb(226, 232, 240)));
+            var y = Math.Max(boardTop + 8, boardTop + 20 + first.LocalY * scale - 24);
+            DrawBadge($"Cell#{first.CellBlock}", x - 2, y, 58, 20,
+                new SolidColorBrush(Color.FromArgb(210, 15, 23, 42)),
+                new SolidColorBrush(Color.FromRgb(71, 85, 105)),
+                new SolidColorBrush(Color.FromRgb(226, 232, 240)),
+                12,
+                FontWeights.Bold);
         }
     }
 
@@ -319,7 +325,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        var boardScale = GetBoardScale(width, Math.Max(260.0, LayoutCanvas.Height - 310.0));
+        var boardScale = GetBoardScale(width, Math.Max(220.0, LayoutCanvas.Height - 390.0));
         var minScannerY = _lastResult.Scanners.Min(x => x.CenterY);
         var boxWidth = 74.0;
         var boxHeight = 64.0;
@@ -328,7 +334,13 @@ public partial class MainWindow : Window
         {
             var localX = scanner.CenterX - _lastResult.Ak1GlobalX;
             var x = left + 28 + localX * boardScale - boxWidth * 0.5;
-            var y = top + Math.Max(0, (scanner.CenterY - minScannerY) * boardScale);
+            var yOffset = Math.Max(0, (scanner.CenterY - minScannerY) * boardScale);
+            if (yOffset > 0)
+            {
+                yOffset = Math.Max(78, yOffset);
+            }
+
+            var y = top + yOffset;
             var isActiveScanner = scanner.IsHighlighted;
             var fill = isActiveScanner
                 ? new SolidColorBrush(Color.FromRgb(37, 99, 235))
@@ -366,7 +378,7 @@ public partial class MainWindow : Window
             LayoutCanvas.Children.Add(box);
 
             DrawText($"Scanner\n#{scanner.Index}", x + 8, y + 14, 15, FontWeights.SemiBold, isActiveScanner ? Brushes.White : new SolidColorBrush(Color.FromRgb(203, 213, 225)));
-            DrawText($"({scanner.CenterX:0.#}, {scanner.CenterY:0.#})", x - 4, y + boxHeight + 4, 10, FontWeights.Normal, new SolidColorBrush(Color.FromRgb(148, 163, 184)));
+            DrawText($"({scanner.CenterX:0.#}, {scanner.CenterY:0.#})", x - 4, y + boxHeight + 6, 10, FontWeights.Normal, new SolidColorBrush(Color.FromRgb(148, 163, 184)));
         }
     }
 
@@ -381,7 +393,7 @@ public partial class MainWindow : Window
         var cos = Math.Cos(theta);
         var sin = Math.Sin(theta);
 
-        var boardHeight = Math.Max(260.0, LayoutCanvas.Height - 310.0);
+        var boardHeight = Math.Max(220.0, LayoutCanvas.Height - 390.0);
 
         foreach (var scanner in _lastResult.Scanners.Where(x => x.IsHighlighted))
         {
@@ -406,10 +418,62 @@ public partial class MainWindow : Window
             Canvas.SetLeft(area, x);
             Canvas.SetTop(area, y);
             LayoutCanvas.Children.Add(area);
-
-            DrawText($"{scanner.Name} X 가공 가능 Band\nY 방향은 기판 이동으로 커버", x + 6, y + 6, 12, FontWeights.Bold, new SolidColorBrush(Color.FromRgb(207, 250, 254)));
         }
     }
+
+    private void DrawScannerBandLabels(double boardLeft, double labelTop, double boardWidth, double boardHeight)
+    {
+        if (_lastResult is null)
+        {
+            return;
+        }
+
+        var highlighted = _lastResult.Scanners.Where(x => x.IsHighlighted).OrderBy(x => x.CenterX).ToList();
+        if (highlighted.Count == 0)
+        {
+            return;
+        }
+
+        var scale = GetBoardScale(boardWidth, boardHeight);
+        var theta = _input.ThetaAlignDeg * Math.PI / 180.0;
+        var cos = Math.Cos(theta);
+        var sin = Math.Sin(theta);
+        var labelWidth = Math.Min(235, Math.Max(160, boardWidth * 0.32));
+        var labelHeight = 24.0;
+        var rowGap = 28.0;
+        var occupiedRows = new List<List<(double Left, double Right)>> { new(), new() };
+
+        foreach (var scanner in highlighted)
+        {
+            var dx = scanner.CenterX - _lastResult.Ak1GlobalX;
+            var localX = cos * dx + sin * 0.0;
+            var bandCenterX = boardLeft + 28 + localX * scale;
+            var labelLeft = Math.Clamp(bandCenterX - labelWidth * 0.5, boardLeft + 8, boardLeft + boardWidth - labelWidth - 8);
+            var labelRight = labelLeft + labelWidth;
+            var rowIndex = 0;
+
+            for (var row = 0; row < occupiedRows.Count; row++)
+            {
+                if (occupiedRows[row].All(x => labelRight < x.Left - 8 || labelLeft > x.Right + 8))
+                {
+                    rowIndex = row;
+                    break;
+                }
+
+                rowIndex = row;
+            }
+
+            occupiedRows[rowIndex].Add((labelLeft, labelRight));
+            var text = $"{scanner.Name} X Band  {scanner.CenterX - scanner.FieldHalfX:0.#} ~ {scanner.CenterX + scanner.FieldHalfX:0.#} mm / Y 이동 커버";
+            DrawBadge(text, labelLeft, labelTop + rowIndex * rowGap, labelWidth, labelHeight,
+                new SolidColorBrush(Color.FromRgb(8, 47, 73)),
+                new SolidColorBrush(Color.FromRgb(34, 211, 238)),
+                new SolidColorBrush(Color.FromRgb(207, 250, 254)),
+                11,
+                FontWeights.SemiBold);
+        }
+    }
+
 
     private void CellRect_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
@@ -756,6 +820,35 @@ public partial class MainWindow : Window
     private void DrawTitle(string text, double x, double y, double size, FontWeight weight)
     {
         DrawText(text, x, y, size, weight, new SolidColorBrush(Color.FromRgb(248, 250, 252)));
+    }
+
+    private void DrawBadge(string text, double x, double y, double width, double height, Brush background, Brush borderBrush, Brush foreground, double fontSize, FontWeight weight)
+    {
+        var badge = new Border
+        {
+            Width = width,
+            Height = height,
+            Background = background,
+            BorderBrush = borderBrush,
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(4),
+            Child = new TextBlock
+            {
+                Text = text,
+                FontSize = fontSize,
+                FontWeight = weight,
+                Foreground = foreground,
+                TextAlignment = TextAlignment.Center,
+                TextWrapping = TextWrapping.NoWrap,
+                TextTrimming = TextTrimming.CharacterEllipsis,
+                VerticalAlignment = VerticalAlignment.Center,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                Margin = new Thickness(5, 0, 5, 0)
+            }
+        };
+        Canvas.SetLeft(badge, x);
+        Canvas.SetTop(badge, y);
+        LayoutCanvas.Children.Add(badge);
     }
 
     private void DrawText(string text, double x, double y, double size, FontWeight weight, Brush brush)
