@@ -40,8 +40,10 @@ public sealed class CoordinateInput
     public int SelectedCellBlock { get; set; } = 1;
 
     public int ScannerCount { get; set; } = 8;
-    public double FirstScannerCenterX { get; set; } = 479.7;
-    public double FirstScannerCenterY { get; set; } = 1640.1;
+    // Fixed equipment geometry: H1 scanner center minus review camera center.
+    // This calibration value is fundamentally different from a review-error correction.
+    public double ReviewToFirstScannerOffsetX { get; set; } = 374.7;
+    public double ReviewToFirstScannerOffsetY { get; set; } = 440.1;
     public double ScannerPitchX { get; set; } = 100;
     public double EvenScannerYOffset { get; set; } = 45;
     public double ScannerFieldHalfX { get; set; } = 55;
@@ -64,6 +66,8 @@ public sealed class ScannerModel
     public string MountType { get; init; } = "Odd";
     public double CenterX { get; init; }
     public double CenterY { get; init; }
+    public double ReviewCameraOffsetX { get; init; }
+    public double ReviewCameraOffsetY { get; init; }
     public double FieldHalfX { get; init; }
     public double FieldHalfY { get; init; }
     public bool IsHighlighted { get; init; }
@@ -98,10 +102,14 @@ public sealed class CellCommand
     public double DesignStageY { get; init; }
     public double ProcessStageX { get; init; }
     public double ProcessStageY { get; init; }
+    public double ReviewCameraRelativeX { get; init; }
+    public double ReviewCameraRelativeY { get; init; }
 
     public string ScannerName { get; init; } = "";
     public int ScannerIndex { get; init; }
     public string ScannerType { get; init; } = "";
+    public double ScannerPhysicalOffsetX { get; init; }
+    public double ScannerPhysicalOffsetY { get; init; }
     public double RelativeX { get; init; }
     public double RelativeY { get; init; }
     public double Gx { get; init; }
@@ -124,6 +132,8 @@ public sealed class CellCommand
     public string DesignStageMatrix => FormatPair(DesignStageX, DesignStageY);
     public string ProcessStageMatrix => FormatPair(ProcessStageX, ProcessStageY);
     public string ProcessGMatrix => FormatPair(Gx, Gy);
+    public string ReviewCameraRelativeMatrix => FormatPair(ReviewCameraRelativeX, ReviewCameraRelativeY);
+    public string ScannerPhysicalOffsetMatrix => FormatPair(ScannerPhysicalOffsetX, ScannerPhysicalOffsetY);
     public string ScannerRelativeMatrix => FormatPair(RelativeX, RelativeY);
     public string ReviewReferenceMatrix => FormatPair(ReviewReferenceStageX, ReviewReferenceStageY);
     public string ReviewMatrix => FormatPair(ReviewCoordinateX, ReviewCoordinateY);

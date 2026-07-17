@@ -164,10 +164,12 @@ public partial class MainWindow : Window
         SummaryText.Text =
             $"AK1 Stage 기준 = ({_lastResult.Ak1GlobalX:0.######}, {_lastResult.Ak1GlobalY:0.######}) mm   " +
             $"전체 좌표 = {_lastResult.Commands.Count}, X 커버 좌표 = {inFieldCount}, 선택 Scanner = {selectedScannerCount}, 표시 좌표 = {filteredCount}, 선택 좌표 = {_selectedPointKeys.Count}   " +
+            $"Camera→H1 물리 Offset = ({_input.ReviewToFirstScannerOffsetX:0.###}, {_input.ReviewToFirstScannerOffsetY:0.###}) mm   " +
             $"Review 기준 = H{_lastResult.SelectedReviewScanner.Index} DOE{_lastResult.SelectedDoeBeam.BeamNo:00}";
 
         FormulaText.Text =
-            "스캐너 박스 또는 주변 클릭 영역을 누르면 복수 선택/해제가 됩니다. 선택된 스캐너가 있으면 좌표 Matrix는 해당 스캐너의 X 가공 가능 범위에 포함되는 좌표만 표시합니다. " +
+            "고정 물리 Offset은 Review Camera 중심에서 각 Scanner 중심까지의 설비 설계/캘리브레이션 거리입니다. CameraRelative = ProcessStage - ReviewCenter, ScannerRelative = CameraRelative - CameraToScannerOffset 순서로 변환한 뒤 Gx/Gy를 생성합니다. " +
+            "Dynamic Review Correction은 가공 후 측정오차를 다음 가공에 보정하는 값으로, 고정 물리 Offset과 별도로 관리합니다. 스캐너 박스 또는 주변 클릭 영역을 누르면 복수 선택/해제가 됩니다. 선택된 스캐너가 있으면 좌표 Matrix는 해당 스캐너의 X 가공 가능 범위에 포함되는 좌표만 표시합니다. " +
             "Matrix 셀은 드래그로 연속 선택하고, Shift 클릭으로 기준 셀부터 현재 셀까지 범위 선택하며, Ctrl 클릭/드래그로 추가 또는 해제할 수 있습니다. " +
             "Ctrl + 마우스 휠로 Board와 Matrix를 확대/축소하면 마지막 비율이 다음 실행에도 유지됩니다.";
 
@@ -587,7 +589,12 @@ public partial class MainWindow : Window
                 : new SolidColorBrush(Color.FromRgb(51, 65, 85)),
             StrokeThickness = selected ? 2.2 : 1,
             Tag = command,
-            Cursor = Cursors.Hand
+            Cursor = Cursors.Hand,
+            ToolTip = $"{command.CellIndex}\n" +
+                      $"Camera 기준 상대좌표: {command.ReviewCameraRelativeMatrix} mm\n" +
+                      $"Camera→{command.ScannerName} 물리 Offset: {command.ScannerPhysicalOffsetMatrix} mm\n" +
+                      $"Scanner 상대좌표: {command.ScannerRelativeMatrix} mm\n" +
+                      $"MOF Gx/Gy: {command.ProcessGMatrix}"
         };
         rect.MouseLeftButtonDown += MatrixCell_MouseLeftButtonDown;
         rect.MouseEnter += MatrixCell_MouseEnter;
@@ -1058,8 +1065,8 @@ public partial class MainWindow : Window
 
         SetTip(ScannerCountBox, "Scanner Count", "장비에 배치된 Scanner Head 개수입니다. 하단 Zigzag Scanner UI의 Head 수를 결정합니다.", "H1, H2, H3... 생성", "Scanner");
         SetTip(HighlightHeadsBox, "Highlight Heads", "Board UI에서 가공 가능 영역을 강조할 Scanner 번호 목록입니다. 콤마로 여러 개를 입력할 수 있습니다.", "예: 1,5 또는 2,4,6", "Scanner");
-        SetTip(FirstScannerXBox, "First Scanner Center X", "H1 Scanner 중심의 Stage X 좌표입니다. 나머지 Scanner는 Scanner Pitch X를 더해 배치됩니다.", "Hn_X = H1_X + (n-1)*ScannerPitchX", "Scanner");
-        SetTip(FirstScannerYBox, "First Scanner Center Y", "H1 Scanner 중심의 Stage Y 좌표입니다. 짝수 Head는 Even Y Offset을 추가해 Zigzag로 배치됩니다.", "Odd: Y=H1_Y, Even: Y=H1_Y+EvenYOffset", "Scanner");
+        SetTip(CameraToScannerOffsetXBox, "Review Camera → H1 Physical Offset X", "Review Camera 광학 중심에서 H1 Scanner 가공 중심까지의 고정된 X 방향 설계/캘리브레이션 거리입니다. 리뷰 측정 위치를 스캐너 상대 가공좌표로 옮기는 핵심 기준이며, 가공 후 오차 보정값과 구분해 관리합니다.", "H1.CenterX = ReviewCenterX + PhysicalOffsetX", "Scanner");
+        SetTip(CameraToScannerOffsetYBox, "Review Camera → H1 Physical Offset Y", "Review Camera 광학 중심에서 H1 Scanner 가공 중심까지의 고정된 Y 방향 설계/캘리브레이션 거리입니다. 기판이 Y로 이동할 때 동일한 가공점을 H1 아래로 보내기 위한 기준 거리입니다.", "H1.CenterY = ReviewCenterY + PhysicalOffsetY", "Scanner");
         SetTip(ScannerPitchXBox, "Scanner Pitch X", "인접 Scanner Head 사이의 X 방향 중심 간격입니다.", "H2_X - H1_X", "Scanner");
         SetTip(EvenYOffsetBox, "Even Y Offset", "짝수 Scanner Head가 홀수 Head 기준선에서 Y 방향으로 얼마나 어긋나 배치되는지 나타냅니다.", "Zigzag 배치용 Y offset", "Scanner");
         SetTip(FieldHalfXBox, "Process Area Half X", "Scanner가 가공 가능한 영역의 X 반폭입니다. Scanner를 클릭하면 CenterX ± HalfX 범위 안의 가공점이 강조됩니다.", "abs(TargetX - ScannerCenterX) <= HalfX", "Scanner");
@@ -1069,8 +1076,8 @@ public partial class MainWindow : Window
         SetTip(DoePitchXBox, "DOE Pitch X", "DOE 16 Beam 내부에서 Beam 간 X 방향 간격입니다.", "BeamOffsetX = (Column - 1.5) * DoePitchX", "Doe");
         SetTip(DoePitchYBox, "DOE Pitch Y", "DOE 16 Beam 내부에서 Beam 간 Y 방향 간격입니다.", "BeamOffsetY = (Row - 1.5) * DoePitchY", "Doe");
 
-        SetTip(OffsetXBox, "Offset Global X", "Review 측정 후 보정할 X 방향 Stage offset입니다. 설계 좌표에 더해져 최종 가공 좌표가 됩니다.", "Pprocess.X = Pdesign.X + OffsetX", "Offset");
-        SetTip(OffsetYBox, "Offset Global Y", "Review 측정 후 보정할 Y 방향 Stage offset입니다. 설계 좌표에 더해져 최종 가공 좌표가 됩니다.", "Pprocess.Y = Pdesign.Y + OffsetY", "Offset");
+        SetTip(OffsetXBox, "Dynamic Review Correction X", "가공 후 Review 측정에서 확인된 X 오차를 다음 가공좌표에 되먹임하는 동적 보정값입니다. Camera→Scanner 고정 물리 Offset과는 수명주기와 목적이 다릅니다.", "Pprocess.X = Pdesign.X + ReviewCorrectionX", "Offset");
+        SetTip(OffsetYBox, "Dynamic Review Correction Y", "가공 후 Review 측정에서 확인된 Y 오차를 다음 가공좌표에 되먹임하는 동적 보정값입니다. 설비 기구 치수인 Camera→Scanner 고정 물리 Offset과 별도로 저장합니다.", "Pprocess.Y = Pdesign.Y + ReviewCorrectionY", "Offset");
 
         SetTip(GenerateButton, "Generate / Refresh", "현재 입력값을 기준으로 Cell 배치, Stage 좌표, Scanner 가공좌표, Review 좌표계를 다시 계산합니다.", "입력값 변경 후 누르면 화면 전체 갱신", "None");
         SetTip(OpenConfigButton, "Open CSV Template in Excel", "CSV 템플릿을 Excel 또는 Windows 기본 CSV 앱으로 엽니다. 값을 저장한 뒤 Reload 또는 Load로 화면에 반영합니다.", "Excel에서 저장 -> Reload Current CSV", "None");
@@ -1276,8 +1283,8 @@ public partial class MainWindow : Window
         SelectedCellRowBox.Text = input.SelectedCellRow.ToString(CultureInfo.InvariantCulture);
         ScannerCountBox.Text = input.ScannerCount.ToString(CultureInfo.InvariantCulture);
         HighlightHeadsBox.Text = input.HighlightScannerHeads;
-        FirstScannerXBox.Text = Format(input.FirstScannerCenterX);
-        FirstScannerYBox.Text = Format(input.FirstScannerCenterY);
+        CameraToScannerOffsetXBox.Text = Format(input.ReviewToFirstScannerOffsetX);
+        CameraToScannerOffsetYBox.Text = Format(input.ReviewToFirstScannerOffsetY);
         ScannerPitchXBox.Text = Format(input.ScannerPitchX);
         EvenYOffsetBox.Text = Format(input.EvenScannerYOffset);
         FieldHalfXBox.Text = Format(input.ScannerFieldHalfX);
@@ -1377,8 +1384,8 @@ public partial class MainWindow : Window
             SelectedCellRow = Clamp(ReadZeroBasedInt(SelectedCellRowBox, _input.SelectedCellRow), 0, Math.Max(0, rows - 1)),
             ScannerCount = scannerCount,
             HighlightScannerHeads = HighlightHeadsBox.Text,
-            FirstScannerCenterX = ReadDouble(FirstScannerXBox, _input.FirstScannerCenterX),
-            FirstScannerCenterY = ReadDouble(FirstScannerYBox, _input.FirstScannerCenterY),
+            ReviewToFirstScannerOffsetX = ReadDouble(CameraToScannerOffsetXBox, _input.ReviewToFirstScannerOffsetX),
+            ReviewToFirstScannerOffsetY = ReadDouble(CameraToScannerOffsetYBox, _input.ReviewToFirstScannerOffsetY),
             ScannerPitchX = ReadDouble(ScannerPitchXBox, _input.ScannerPitchX),
             EvenScannerYOffset = ReadDouble(EvenYOffsetBox, _input.EvenScannerYOffset),
             ScannerFieldHalfX = ReadDouble(FieldHalfXBox, _input.ScannerFieldHalfX),
@@ -1546,8 +1553,8 @@ public partial class MainWindow : Window
             CsvLine(nameof(CoordinateInput.CellBlockPitchY), _input.CellBlockPitchY),
             CsvLine(nameof(CoordinateInput.ScannerCount), _input.ScannerCount),
             CsvLine(nameof(CoordinateInput.HighlightScannerHeads), _input.HighlightScannerHeads),
-            CsvLine(nameof(CoordinateInput.FirstScannerCenterX), _input.FirstScannerCenterX),
-            CsvLine(nameof(CoordinateInput.FirstScannerCenterY), _input.FirstScannerCenterY),
+            CsvLine(nameof(CoordinateInput.ReviewToFirstScannerOffsetX), _input.ReviewToFirstScannerOffsetX),
+            CsvLine(nameof(CoordinateInput.ReviewToFirstScannerOffsetY), _input.ReviewToFirstScannerOffsetY),
             CsvLine(nameof(CoordinateInput.ScannerPitchX), _input.ScannerPitchX),
             CsvLine(nameof(CoordinateInput.EvenScannerYOffset), _input.EvenScannerYOffset),
             CsvLine(nameof(CoordinateInput.ScannerFieldHalfX), _input.ScannerFieldHalfX),
@@ -1608,8 +1615,11 @@ public partial class MainWindow : Window
             case nameof(CoordinateInput.CellBlockPitchY): _input.CellBlockPitchY = number; break;
             case nameof(CoordinateInput.ScannerCount): _input.ScannerCount = Math.Max(1, integer); break;
             case nameof(CoordinateInput.HighlightScannerHeads): _input.HighlightScannerHeads = value; break;
-            case nameof(CoordinateInput.FirstScannerCenterX): _input.FirstScannerCenterX = number; break;
-            case nameof(CoordinateInput.FirstScannerCenterY): _input.FirstScannerCenterY = number; break;
+            case nameof(CoordinateInput.ReviewToFirstScannerOffsetX): _input.ReviewToFirstScannerOffsetX = number; break;
+            case nameof(CoordinateInput.ReviewToFirstScannerOffsetY): _input.ReviewToFirstScannerOffsetY = number; break;
+            // Backward compatibility for CSV files created before the physical offset was explicit.
+            case "FirstScannerCenterX": _input.ReviewToFirstScannerOffsetX = number - _input.ReviewCenterGlobalX; break;
+            case "FirstScannerCenterY": _input.ReviewToFirstScannerOffsetY = number - _input.ReviewCenterGlobalY; break;
             case nameof(CoordinateInput.ScannerPitchX): _input.ScannerPitchX = number; break;
             case nameof(CoordinateInput.EvenScannerYOffset): _input.EvenScannerYOffset = number; break;
             case nameof(CoordinateInput.ScannerFieldHalfX): _input.ScannerFieldHalfX = number; break;

@@ -225,7 +225,39 @@ STX + JSON + ETX
 | 58 | `BULK_TRANSFER_END` | 양방향 | 대용량 전송 완료 |
 | 59 | `BULK_TRANSFER_ABORT` | 양방향 | 대용량 전송 중단 |
 
+### 3.9 장비 Geometry / Calibration 동기화
+
+Review Camera와 Scanner 사이의 물리 오프셋은 Recipe 데이터나 가공 후 Review 보정값이 아니라 장비 고유 Calibration 데이터다. Process와 Review가 서로 다른 값을 사용하면 모든 Scanner 가공좌표가 동일한 크기만큼 체계적으로 틀어질 수 있으므로 운전 시작 전에 버전과 값을 반드시 비교한다.
+
+| No | Message | Direction | 목적 | 주요 Payload |
+| ---: | --- | --- | --- | --- |
+| 60 | `EQUIPMENT_GEOMETRY_SYNC_REQ` | Process → Review | Camera→Scanner 고정 물리 Offset과 Scanner 배치 Geometry 전달 | calibrationId, reviewCenter, reviewToFirstScannerOffset, scannerPitch, evenYOffset, axisSign |
+| 61 | `EQUIPMENT_GEOMETRY_SYNC_RSP` | Review → Process | Calibration 버전 및 값 일치 여부 응답 | accepted, calibrationId, checksum, mismatchFields |
+
 ## 4. 핵심 Payload 정의 초안
+
+### 4.0 `EQUIPMENT_GEOMETRY_SYNC_REQ`
+
+고정 설비 Geometry를 동기화한다. `physicalOffset`과 `dynamicReviewCorrection`은 절대 같은 필드로 합치지 않는다.
+
+| Field | 설명 |
+| --- | --- |
+| `calibrationId` | 승인된 장비 Geometry/Calibration 버전 ID |
+| `reviewCenterStageX/Y` | Review Camera 광학 중심의 Stage 좌표 |
+| `reviewToFirstScannerOffsetX/Y` | Review Camera 중심에서 H1 Scanner 중심까지의 고정 물리 벡터 |
+| `scannerPitchX` | 인접 Scanner Head 중심의 X 설계 간격 |
+| `evenScannerYOffset` | 짝수 Head의 Zigzag Y 설계 Offset |
+| `axisSignX/Y` | 실제 Stage 축 방향과 좌표식 부호 정의 |
+| `scannerCenters[]` | 위 Geometry에서 계산한 Head별 Stage 중심 검증값 |
+| `checksum` | 양측 Geometry 데이터 동일성 확인값 |
+
+검증식:
+
+```text
+ScannerCenter_i = ReviewCenter + CameraToScannerPhysicalOffset_i
+ScannerRelative = (ProcessStage - ReviewCenter) - CameraToScannerPhysicalOffset_i
+                = ProcessStage - ScannerCenter_i
+```
 
 ### 4.1 `CELL_TARGET_LIST_DOWNLOAD_REQ`
 
@@ -244,6 +276,9 @@ Process가 Review에 전체 또는 Review 대상 가공 좌표를 전달한다.
 | `localX` / `localY` | AK1 기준 Recipe Local 좌표 |
 | `designStageX` / `designStageY` | 설계 기준 Stage 좌표 |
 | `processStageX` / `processStageY` | Offset 반영 후 Process Stage 좌표 |
+| `reviewCameraRelativeX` / `reviewCameraRelativeY` | Process Stage 좌표를 Review Camera 중심 기준으로 표현한 값 |
+| `scannerPhysicalOffsetX` / `scannerPhysicalOffsetY` | Review Camera에서 담당 Scanner 중심까지의 고정 물리 Offset |
+| `scannerRelativeX` / `scannerRelativeY` | 물리 Offset을 적용한 Scanner 상대좌표 |
 | `scannerIndex` / `scannerName` | 담당 Scanner |
 | `scannerType` | Odd/Even |
 | `gx` / `gy` | Scanner 가공 명령 좌표 |
@@ -483,18 +518,20 @@ Head Offset 필드:
 9. `RECIPE_INFO_DOWNLOAD_REQ`
 10. `PROCESS_PLAN_DOWNLOAD_REQ`
 11. `SCANNER_LAYOUT_SYNC_REQ`
-12. `DOE_CONFIG_SYNC_REQ`
-13. `CELL_TARGET_LIST_DOWNLOAD_REQ`
-14. `AK_MEASURE_REQ`
-15. `AK_MEASURE_RESULT`
-16. `REVIEW_MEASURE_REQ`
-17. `REVIEW_MEASURE_PROGRESS`
-18. `REVIEW_POINT_RESULT`
-19. `REVIEW_MEASUREMENT_BATCH_RESULT`
-20. `REVIEW_MEASURE_COMPLETED`
-21. `REVIEW_MEASURE_FAILED`
-22. `OFFSET_POLICY_SET_REQ`
-23. `OFFSET_CALC_RSP`
-24. `OFFSET_APPLY_REQ`
+12. `EQUIPMENT_GEOMETRY_SYNC_REQ`
+13. `EQUIPMENT_GEOMETRY_SYNC_RSP`
+14. `DOE_CONFIG_SYNC_REQ`
+15. `CELL_TARGET_LIST_DOWNLOAD_REQ`
+16. `AK_MEASURE_REQ`
+17. `AK_MEASURE_RESULT`
+18. `REVIEW_MEASURE_REQ`
+19. `REVIEW_MEASURE_PROGRESS`
+20. `REVIEW_POINT_RESULT`
+21. `REVIEW_MEASUREMENT_BATCH_RESULT`
+22. `REVIEW_MEASURE_COMPLETED`
+23. `REVIEW_MEASURE_FAILED`
+24. `OFFSET_POLICY_SET_REQ`
+25. `OFFSET_CALC_RSP`
+26. `OFFSET_APPLY_REQ`
 
-이 24개를 먼저 표준화하면 Process / Review 간 기본 운용, 측정, 결과 수신, 보정 반영까지 한 사이클을 닫을 수 있다.
+이 26개를 먼저 표준화하면 고정 설비 Geometry 확인부터 Process / Review 기본 운용, 측정, 결과 수신, 동적 보정 반영까지 한 사이클을 닫을 수 있다.

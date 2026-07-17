@@ -1,5 +1,12 @@
 Review 측정 / Review Offset 구조화 가이드
 
+0. 반드시 분리해야 하는 두 종류의 Offset
+- CameraToScannerPhysicalOffset: Review Camera 광학 중심과 Scanner 가공 중심 사이의 고정 설비 Geometry
+- DynamicReviewCorrection: 가공 후 측정된 오차를 다음 Process Plan에 반영하는 동적 보정값
+- 물리 Offset은 Calibration ID와 장비 버전으로 관리하고, 동적 보정은 Lot/Panel/Head/Batch 이력으로 관리한다.
+- 좌표식은 ScannerRelative = (ProcessStage - ReviewCenter) - CameraToScannerPhysicalOffset이다.
+- 위 결과는 ProcessStage - ScannerCenter와 반드시 같아야 한다.
+
 1. 현재 프로젝트에서 미개발인 부분
 - Vision PC 또는 Review Camera에서 실제 측정 좌표를 받는 I/F
 - APC 파일을 감시/다운로드/파싱하는 구성

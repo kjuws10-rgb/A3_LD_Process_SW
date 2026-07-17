@@ -4,7 +4,8 @@ namespace MofCoordinateDemo.Services;
 
 /// <summary>
 /// Generates the full coordinate chain:
-/// recipe local coordinate -> design stage coordinate -> process stage coordinate
+/// recipe local coordinate -> design stage coordinate -> corrected process stage
+/// -> review-camera-relative coordinate -> physical camera-to-scanner offset
 /// -> scanner Gx/Gy command -> review coordinate based on a selected DOE beam.
 /// </summary>
 public sealed class CoordinateTransformService
@@ -108,8 +109,12 @@ public sealed class CoordinateTransformService
                 Name = $"H{index}",
                 Index = index,
                 MountType = isOdd ? "Odd" : "Even",
-                CenterX = input.FirstScannerCenterX + i * input.ScannerPitchX,
-                CenterY = input.FirstScannerCenterY + (isOdd ? 0 : input.EvenScannerYOffset),
+                // Scanner centers are derived from the measured review-camera center and
+                // the fixed mechanical calibration. This makes the physical offset explicit.
+                CenterX = input.ReviewCenterGlobalX + input.ReviewToFirstScannerOffsetX + i * input.ScannerPitchX,
+                CenterY = input.ReviewCenterGlobalY + input.ReviewToFirstScannerOffsetY + (isOdd ? 0 : input.EvenScannerYOffset),
+                ReviewCameraOffsetX = input.ReviewToFirstScannerOffsetX + i * input.ScannerPitchX,
+                ReviewCameraOffsetY = input.ReviewToFirstScannerOffsetY + (isOdd ? 0 : input.EvenScannerYOffset),
                 FieldHalfX = input.ScannerFieldHalfX,
                 FieldHalfY = input.ScannerFieldHalfY,
                 IsHighlighted = highlightedHeads.Contains(index)
@@ -163,8 +168,14 @@ public sealed class CoordinateTransformService
         var isInHighlightedScannerArea = scanners.Any(scanner =>
             scanner.IsHighlighted &&
             Math.Abs(processStageX - scanner.CenterX) <= scanner.FieldHalfX);
-        var relativeX = processStageX - selected.CenterX;
-        var relativeY = processStageY - selected.CenterY;
+        // First express the target from the review-camera optical center. Subtracting
+        // the calibrated camera-to-head vector moves the same target into scanner space.
+        //   CameraRelative = ProcessStage - ReviewCameraCenter
+        //   ScannerRelative = CameraRelative - CameraToScannerPhysicalOffset
+        var reviewCameraRelativeX = processStageX - input.ReviewCenterGlobalX;
+        var reviewCameraRelativeY = processStageY - input.ReviewCenterGlobalY;
+        var relativeX = reviewCameraRelativeX - selected.ReviewCameraOffsetX;
+        var relativeY = reviewCameraRelativeY - selected.ReviewCameraOffsetY;
 
         var gx = selected.MountType == "Odd" ? -relativeX : relativeX;
         var gy = selected.MountType == "Odd" ? relativeY : -relativeY;
@@ -192,9 +203,13 @@ public sealed class CoordinateTransformService
             DesignStageY = Round(designStageY),
             ProcessStageX = Round(processStageX),
             ProcessStageY = Round(processStageY),
+            ReviewCameraRelativeX = Round(reviewCameraRelativeX),
+            ReviewCameraRelativeY = Round(reviewCameraRelativeY),
             ScannerName = selected.Name,
             ScannerIndex = selected.Index,
             ScannerType = selected.MountType,
+            ScannerPhysicalOffsetX = Round(selected.ReviewCameraOffsetX),
+            ScannerPhysicalOffsetY = Round(selected.ReviewCameraOffsetY),
             RelativeX = Round(relativeX),
             RelativeY = Round(relativeY),
             Gx = Round(gx),

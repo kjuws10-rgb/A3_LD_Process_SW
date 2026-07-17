@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1540" viewBox="0 0 1800 1540">
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1860" viewBox="0 0 1800 1860">
   <defs>
     <style>
       .title{font-family:Segoe UI,Arial,sans-serif;font-size:30px;font-weight:700;fill:#e5f0ff}
@@ -39,7 +39,7 @@
     </marker>
   </defs>
 
-  <rect width="1800" height="1540" fill="#07111f"/>
+  <rect width="1800" height="1860" fill="#07111f"/>
   <text x="42" y="48" class="title">MOF Coordinate Transform 상세 흐름도</text>
   <text x="44" y="76" class="subtitle">Review Camera AK1 측정값을 기준으로 Recipe Cell 좌표를 Stage 좌표로 만들고, Zigzag Scanner의 X 가공 가능 Band를 통해 MOF Gx/Gy와 DOE Review 좌표를 생성하는 전체 과정</text>
 
@@ -59,7 +59,7 @@
 
   <rect x="720" y="184" width="300" height="76" class="input"/>
   <text x="738" y="208" class="h">Scanner Design</text>
-  <text x="738" y="229" class="tiny">ScannerCount, FirstScannerCenterX/Y</text>
+  <text x="738" y="229" class="tiny">ScannerCount, ReviewToFirstScannerOffsetX/Y</text>
   <text x="738" y="247" class="tiny">ScannerPitchX, EvenYOffset, FieldHalfX/Y</text>
 
   <rect x="1050" y="184" width="300" height="76" class="input"/>
@@ -69,8 +69,8 @@
 
   <rect x="1380" y="184" width="300" height="76" class="input"/>
   <text x="1398" y="208" class="h">Offset / Feedback</text>
-  <text x="1398" y="229" class="tiny">ProcessOffsetGlobalX/Y</text>
-  <text x="1398" y="247" class="tiny">Review Error 보정값을 다음 Plan에 반영</text>
+  <text x="1398" y="229" class="tiny">고정 Physical Offset ≠ 동적 Review Correction</text>
+  <text x="1398" y="247" class="tiny">ProcessOffsetGlobalX/Y는 측정오차 보정 전용</text>
 
   <rect x="36" y="315" width="1728" height="250" class="panel"/>
   <text x="60" y="348" class="section">1. AK1 Stage Anchor 생성 및 Recipe Local 좌표 생성</text>
@@ -189,9 +189,9 @@
   <text x="60" y="1063" class="section">3. Scanner 상대좌표, MOF Gx/Gy, DOE Review 좌표, Offset Feedback</text>
 
   <rect x="60" y="1092" width="310" height="95" class="scanner"/>
-  <text x="82" y="1121" class="h">3-1. Scanner Relative</text>
-  <text x="82" y="1149" class="small">Dx = ProcessStageX - ScannerCenterX</text>
-  <text x="82" y="1172" class="small">Dy = ProcessStageY - ScannerCenterY</text>
+  <text x="82" y="1121" class="h">3-1. Camera → Scanner Physical Offset</text>
+  <text x="82" y="1149" class="small">CameraRelative = ProcessStage - ReviewCenter</text>
+  <text x="82" y="1172" class="small">ScannerRelative = CameraRelative - PhysicalOffset</text>
 
   <rect x="420" y="1092" width="315" height="95" class="scanner"/>
   <text x="442" y="1121" class="h">3-2. Odd / Even 좌표 부호</text>
@@ -209,9 +209,9 @@
   <text x="1152" y="1172" class="small">ReviewCoord = ProcessStage - BasisHeadDoeStage</text>
 
   <rect x="1480" y="1092" width="245" height="95" class="feedback"/>
-  <text x="1502" y="1121" class="h">3-5. Review Offset</text>
+  <text x="1502" y="1121" class="h">3-5. Dynamic Review Correction</text>
   <text x="1502" y="1149" class="small">Measured - Target = Error</text>
-  <text x="1502" y="1172" class="small">Next ProcessOffset에 반영</text>
+  <text x="1502" y="1172" class="small">다음 ProcessOffset에 반영</text>
 
   <path class="arrow" d="M370 1142 H420"/>
   <path class="arrow" d="M735 1142 H785"/>
@@ -220,7 +220,7 @@
   <path class="arrow" d="M1605 1092 C1605 1038, 910 1018, 910 1092"/>
 
   <rect x="60" y="1232" width="1665" height="28" fill="#0f172a" stroke="#334155" rx="6"/>
-  <text x="78" y="1251" class="tiny">핵심 데이터 흐름: CoordinateInput → AK1 Stage Anchor → Cell Local Grid → DesignStage / ProcessStage → Scanner 선택 및 Gx/Gy → DOE Review 좌표 → Review Offset Feedback → 다음 Process Plan</text>
+  <text x="78" y="1251" class="tiny">핵심 데이터 흐름: CoordinateInput → AK1 Stage Anchor → ProcessStage → CameraRelative → Physical Offset 적용 → Scanner Gx/Gy → DOE Review 좌표 → Dynamic Correction → 다음 Plan</text>
 
   <rect x="36" y="1288" width="1728" height="218" class="panel"/>
   <text x="60" y="1321" class="section">4. 1-2 / 1-3 계산식 상세 해설: Cell# 묶음 위치와 묶음 안의 실제 가공점 위치</text>
@@ -267,4 +267,42 @@
   <path class="arrow2" d="M1260 1500 H1330"/>
   <rect x="1330" y="1486" width="260" height="28" class="badge"/>
   <text x="1343" y="1505" class="tiny">AK1/Theta를 적용해 Stage 좌표로 변환</text>
+
+  <rect x="36" y="1540" width="1728" height="282" class="panel"/>
+  <text x="60" y="1574" class="section">5. 핵심 보완: Review Camera와 Scanner 사이의 고정 물리 Offset</text>
+  <text x="60" y="1600" class="subtitle">리뷰 위치와 레이저 가공 위치는 물리적으로 떨어져 있다. 이 설비 치수를 먼저 적용해야 같은 기판 가공점을 Scanner Gx/Gy 좌표로 정확히 옮길 수 있다.</text>
+
+  <rect x="60" y="1624" width="340" height="142" class="review"/>
+  <text x="82" y="1652" class="h">5-1. Review Camera 기준</text>
+  <text x="82" y="1680" class="small">C_review = (ReviewCenterX, ReviewCenterY)</text>
+  <text x="82" y="1704" class="small">P_camera = ProcessStage - C_review</text>
+  <text x="82" y="1732" class="tiny">AK1 Pixel 측정과 Recipe/Theta로 ProcessStage 생성</text>
+
+  <rect x="450" y="1624" width="390" height="142" class="feedback"/>
+  <text x="472" y="1652" class="h">5-2. Head별 Physical Offset</text>
+  <text x="472" y="1680" class="small">O_RS_i = C_scanner_i - C_review</text>
+  <text x="472" y="1704" class="small">O_RS_i.X = H1OffsetX + (i-1)*PitchX</text>
+  <text x="472" y="1728" class="small">O_RS_i.Y = H1OffsetY + EvenYOffset(i)</text>
+  <text x="472" y="1750" class="tiny">장비 설계/캘리브레이션 값: Recipe 및 측정오차와 분리</text>
+
+  <rect x="890" y="1624" width="390" height="142" class="scanner"/>
+  <text x="912" y="1652" class="h">5-3. Scanner 상대 가공좌표</text>
+  <text x="912" y="1680" class="small">P_scanner = P_camera - O_RS_i</text>
+  <text x="912" y="1704" class="small">          = ProcessStage - C_scanner_i</text>
+  <text x="912" y="1728" class="small">Odd/Even 부호 변환 → 최종 Gx/Gy</text>
+  <text x="912" y="1750" class="tiny">두 식의 결과가 같아야 Calibration 일관성이 성립</text>
+
+  <rect x="1330" y="1624" width="390" height="142" class="calc"/>
+  <text x="1352" y="1652" class="h">5-4. 기본 예제와 검증식</text>
+  <text x="1352" y="1680" class="small">C_review = (105.0, 1200.0) mm</text>
+  <text x="1352" y="1704" class="small">O_RS_H1 = (374.7, 440.1) mm</text>
+  <text x="1352" y="1728" class="small">C_H1 = (479.7, 1640.1) mm</text>
+  <text x="1352" y="1750" class="tiny">검증: C_review + O_RS_H1 = C_H1</text>
+
+  <path class="arrow" d="M400 1695 H450"/>
+  <path class="arrow" d="M840 1695 H890"/>
+  <path class="arrow" d="M1280 1695 H1330"/>
+
+  <rect x="60" y="1782" width="1660" height="25" fill="#0f172a" stroke="#334155" rx="6"/>
+  <text x="78" y="1800" class="tiny">구분 원칙: Physical Offset = 설비 고정 Geometry / Dynamic Review Correction = 가공 후 측정오차 Feedback. 저장 위치, 변경 권한, 버전과 이력을 반드시 분리한다.</text>
 </svg>

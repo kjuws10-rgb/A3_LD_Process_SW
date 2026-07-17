@@ -2,6 +2,8 @@
 
 이 샘플은 Review Camera에서 측정한 AK1 Pixel 좌표를 기반으로 기판 내부 Cell 좌표를 Stage Global 좌표로 변환하고, Multi Scanner의 Zigzag Odd/Even 배치에 따라 MOF 가공 명령 `Gx`, `Gy`를 생성하는 예제이다.
 
+2026-07-17 업데이트에서는 Review Camera 광학 중심과 H1 Scanner 가공 중심 사이의 고정 물리 오프셋을 좌표 변환의 필수 입력으로 분리했다. Scanner 중심은 `ReviewCenter + CameraToScannerPhysicalOffset`으로 생성되며, 가공 후 측정오차를 보정하는 `ProcessOffsetGlobal`과 서로 다른 데이터로 관리한다.
+
 2026-07-16 업데이트에서는 첨부 예시 이미지처럼 기판 Cell과 Scanner Head 선택 상태를 색상으로 쉽게 파악할 수 있도록 UI를 개선했다. 또한 설계좌표, 가공좌표, 리뷰좌표계를 별도 탭으로 분리하고 모든 좌표 결과를 `(x, y)` 2D Matrix 형태로 표시한다.
 
 추가 업데이트에서는 AK1 기준 첫 번째 가공 위치, X/Y pitch, 내부 가공점 행/열, 기판 내 Cell# 블록 행/열과 pitch를 CSV 설정으로 읽을 수 있게 했다. CSV는 Excel에서 열고 저장할 수 있으므로 Recipe 설정표처럼 사용할 수 있다.
@@ -25,7 +27,7 @@ dotnet run
 
 ## 화면 구성
 
-- 좌측 입력 패널: Board, Review Camera, Cell, Scanner, DOE16 Beam, Review Offset 변수 입력.
+- 좌측 입력 패널: Board, Review Camera, Cell, Scanner, DOE16 Beam, Camera→Scanner Physical Offset, Dynamic Review Correction 변수 입력.
 - Parameter Tooltip: 각 입력칸 또는 버튼 위에 마우스를 올리면 해당 파라미터가 어느 좌표계/계산식에 쓰이는지 말풍선으로 설명한다. Board, Review, Cell, Scanner, DOE 항목은 작은 도식도 함께 표시한다.
 - 상단 Canvas: Board Cell 블록, 선택 Cell, Highlight Scanner가 담당하는 Cell, Zigzag Scanner Head 시각화.
 - 마우스 클릭: 화면의 Cell 또는 Scanner Head를 클릭하면 선택 상태와 결과 Matrix가 즉시 갱신된다.
@@ -55,6 +57,40 @@ dotnet run
 - `CellBlockPitchX`, `CellBlockPitchY`: Cell# 블록 사이의 X/Y pitch. 0이면 내부 Matrix 크기를 기준으로 자동 배치 pitch를 계산해 겹침을 방지한다.
 - `ScannerFieldHalfX`: Scanner가 가공 가능한 X 방향 반폭. Scanner를 클릭하면 `CenterX ± HalfX` 범위에 포함되는 가공점만 강조 표시된다.
 - `ScannerFieldHalfY`: Scanner 설계상의 Y 방향 field 반폭 참고값. MOF 컨셉에서는 기판이 Y 방향으로 이동하므로 가공 가능 여부는 X 커버리지로 판단하고, UI의 process band는 Board Y 전체로 표시한다.
+- `ReviewToFirstScannerOffsetX/Y`: Review Camera 광학 중심에서 H1 Scanner 가공 중심까지의 고정 물리 거리. 장비 조립치수 또는 캘리브레이션 결과로 관리하며 Recipe나 Review 측정오차에 따라 바뀌면 안 된다.
+- `ProcessOffsetGlobalX/Y`: 가공 후 Review 측정오차를 다음 가공에 반영하는 동적 보정값. 고정 물리 오프셋과 별도 이력 및 버전으로 관리한다.
+
+## Review Camera와 Scanner 사이의 물리 Offset
+
+좌표 부호는 다음과 같이 정의한다.
+
+```text
+CameraToScannerOffset_i = ScannerCenter_i - ReviewCameraCenter
+ScannerCenter_i = ReviewCameraCenter + CameraToScannerOffset_i
+```
+
+H1의 물리 오프셋을 기준으로 각 헤드의 오프셋을 파생한다.
+
+```text
+OffsetX_i = ReviewToFirstScannerOffsetX + (i - 1) * ScannerPitchX
+OffsetY_i = ReviewToFirstScannerOffsetY + EvenYOffset(i)
+
+EvenYOffset(i) = 0                  (홀수 Head)
+               = EvenScannerYOffset (짝수 Head)
+```
+
+Review Camera에서 계산된 가공점을 Scanner 좌표계로 옮기는 순서는 다음과 같다.
+
+```text
+CameraRelative = ProcessStageTarget - ReviewCameraCenter
+ScannerRelative = CameraRelative - CameraToScannerOffset_i
+                = ProcessStageTarget - ScannerCenter_i
+
+Odd Head : Gx = -ScannerRelativeX, Gy = +ScannerRelativeY
+Even Head: Gx = +ScannerRelativeX, Gy = -ScannerRelativeY
+```
+
+기본 예제에서 Review Camera Center는 `(105, 1200) mm`, Camera→H1 Offset은 `(374.7, 440.1) mm`이므로 H1 중심은 `(479.7, 1640.1) mm`가 된다. Process Matrix의 좌표 칸에 마우스를 올리면 Camera 기준 상대좌표, 선택 Head의 물리 Offset, Scanner 상대좌표와 최종 Gx/Gy를 함께 확인할 수 있다.
 
 ## Performance
 

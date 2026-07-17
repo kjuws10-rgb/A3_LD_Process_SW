@@ -74,8 +74,8 @@
           <UniformGrid Columns="2" Margin="0,4,0,10">
             <StackPanel Margin="0,0,8,8"><TextBlock Text="Head Count"/><TextBox x:Name="ScannerCountBox"/></StackPanel>
             <StackPanel Margin="0,0,0,8"><TextBlock Text="Highlight Heads"/><TextBox x:Name="HighlightHeadsBox"/></StackPanel>
-            <StackPanel Margin="0,0,8,8"><TextBlock Text="First Center X"/><TextBox x:Name="FirstScannerXBox"/></StackPanel>
-            <StackPanel Margin="0,0,0,8"><TextBlock Text="First Center Y"/><TextBox x:Name="FirstScannerYBox"/></StackPanel>
+            <StackPanel Margin="0,0,8,8"><TextBlock Text="Camera → H1 Off X"/><TextBox x:Name="CameraToScannerOffsetXBox"/></StackPanel>
+            <StackPanel Margin="0,0,0,8"><TextBlock Text="Camera → H1 Off Y"/><TextBox x:Name="CameraToScannerOffsetYBox"/></StackPanel>
             <StackPanel Margin="0,0,8,8"><TextBlock Text="Pitch X"/><TextBox x:Name="ScannerPitchXBox"/></StackPanel>
             <StackPanel Margin="0,0,0,8"><TextBlock Text="Even Y Offset"/><TextBox x:Name="EvenYOffsetBox"/></StackPanel>
             <StackPanel Margin="0,0,8,8"><TextBlock Text="Process Area Half X"/><TextBox x:Name="FieldHalfXBox"/></StackPanel>
@@ -98,7 +98,7 @@
                     Click="ClearScannerSelectionButton_Click"/>
           </UniformGrid>
 
-          <TextBlock Text="Review Offset" Style="{StaticResource SectionTitleStyle}"/>
+          <TextBlock Text="Dynamic Review Correction" Style="{StaticResource SectionTitleStyle}"/>
           <UniformGrid Columns="2" Margin="0,4,0,14">
             <StackPanel Margin="0,0,8,8"><TextBlock Text="Offset Global X"/><TextBox x:Name="OffsetXBox"/></StackPanel>
             <StackPanel Margin="0,0,0,8"><TextBlock Text="Offset Global Y"/><TextBox x:Name="OffsetYBox"/></StackPanel>
