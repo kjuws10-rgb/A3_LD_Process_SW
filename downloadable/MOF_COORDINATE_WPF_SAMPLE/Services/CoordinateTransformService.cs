@@ -20,6 +20,13 @@ public sealed class CoordinateTransformService
         var ak1GlobalY = input.ReviewCenterGlobalY + deltaPixelV * input.PixelScaleY;
 
         var scanners = BuildScanners(input, highlightedHeads);
+        var expectedFirstScannerStageX = input.ReviewCenterGlobalX + input.ReviewToFirstScannerOffsetX;
+        var expectedFirstScannerStageY = input.ReviewCenterGlobalY + input.ReviewToFirstScannerOffsetY;
+        var firstScannerOriginErrorX = input.FirstScannerInitialStageX - expectedFirstScannerStageX;
+        var firstScannerOriginErrorY = input.FirstScannerInitialStageY - expectedFirstScannerStageY;
+        var firstScannerOriginValid =
+            Math.Abs(firstScannerOriginErrorX) <= Math.Abs(input.ScannerOriginTolerance) &&
+            Math.Abs(firstScannerOriginErrorY) <= Math.Abs(input.ScannerOriginTolerance);
         var doeBeams = BuildDoeBeams(input);
         var selectedReviewScanner = scanners.FirstOrDefault(x => x.Index == Clamp(input.ReviewBasisScannerHead, 1, scanners.Count))
                                     ?? scanners[0];
@@ -124,7 +131,12 @@ public sealed class CoordinateTransformService
             MofExecutionCommands = mofExecutionCommands,
             MotionSteps = motionSteps,
             TurnaroundStageY = Round(turnaroundStageY),
-            EquipmentOrderValid = equipmentOrderValid
+            EquipmentOrderValid = equipmentOrderValid,
+            ExpectedFirstScannerStageX = Round(expectedFirstScannerStageX),
+            ExpectedFirstScannerStageY = Round(expectedFirstScannerStageY),
+            FirstScannerOriginErrorX = Round(firstScannerOriginErrorX),
+            FirstScannerOriginErrorY = Round(firstScannerOriginErrorY),
+            FirstScannerOriginValid = firstScannerOriginValid
         };
     }
 
@@ -200,10 +212,10 @@ public sealed class CoordinateTransformService
                 Name = $"H{index}",
                 Index = index,
                 MountType = isOdd ? "Odd" : "Even",
-                // Scanner centers are derived from the measured review-camera center and
-                // the fixed mechanical calibration. This makes the physical offset explicit.
-                CenterX = input.ReviewCenterGlobalX + input.ReviewToFirstScannerOffsetX + i * input.ScannerPitchX,
-                CenterY = input.ReviewCenterGlobalY + input.ReviewToFirstScannerOffsetY + (isOdd ? 0 : input.EvenScannerYOffset),
+                // Scanner layout starts from the explicit H1 Stage origin. The separately
+                // configured camera-to-H1 offset is checked against this origin.
+                CenterX = input.FirstScannerInitialStageX + i * input.ScannerPitchX,
+                CenterY = input.FirstScannerInitialStageY + (isOdd ? 0 : input.EvenScannerYOffset),
                 ReviewCameraOffsetX = input.ReviewToFirstScannerOffsetX + i * input.ScannerPitchX,
                 ReviewCameraOffsetY = input.ReviewToFirstScannerOffsetY + (isOdd ? 0 : input.EvenScannerYOffset),
                 FieldHalfX = input.ScannerFieldHalfX,
@@ -265,17 +277,24 @@ public sealed class CoordinateTransformService
         //   ScannerRelative = CameraRelative - CameraToScannerPhysicalOffset
         var reviewCameraRelativeX = processStageX - input.ReviewCenterGlobalX;
         var reviewCameraRelativeY = processStageY - input.ReviewCenterGlobalY;
-        var relativeX = reviewCameraRelativeX - selected.ReviewCameraOffsetX;
-        var relativeY = reviewCameraRelativeY - selected.ReviewCameraOffsetY;
+        var relativeFromPhysicalOffsetX = reviewCameraRelativeX - selected.ReviewCameraOffsetX;
+        var relativeFromPhysicalOffsetY = reviewCameraRelativeY - selected.ReviewCameraOffsetY;
+        var relativeX = processStageX - selected.CenterX;
+        var relativeY = processStageY - selected.CenterY;
+        var physicalTransformErrorX = relativeFromPhysicalOffsetX - relativeX;
+        var physicalTransformErrorY = relativeFromPhysicalOffsetY - relativeY;
 
         var gx = selected.MountType == "Odd" ? -relativeX : relativeX;
         var gy = selected.MountType == "Odd" ? relativeY : -relativeY;
 
-        // Review coordinate is expressed from the selected scanner head and DOE beam.
-        // This lets the operator ask: "If H5 DOE beam #7 is the reference, where does
-        // every target appear in the review coordinate system?"
-        var reviewX = processStageX - reviewReference.X;
-        var reviewY = processStageY - reviewReference.Y;
+        // Convert the selected head's scanner-relative Stage coordinate back into the
+        // actual review-camera coordinate system. The physical head offset must be added,
+        // not removed again. DOE offset selects the actual split-beam landing position.
+        var basisRelativeX = processStageX - selectedReviewScanner.CenterX;
+        var basisRelativeY = processStageY - selectedReviewScanner.CenterY;
+        var selectedDoeStageOffset = ToStageDoeOffset(selectedReviewScanner, selectedDoeBeam);
+        var reviewX = basisRelativeX + selectedReviewScanner.ReviewCameraOffsetX + selectedDoeStageOffset.X;
+        var reviewY = basisRelativeY + selectedReviewScanner.ReviewCameraOffsetY + selectedDoeStageOffset.Y;
         var reviewU = input.ReviewPixelCenterU + reviewX / input.PixelScaleX;
         var reviewV = input.ReviewPixelCenterV + reviewY / input.PixelScaleY;
 
@@ -301,6 +320,10 @@ public sealed class CoordinateTransformService
             ScannerType = selected.MountType,
             ScannerPhysicalOffsetX = Round(selected.ReviewCameraOffsetX),
             ScannerPhysicalOffsetY = Round(selected.ReviewCameraOffsetY),
+            ScannerRelativeFromPhysicalOffsetX = Round(relativeFromPhysicalOffsetX),
+            ScannerRelativeFromPhysicalOffsetY = Round(relativeFromPhysicalOffsetY),
+            PhysicalTransformErrorX = Round(physicalTransformErrorX),
+            PhysicalTransformErrorY = Round(physicalTransformErrorY),
             RelativeX = Round(relativeX),
             RelativeY = Round(relativeY),
             Gx = Round(gx),
@@ -347,9 +370,15 @@ public sealed class CoordinateTransformService
     {
         // DOE beam offset is defined in scanner Gx/Gy space.
         // Convert it back to stage relative space by applying the inverse sign rule.
+        var (stageDx, stageDy) = ToStageDoeOffset(scanner, beam);
+        return (scanner.CenterX + stageDx, scanner.CenterY + stageDy);
+    }
+
+    private static (double X, double Y) ToStageDoeOffset(ScannerModel scanner, DoeBeamModel beam)
+    {
         var stageDx = scanner.MountType == "Odd" ? -beam.ScannerOffsetX : beam.ScannerOffsetX;
         var stageDy = scanner.MountType == "Odd" ? beam.ScannerOffsetY : -beam.ScannerOffsetY;
-        return (scanner.CenterX + stageDx, scanner.CenterY + stageDy);
+        return (stageDx, stageDy);
     }
 
     private static IReadOnlySet<int> ParseHeadSet(string text)

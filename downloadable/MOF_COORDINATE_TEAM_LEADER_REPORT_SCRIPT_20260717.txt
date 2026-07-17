@@ -20,7 +20,7 @@
    Recipe Local 좌표에 Review에서 얻은 회전 보정각을 적용하고, AK1 Stage 위치를 더하면 실제 Stage 좌표가 됩니다. 이 좌표가 Scanner 판단의 기준입니다.
 
 6. Review Camera와 Scanner 사이의 고정 물리 Offset은 빠지면 안 되는 핵심 연결값이라고 설명합니다.
-   Review Camera가 보는 중심과 Scanner가 레이저를 쏘는 중심은 물리적으로 떨어져 있습니다. 따라서 먼저 가공점을 Camera 중심 기준 상대좌표로 만든 뒤, Camera에서 해당 Scanner까지의 고정 거리와 방향을 빼야 Scanner 상대좌표가 됩니다. 기본 예제에서는 Camera Center (105, 1200)에 H1 물리 Offset (374.7, 440.1)을 더해 H1 Center (479.7, 1640.1)를 만듭니다.
+   Review Camera가 보는 중심과 Scanner가 레이저를 쏘는 중심은 물리적으로 떨어져 있습니다. H1의 실제 초기 Stage 위치를 별도 입력하고, Camera Center + H1 Physical Offset 기대값과 일치하는지 먼저 검증합니다. Process G는 실제 Scanner 중심 기준으로 만들고, Review 좌표는 Scanner 상대 Stage 좌표에 Head별 Physical Offset과 선택 DOE Stage Offset을 더해 Camera 좌표계로 되돌립니다. 제공 설정에서는 H1=(115,2200), H2=(315,2260), B1 Process G=(-99.830,1024.804), B1 Review/DOE05=(109.900,35.286)입니다.
 
 7. Scanner는 고정되어 있고 기판이 Y 방향으로 지나간다고 설명합니다.
    기판 기준으로 Review Camera가 먼저 있고 Scanner는 뒤쪽에 있습니다. 기판은 Home에서 Review Camera를 지나 Scanner 뒤쪽까지 전진한 뒤 방향을 반전합니다. 돌아오는 역물류 구간에서 MOF 가공을 하고, 그다음 만나는 Review Camera에서 가공 결과를 측정한 뒤 Home으로 복귀합니다. 따라서 MOF 가공 가능 여부는 X 방향 Scanner 커버리지이고, 실행 순서는 역방향 Y 순서가 핵심입니다.

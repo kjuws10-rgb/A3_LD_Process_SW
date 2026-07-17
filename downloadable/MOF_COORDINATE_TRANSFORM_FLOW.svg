@@ -59,8 +59,8 @@
 
   <rect x="720" y="184" width="300" height="76" class="input"/>
   <text x="738" y="208" class="h">Scanner Design</text>
-  <text x="738" y="229" class="tiny">ScannerCount, ReviewToFirstScannerOffsetX/Y</text>
-  <text x="738" y="247" class="tiny">ScannerPitchX, EvenYOffset, FieldHalfX/Y</text>
+  <text x="738" y="229" class="tiny">FirstScannerInitialStageX/Y, OriginTolerance</text>
+  <text x="738" y="247" class="tiny">PhysicalOffset, ScannerPitchX, EvenYOffset, Field</text>
 
   <rect x="1050" y="184" width="300" height="76" class="input"/>
   <text x="1068" y="208" class="h">DOE / Review Basis</text>
@@ -204,9 +204,9 @@
   <text x="807" y="1172" class="small">→ 실제 Scanner 가공 명령</text>
 
   <rect x="1130" y="1092" width="300" height="95" class="review"/>
-  <text x="1152" y="1121" class="h">3-4. DOE 16 Review 좌표</text>
-  <text x="1152" y="1149" class="small">DoeOffset = ((Col-1.5)*PitchX, ...)</text>
-  <text x="1152" y="1172" class="small">ReviewCoord = ProcessStage - BasisHeadDoeStage</text>
+  <text x="1152" y="1121" class="h">3-4. 실제 Review Camera 좌표</text>
+  <text x="1152" y="1149" class="small">Review = ScannerRelative + PhysicalOffset</text>
+  <text x="1152" y="1172" class="small">       + SelectedDoeStageOffset</text>
 
   <rect x="1480" y="1092" width="245" height="95" class="feedback"/>
   <text x="1502" y="1121" class="h">3-5. Dynamic Review Correction</text>
@@ -279,25 +279,25 @@
   <text x="82" y="1732" class="tiny">AK1 Pixel 측정과 Recipe/Theta로 ProcessStage 생성</text>
 
   <rect x="450" y="1624" width="390" height="142" class="feedback"/>
-  <text x="472" y="1652" class="h">5-2. Head별 Physical Offset</text>
-  <text x="472" y="1680" class="small">O_RS_i = C_scanner_i - C_review</text>
-  <text x="472" y="1704" class="small">O_RS_i.X = H1OffsetX + (i-1)*PitchX</text>
-  <text x="472" y="1728" class="small">O_RS_i.Y = H1OffsetY + EvenYOffset(i)</text>
-  <text x="472" y="1750" class="tiny">장비 설계/캘리브레이션 값: Recipe 및 측정오차와 분리</text>
+  <text x="472" y="1652" class="h">5-2. H1 초기위치 / Offset 검증</text>
+  <text x="472" y="1680" class="small">ExpectedH1 = C_review + O_RS_H1</text>
+  <text x="472" y="1704" class="small">Error = FirstScannerInitial - ExpectedH1</text>
+  <text x="472" y="1728" class="small">abs(Error.X/Y) &lt;= OriginTolerance</text>
+  <text x="472" y="1750" class="tiny">Scanner 배치는 H1 Initial, Review 변환은 Physical Offset 사용</text>
 
   <rect x="890" y="1624" width="390" height="142" class="scanner"/>
-  <text x="912" y="1652" class="h">5-3. Scanner 상대 가공좌표</text>
-  <text x="912" y="1680" class="small">P_scanner = P_camera - O_RS_i</text>
-  <text x="912" y="1704" class="small">          = ProcessStage - C_scanner_i</text>
-  <text x="912" y="1728" class="small">Odd/Even 부호 변환 → 최종 Gx/Gy</text>
-  <text x="912" y="1750" class="tiny">두 식의 결과가 같아야 Calibration 일관성이 성립</text>
+  <text x="912" y="1652" class="h">5-3. Process → Review 변환</text>
+  <text x="912" y="1680" class="small">P_scanner = ProcessStage - ScannerCenter</text>
+  <text x="912" y="1704" class="small">P_review = P_scanner + O_RS_i + DoeStage</text>
+  <text x="912" y="1728" class="small">검증 = ProcessStage - C_review + DoeStage</text>
+  <text x="912" y="1750" class="tiny">기존 ProcessStage-BasisHeadDoeStage 식은 Scanner 상대좌표임</text>
 
   <rect x="1330" y="1624" width="390" height="142" class="calc"/>
-  <text x="1352" y="1652" class="h">5-4. 기본 예제와 검증식</text>
-  <text x="1352" y="1680" class="small">C_review = (105.0, 1200.0) mm</text>
-  <text x="1352" y="1704" class="small">O_RS_H1 = (374.7, 440.1) mm</text>
-  <text x="1352" y="1728" class="small">C_H1 = (479.7, 1640.1) mm</text>
-  <text x="1352" y="1750" class="tiny">검증: C_review + O_RS_H1 = C_H1</text>
+  <text x="1352" y="1652" class="h">5-4. 제공 설정 검증</text>
+  <text x="1352" y="1680" class="small">Review=(105,1200), H1Offset=(10,1000)</text>
+  <text x="1352" y="1704" class="small">H1Initial=(115,2200), H2=(315,2260)</text>
+  <text x="1352" y="1728" class="small">B1 G=(-99.830,1024.804)</text>
+  <text x="1352" y="1750" class="tiny">B1 Review/DOE05=(109.900,35.286), Error=(0,0)</text>
 
   <path class="arrow" d="M400 1695 H450"/>
   <path class="arrow" d="M840 1695 H890"/>

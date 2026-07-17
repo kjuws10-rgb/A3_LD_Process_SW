@@ -76,8 +76,11 @@
           <UniformGrid Columns="2" Margin="0,4,0,10">
             <StackPanel Margin="0,0,8,8"><TextBlock Text="Head Count"/><TextBox x:Name="ScannerCountBox"/></StackPanel>
             <StackPanel Margin="0,0,0,8"><TextBlock Text="Highlight Heads"/><TextBox x:Name="HighlightHeadsBox"/></StackPanel>
+            <StackPanel Margin="0,0,8,8"><TextBlock Text="H1 Initial Stage X"/><TextBox x:Name="FirstScannerInitialXBox"/></StackPanel>
+            <StackPanel Margin="0,0,0,8"><TextBlock Text="H1 Initial Stage Y"/><TextBox x:Name="FirstScannerInitialYBox"/></StackPanel>
             <StackPanel Margin="0,0,8,8"><TextBlock Text="Camera → H1 Off X"/><TextBox x:Name="CameraToScannerOffsetXBox"/></StackPanel>
             <StackPanel Margin="0,0,0,8"><TextBlock Text="Camera → H1 Off Y"/><TextBox x:Name="CameraToScannerOffsetYBox"/></StackPanel>
+            <StackPanel Margin="0,0,8,8"><TextBlock Text="Origin Tolerance"/><TextBox x:Name="ScannerOriginToleranceBox"/></StackPanel>
             <StackPanel Margin="0,0,8,8"><TextBlock Text="Pitch X"/><TextBox x:Name="ScannerPitchXBox"/></StackPanel>
             <StackPanel Margin="0,0,0,8"><TextBlock Text="Even Y Offset"/><TextBox x:Name="EvenYOffsetBox"/></StackPanel>
             <StackPanel Margin="0,0,8,8"><TextBlock Text="Process Area Half X"/><TextBox x:Name="FieldHalfXBox"/></StackPanel>
@@ -176,14 +179,14 @@
               <Canvas x:Name="DesignMatrixCanvas" Background="#0F172A"/>
             </ScrollViewer>
           </TabItem>
-          <TabItem Header="Process 2D Matrix">
+          <TabItem Header="Process Gx/Gy 2D Matrix">
             <ScrollViewer HorizontalScrollBarVisibility="Auto"
                           VerticalScrollBarVisibility="Auto"
                           PreviewMouseWheel="MatrixScrollViewer_PreviewMouseWheel">
               <Canvas x:Name="ProcessMatrixCanvas" Background="#0F172A"/>
             </ScrollViewer>
           </TabItem>
-          <TabItem Header="Review 2D Matrix">
+          <TabItem Header="Review Camera 2D Matrix">
             <ScrollViewer HorizontalScrollBarVisibility="Auto"
                           VerticalScrollBarVisibility="Auto"
                           PreviewMouseWheel="MatrixScrollViewer_PreviewMouseWheel">

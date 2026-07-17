@@ -8,5 +8,6 @@
   </PropertyGroup>
   <ItemGroup>
     <None Update="CELL_LAYOUT_CONFIG_TEMPLATE.csv" CopyToOutputDirectory="PreserveNewest"/>
+    <None Update="CELL_LAYOUT_CONFIG_REVIEW_OFFSET_CHECK.csv" CopyToOutputDirectory="PreserveNewest"/>
   </ItemGroup>
 </Project>

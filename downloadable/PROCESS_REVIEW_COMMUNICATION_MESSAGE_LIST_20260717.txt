@@ -58,7 +58,7 @@
 55. BULK_TRANSFER_CHUNK | 양방향 | 대용량 데이터를 여러 블록으로 분할 전송
 56. BULK_TRANSFER_END | 양방향 | 대용량 데이터 전송 완료 및 검증 요청
 57. BULK_TRANSFER_ABORT | 양방향 | 대용량 데이터 전송 취소 또는 오류 통보
-58. EQUIPMENT_GEOMETRY_SYNC_REQ | Process -> Review | Review Camera와 H1 Scanner 사이의 고정 물리 Offset, Scanner Pitch 및 Zigzag 설계 Geometry 전달
+58. EQUIPMENT_GEOMETRY_SYNC_REQ | Process -> Review | H1 실제 초기 Stage 위치, Review Camera와 H1 사이의 고정 물리 Offset, 허용오차, Scanner Pitch 및 Zigzag Geometry 전달
 59. EQUIPMENT_GEOMETRY_SYNC_RSP | Review -> Process | 장비 Calibration 버전, 물리 Offset 및 Geometry 값의 일치 여부 응답
 60. MOTION_SEQUENCE_SYNC_REQ | Process -> Review | Home, Review Camera, Scanner Turnaround, 역방향 MOF 및 후측정 순서와 Y 방향 정의 전달
 61. MOTION_SEQUENCE_SYNC_RSP | Review -> Process | Review Camera 후측정 위치와 공정 시퀀스 수신 및 적용 가능 여부 응답

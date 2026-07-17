@@ -2,7 +2,7 @@
 
 이 샘플은 Review Camera에서 측정한 AK1 Pixel 좌표를 기반으로 기판 내부 Cell 좌표를 Stage Global 좌표로 변환하고, Multi Scanner의 Zigzag Odd/Even 배치에 따라 MOF 가공 명령 `Gx`, `Gy`를 생성하는 예제이다.
 
-2026-07-17 업데이트에서는 Review Camera 광학 중심과 H1 Scanner 가공 중심 사이의 고정 물리 오프셋을 좌표 변환의 필수 입력으로 분리했다. Scanner 중심은 `ReviewCenter + CameraToScannerPhysicalOffset`으로 생성되며, 가공 후 측정오차를 보정하는 `ProcessOffsetGlobal`과 서로 다른 데이터로 관리한다.
+2026-07-17 업데이트에서는 Review Camera 광학 중심과 H1 Scanner 가공 중심 사이의 고정 물리 오프셋을 좌표 변환의 필수 입력으로 분리했다. Scanner 배치는 명시적인 `FirstScannerInitialStageX/Y`에서 시작하고, 이 값이 `ReviewCenter + CameraToScannerPhysicalOffset`과 일치하는지 검증한다. 가공 후 측정오차를 보정하는 `ProcessOffsetGlobal`은 별도 데이터로 관리한다.
 
 장비 물류 순서는 `Home → Review Camera 통과 → Scanner 뒤쪽까지 정방향 이동 → 방향 반전 → 역방향 이동 중 MOF → Review Camera 후측정 → Home 복귀`로 반영했다. 기본 설정은 +Y가 정물류 방향이며, MOF 명령은 Stage Y가 큰 가공점부터 작은 가공점 순서로 실행된다.
 
@@ -38,7 +38,7 @@ dotnet run
 - Board Scroll: Board를 확대하면 상하좌우 ScrollBar로 원하는 위치를 이동해서 볼 수 있다.
 - Design 2D Matrix 탭: Cell#별 A/B/C 열, 1/2/3 행 형태로 Recipe Local 좌표를 `(x, y)`로 표시.
 - Process 2D Matrix 탭: 동일 Matrix 구조로 최종 MOF `Gx/Gy`를 `(x, y)`로 표시.
-- Review 2D Matrix 탭: 사용자가 선택한 Scanner Head와 DOE16 Beam 기준으로 모든 Cell의 리뷰 좌표계를 `(x, y)`로 표시.
+- Review Camera 2D Matrix 탭: Scanner Stage 상대좌표에 Camera→Scanner 물리 Offset과 선택 DOE Stage Offset을 적용한 실제 Review Camera 좌표를 `(x, y)`로 표시.
 - DOE 16 Matrix 탭: 4 x 4 DOE Beam의 Scanner 내부 Offset Matrix 표시.
 
 ## Excel CSV 설정
@@ -60,6 +60,8 @@ dotnet run
 - `ScannerFieldHalfX`: Scanner가 가공 가능한 X 방향 반폭. Scanner를 클릭하면 `CenterX ± HalfX` 범위에 포함되는 가공점만 강조 표시된다.
 - `ScannerFieldHalfY`: Scanner 설계상의 Y 방향 field 반폭 참고값. MOF 컨셉에서는 기판이 Y 방향으로 이동하므로 가공 가능 여부는 X 커버리지로 판단하고, UI의 process band는 Board Y 전체로 표시한다.
 - `ReviewToFirstScannerOffsetX/Y`: Review Camera 광학 중심에서 H1 Scanner 가공 중심까지의 고정 물리 거리. 장비 조립치수 또는 캘리브레이션 결과로 관리하며 Recipe나 Review 측정오차에 따라 바뀌면 안 된다.
+- `FirstScannerInitialStageX/Y`: 장비 설계 또는 Teaching으로 결정한 H1 Scanner 중심의 실제 Stage 초기좌표. Scanner Pitch와 Even Y Offset은 이 위치에서 파생된다.
+- `ScannerOriginTolerance`: H1 실제 초기좌표와 `ReviewCenter + PhysicalOffset` 기대좌표 사이의 허용오차.
 - `ProcessOffsetGlobalX/Y`: 가공 후 Review 측정오차를 다음 가공에 반영하는 동적 보정값. 고정 물리 오프셋과 별도 이력 및 버전으로 관리한다.
 - `HomeStageY`: 기판 Stage가 공정 전후에 대기하는 원점 Y 좌표.
 - `ForwardTransportSignY`: Home에서 Review Camera를 먼저 지나 Scanner 쪽으로 이동하는 정물류 방향. `+1`이면 +Y 전진/-Y 역방향 MOF이고, `-1`이면 반대이다.
@@ -120,7 +122,7 @@ Odd Head : Gx = -ScannerRelativeX, Gy = +ScannerRelativeY
 Even Head: Gx = +ScannerRelativeX, Gy = -ScannerRelativeY
 ```
 
-기본 예제에서 Review Camera Center는 `(105, 1200) mm`, Camera→H1 Offset은 `(374.7, 440.1) mm`이므로 H1 중심은 `(479.7, 1640.1) mm`가 된다. Process Matrix의 좌표 칸에 마우스를 올리면 Camera 기준 상대좌표, 선택 Head의 물리 Offset, Scanner 상대좌표와 최종 Gx/Gy를 함께 확인할 수 있다.
+기본 예제에서 Review Camera Center는 `(105, 1200) mm`, Camera→H1 Offset은 `(374.7, 440.1) mm`이므로 H1 기대 중심은 `(479.7, 1640.1) mm`가 된다. 입력한 H1 초기 Stage 위치와 이 기대값이 허용오차 안에서 같아야 한다. Process Matrix의 좌표 칸에 마우스를 올리면 Camera 기준 상대좌표, 선택 Head의 물리 Offset, Scanner 상대좌표, 변환 일치 오차와 최종 Gx/Gy를 함께 확인할 수 있다.
 
 ## Performance
 
@@ -139,8 +141,23 @@ Even Head: Gx = +ScannerRelativeX, Gy = -ScannerRelativeY
 - `Review Head`: 리뷰 좌표계 기준으로 사용할 Scanner Head 번호.
 - `DOE Beam 1-16`: 4 x 4 DOE Matrix 중 기준으로 사용할 Beam 번호.
 - `DOE Pitch X/Y`: DOE Beam 사이 간격.
-- Review Coordinate 탭의 `Review Coordinate mm (x, y)`는 `ProcessStage - SelectedHeadSelectedBeamStage`로 계산된다.
+- Review Camera 좌표는 `ScannerRelativeStage + CameraToSelectedScannerPhysicalOffset + SelectedDoeStageOffset`으로 계산된다.
+- 위 식은 Scanner 초기위치와 물리 Offset이 일치할 때 `ProcessStage - ReviewCenter + SelectedDoeStageOffset`과 결과가 같아야 한다.
 - Scanner Head별로 처리된 Cell을 구분하기 위해 각 Row에 `Process Scanner`가 함께 표시된다.
+
+제공 설정 검증 예제:
+
+```text
+Review Center = (105, 1200)
+Camera→H1 Offset = (10, 1000)
+H1 Initial = (115, 2200)
+H2 Center = (315, 2260)
+Camera→H2 Offset = (210, 1060)
+
+B1 Process G = (-99.830, 1024.804)
+B1 Review Camera / DOE05 = (109.900, 35.286)
+Transform Consistency Error = (0, 0)
+```
 
 ## Excel 예제 반영값
 

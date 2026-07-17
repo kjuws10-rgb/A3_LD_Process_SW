@@ -17,6 +17,9 @@ CellBlockPitchX,0
 CellBlockPitchY,140
 ScannerCount,8
 HighlightScannerHeads,"1,5"
+FirstScannerInitialStageX,479.7
+FirstScannerInitialStageY,1640.1
+ScannerOriginTolerance,0.001
 ReviewToFirstScannerOffsetX,374.7
 ReviewToFirstScannerOffsetY,440.1
 ScannerPitchX,100

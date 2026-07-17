@@ -44,6 +44,11 @@ public sealed class CoordinateInput
     public int SelectedCellBlock { get; set; } = 1;
 
     public int ScannerCount { get; set; } = 8;
+    // Explicit H1 scanner origin in Stage Global coordinates.
+    // It must match ReviewCenter + ReviewToFirstScannerOffset within tolerance.
+    public double FirstScannerInitialStageX { get; set; } = 479.7;
+    public double FirstScannerInitialStageY { get; set; } = 1640.1;
+    public double ScannerOriginTolerance { get; set; } = 0.001;
     // Fixed equipment geometry: H1 scanner center minus review camera center.
     // This calibration value is fundamentally different from a review-error correction.
     public double ReviewToFirstScannerOffsetX { get; set; } = 374.7;
@@ -115,6 +120,10 @@ public sealed class CellCommand
     public string ScannerType { get; init; } = "";
     public double ScannerPhysicalOffsetX { get; init; }
     public double ScannerPhysicalOffsetY { get; init; }
+    public double ScannerRelativeFromPhysicalOffsetX { get; init; }
+    public double ScannerRelativeFromPhysicalOffsetY { get; init; }
+    public double PhysicalTransformErrorX { get; init; }
+    public double PhysicalTransformErrorY { get; init; }
     public double RelativeX { get; init; }
     public double RelativeY { get; init; }
     public double Gx { get; init; }
@@ -139,6 +148,8 @@ public sealed class CellCommand
     public string ProcessGMatrix => FormatPair(Gx, Gy);
     public string ReviewCameraRelativeMatrix => FormatPair(ReviewCameraRelativeX, ReviewCameraRelativeY);
     public string ScannerPhysicalOffsetMatrix => FormatPair(ScannerPhysicalOffsetX, ScannerPhysicalOffsetY);
+    public string ScannerRelativeFromPhysicalOffsetMatrix => FormatPair(ScannerRelativeFromPhysicalOffsetX, ScannerRelativeFromPhysicalOffsetY);
+    public string PhysicalTransformErrorMatrix => FormatPair(PhysicalTransformErrorX, PhysicalTransformErrorY);
     public string ScannerRelativeMatrix => FormatPair(RelativeX, RelativeY);
     public string ReviewReferenceMatrix => FormatPair(ReviewReferenceStageX, ReviewReferenceStageY);
     public string ReviewMatrix => FormatPair(ReviewCoordinateX, ReviewCoordinateY);
@@ -202,4 +213,9 @@ public sealed class CoordinateResult
     public IReadOnlyList<StageMotionStep> MotionSteps { get; init; } = Array.Empty<StageMotionStep>();
     public double TurnaroundStageY { get; init; }
     public bool EquipmentOrderValid { get; init; }
+    public double ExpectedFirstScannerStageX { get; init; }
+    public double ExpectedFirstScannerStageY { get; init; }
+    public double FirstScannerOriginErrorX { get; init; }
+    public double FirstScannerOriginErrorY { get; init; }
+    public bool FirstScannerOriginValid { get; init; }
 }

@@ -165,12 +165,13 @@ public partial class MainWindow : Window
             $"AK1 Stage 기준 = ({_lastResult.Ak1GlobalX:0.######}, {_lastResult.Ak1GlobalY:0.######}) mm   " +
             $"전체 좌표 = {_lastResult.Commands.Count}, X 커버 좌표 = {inFieldCount}, 선택 Scanner = {selectedScannerCount}, 표시 좌표 = {filteredCount}, 선택 좌표 = {_selectedPointKeys.Count}   " +
             $"Camera→H1 물리 Offset = ({_input.ReviewToFirstScannerOffsetX:0.###}, {_input.ReviewToFirstScannerOffsetY:0.###}) mm   " +
+            $"H1 초기위치 = ({_input.FirstScannerInitialStageX:0.###}, {_input.FirstScannerInitialStageY:0.###}) / 기대값 = ({_lastResult.ExpectedFirstScannerStageX:0.###}, {_lastResult.ExpectedFirstScannerStageY:0.###}) / 원점검증 = {(_lastResult.FirstScannerOriginValid ? "정상" : "불일치")}   " +
             $"반전 Y = {_lastResult.TurnaroundStageY:0.###} mm / 배치검증 = {(_lastResult.EquipmentOrderValid ? "정상" : "확인필요")}   " +
             $"Review 기준 = H{_lastResult.SelectedReviewScanner.Index} DOE{_lastResult.SelectedDoeBeam.BeamNo:00}";
 
         FormulaText.Text =
             "동작 순서: Home에서 정방향으로 Review Camera를 먼저 통과해 Scanner 뒤쪽까지 이동한 뒤 방향을 반전합니다. 역방향 복귀 중 MOF 좌표를 Y 먼 위치부터 순서대로 가공하고, Review Camera에서 후측정한 다음 Home으로 복귀합니다. " +
-            "고정 물리 Offset은 Review Camera 중심에서 각 Scanner 중심까지의 설비 설계/캘리브레이션 거리입니다. CameraRelative = ProcessStage - ReviewCenter, ScannerRelative = CameraRelative - CameraToScannerOffset 순서로 변환한 뒤 Gx/Gy를 생성합니다. " +
+            "H1 초기 Stage 위치는 ReviewCenter + CameraToH1PhysicalOffset과 허용오차 안에서 같아야 합니다. Process G는 실제 H1 초기위치에서 만든 Scanner Center 기준이며, Review 좌표는 ScannerRelative(Stage축) + CameraToScannerPhysicalOffset + DOE Stage Offset으로 계산합니다. " +
             "Dynamic Review Correction은 가공 후 측정오차를 다음 가공에 보정하는 값으로, 고정 물리 Offset과 별도로 관리합니다. 스캐너 박스 또는 주변 클릭 영역을 누르면 복수 선택/해제가 됩니다. 선택된 스캐너가 있으면 좌표 Matrix는 해당 스캐너의 X 가공 가능 범위에 포함되는 좌표만 표시합니다. " +
             "Matrix 셀은 드래그로 연속 선택하고, Shift 클릭으로 기준 셀부터 현재 셀까지 범위 선택하며, Ctrl 클릭/드래그로 추가 또는 해제할 수 있습니다. " +
             "Ctrl + 마우스 휠로 Board와 Matrix를 확대/축소하면 마지막 비율이 다음 실행에도 유지됩니다.";
@@ -616,6 +617,9 @@ public partial class MainWindow : Window
                       $"Camera 기준 상대좌표: {command.ReviewCameraRelativeMatrix} mm\n" +
                       $"Camera→{command.ScannerName} 물리 Offset: {command.ScannerPhysicalOffsetMatrix} mm\n" +
                       $"Scanner 상대좌표: {command.ScannerRelativeMatrix} mm\n" +
+                      $"Offset으로 재계산한 Scanner 상대좌표: {command.ScannerRelativeFromPhysicalOffsetMatrix} mm\n" +
+                      $"Origin/Offset 일치 오차: {command.PhysicalTransformErrorMatrix} mm\n" +
+                      $"Review Camera 좌표: {command.ReviewMatrix} mm\n" +
                       $"MOF Gx/Gy: {command.ProcessGMatrix}"
         };
         rect.MouseLeftButtonDown += MatrixCell_MouseLeftButtonDown;
@@ -1089,8 +1093,11 @@ public partial class MainWindow : Window
 
         SetTip(ScannerCountBox, "Scanner Count", "장비에 배치된 Scanner Head 개수입니다. 하단 Zigzag Scanner UI의 Head 수를 결정합니다.", "H1, H2, H3... 생성", "Scanner");
         SetTip(HighlightHeadsBox, "Highlight Heads", "Board UI에서 가공 가능 영역을 강조할 Scanner 번호 목록입니다. 콤마로 여러 개를 입력할 수 있습니다.", "예: 1,5 또는 2,4,6", "Scanner");
+        SetTip(FirstScannerInitialXBox, "H1 Initial Stage X", "장비 설계 또는 Teaching으로 확정한 H1 Scanner 중심의 초기 Stage X 좌표입니다. Scanner 배치는 이 값을 실제 기준으로 사용합니다.", "Expected H1.X = ReviewCenterX + CameraToH1OffsetX", "Scanner");
+        SetTip(FirstScannerInitialYBox, "H1 Initial Stage Y", "장비 설계 또는 Teaching으로 확정한 H1 Scanner 중심의 초기 Stage Y 좌표입니다. 짝수 Head는 이 기준에 Even Y Offset을 더합니다.", "Expected H1.Y = ReviewCenterY + CameraToH1OffsetY", "Scanner");
         SetTip(CameraToScannerOffsetXBox, "Review Camera → H1 Physical Offset X", "Review Camera 광학 중심에서 H1 Scanner 가공 중심까지의 고정된 X 방향 설계/캘리브레이션 거리입니다. 리뷰 측정 위치를 스캐너 상대 가공좌표로 옮기는 핵심 기준이며, 가공 후 오차 보정값과 구분해 관리합니다.", "H1.CenterX = ReviewCenterX + PhysicalOffsetX", "Scanner");
         SetTip(CameraToScannerOffsetYBox, "Review Camera → H1 Physical Offset Y", "Review Camera 광학 중심에서 H1 Scanner 가공 중심까지의 고정된 Y 방향 설계/캘리브레이션 거리입니다. 기판이 Y로 이동할 때 동일한 가공점을 H1 아래로 보내기 위한 기준 거리입니다.", "H1.CenterY = ReviewCenterY + PhysicalOffsetY", "Scanner");
+        SetTip(ScannerOriginToleranceBox, "Scanner Origin Tolerance", "입력한 H1 초기 Stage 위치와 ReviewCenter + PhysicalOffset으로 계산한 H1 기대 위치 사이에 허용할 최대 오차입니다. 초과하면 화면에 원점검증 불일치가 표시됩니다.", "abs(H1Initial - ExpectedH1) <= Tolerance", "Scanner");
         SetTip(ScannerPitchXBox, "Scanner Pitch X", "인접 Scanner Head 사이의 X 방향 중심 간격입니다.", "H2_X - H1_X", "Scanner");
         SetTip(EvenYOffsetBox, "Even Y Offset", "짝수 Scanner Head가 홀수 Head 기준선에서 Y 방향으로 얼마나 어긋나 배치되는지 나타냅니다.", "Zigzag 배치용 Y offset", "Scanner");
         SetTip(FieldHalfXBox, "Process Area Half X", "Scanner가 가공 가능한 영역의 X 반폭입니다. Scanner를 클릭하면 CenterX ± HalfX 범위 안의 가공점이 강조됩니다.", "abs(TargetX - ScannerCenterX) <= HalfX", "Scanner");
@@ -1309,8 +1316,11 @@ public partial class MainWindow : Window
         SelectedCellRowBox.Text = input.SelectedCellRow.ToString(CultureInfo.InvariantCulture);
         ScannerCountBox.Text = input.ScannerCount.ToString(CultureInfo.InvariantCulture);
         HighlightHeadsBox.Text = input.HighlightScannerHeads;
+        FirstScannerInitialXBox.Text = Format(input.FirstScannerInitialStageX);
+        FirstScannerInitialYBox.Text = Format(input.FirstScannerInitialStageY);
         CameraToScannerOffsetXBox.Text = Format(input.ReviewToFirstScannerOffsetX);
         CameraToScannerOffsetYBox.Text = Format(input.ReviewToFirstScannerOffsetY);
+        ScannerOriginToleranceBox.Text = Format(input.ScannerOriginTolerance);
         ScannerPitchXBox.Text = Format(input.ScannerPitchX);
         EvenYOffsetBox.Text = Format(input.EvenScannerYOffset);
         FieldHalfXBox.Text = Format(input.ScannerFieldHalfX);
@@ -1385,7 +1395,7 @@ public partial class MainWindow : Window
             AlignMarginX = ReadDouble(AkMarginXBox, _input.AlignMarginX),
             AlignMarginY = ReadDouble(AkMarginYBox, _input.AlignMarginY),
             HomeStageY = ReadDouble(HomeStageYBox, _input.HomeStageY),
-            ForwardTransportSignY = ReadInt(ForwardTransportSignYBox, _input.ForwardTransportSignY) >= 0 ? 1 : -1,
+            ForwardTransportSignY = ReadSignedInt(ForwardTransportSignYBox, _input.ForwardTransportSignY) >= 0 ? 1 : -1,
             ReviewCenterGlobalX = ReadDouble(ReviewCenterXBox, _input.ReviewCenterGlobalX),
             ReviewCenterGlobalY = ReadDouble(ReviewCenterYBox, _input.ReviewCenterGlobalY),
             ReviewPixelCenterU = ReadDouble(U0Box, _input.ReviewPixelCenterU),
@@ -1412,6 +1422,9 @@ public partial class MainWindow : Window
             SelectedCellRow = Clamp(ReadZeroBasedInt(SelectedCellRowBox, _input.SelectedCellRow), 0, Math.Max(0, rows - 1)),
             ScannerCount = scannerCount,
             HighlightScannerHeads = HighlightHeadsBox.Text,
+            FirstScannerInitialStageX = ReadDouble(FirstScannerInitialXBox, _input.FirstScannerInitialStageX),
+            FirstScannerInitialStageY = ReadDouble(FirstScannerInitialYBox, _input.FirstScannerInitialStageY),
+            ScannerOriginTolerance = Math.Abs(ReadDouble(ScannerOriginToleranceBox, _input.ScannerOriginTolerance)),
             ReviewToFirstScannerOffsetX = ReadDouble(CameraToScannerOffsetXBox, _input.ReviewToFirstScannerOffsetX),
             ReviewToFirstScannerOffsetY = ReadDouble(CameraToScannerOffsetYBox, _input.ReviewToFirstScannerOffsetY),
             ScannerPitchX = ReadDouble(ScannerPitchXBox, _input.ScannerPitchX),
@@ -1532,6 +1545,7 @@ public partial class MainWindow : Window
 
     private void ApplyConfigCsv(string path)
     {
+        var loadedKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var line in File.ReadAllLines(path))
         {
             if (string.IsNullOrWhiteSpace(line) || line.TrimStart().StartsWith("#", StringComparison.Ordinal))
@@ -1545,7 +1559,34 @@ public partial class MainWindow : Window
                 continue;
             }
 
-            ApplyConfigValue(parts[0].Trim(), parts[1].Trim());
+            var key = parts[0].Trim();
+            loadedKeys.Add(key);
+            ApplyConfigValue(key, parts[1].Trim());
+        }
+
+        var hasExplicitFirstScannerX = loadedKeys.Contains(nameof(CoordinateInput.FirstScannerInitialStageX)) || loadedKeys.Contains("FirstScannerCenterX");
+        var hasExplicitFirstScannerY = loadedKeys.Contains(nameof(CoordinateInput.FirstScannerInitialStageY)) || loadedKeys.Contains("FirstScannerCenterY");
+        var hasPhysicalOffsetX = loadedKeys.Contains(nameof(CoordinateInput.ReviewToFirstScannerOffsetX));
+        var hasPhysicalOffsetY = loadedKeys.Contains(nameof(CoordinateInput.ReviewToFirstScannerOffsetY));
+
+        // New CSV files may provide both values for consistency validation. Older files
+        // usually provide only one side, so derive the missing side after all rows load.
+        if (!hasExplicitFirstScannerX)
+        {
+            _input.FirstScannerInitialStageX = _input.ReviewCenterGlobalX + _input.ReviewToFirstScannerOffsetX;
+        }
+        else if (!hasPhysicalOffsetX)
+        {
+            _input.ReviewToFirstScannerOffsetX = _input.FirstScannerInitialStageX - _input.ReviewCenterGlobalX;
+        }
+
+        if (!hasExplicitFirstScannerY)
+        {
+            _input.FirstScannerInitialStageY = _input.ReviewCenterGlobalY + _input.ReviewToFirstScannerOffsetY;
+        }
+        else if (!hasPhysicalOffsetY)
+        {
+            _input.ReviewToFirstScannerOffsetY = _input.FirstScannerInitialStageY - _input.ReviewCenterGlobalY;
         }
     }
 
@@ -1583,6 +1624,9 @@ public partial class MainWindow : Window
             CsvLine(nameof(CoordinateInput.CellBlockPitchY), _input.CellBlockPitchY),
             CsvLine(nameof(CoordinateInput.ScannerCount), _input.ScannerCount),
             CsvLine(nameof(CoordinateInput.HighlightScannerHeads), _input.HighlightScannerHeads),
+            CsvLine(nameof(CoordinateInput.FirstScannerInitialStageX), _input.FirstScannerInitialStageX),
+            CsvLine(nameof(CoordinateInput.FirstScannerInitialStageY), _input.FirstScannerInitialStageY),
+            CsvLine(nameof(CoordinateInput.ScannerOriginTolerance), _input.ScannerOriginTolerance),
             CsvLine(nameof(CoordinateInput.ReviewToFirstScannerOffsetX), _input.ReviewToFirstScannerOffsetX),
             CsvLine(nameof(CoordinateInput.ReviewToFirstScannerOffsetY), _input.ReviewToFirstScannerOffsetY),
             CsvLine(nameof(CoordinateInput.ScannerPitchX), _input.ScannerPitchX),
@@ -1647,11 +1691,14 @@ public partial class MainWindow : Window
             case nameof(CoordinateInput.CellBlockPitchY): _input.CellBlockPitchY = number; break;
             case nameof(CoordinateInput.ScannerCount): _input.ScannerCount = Math.Max(1, integer); break;
             case nameof(CoordinateInput.HighlightScannerHeads): _input.HighlightScannerHeads = value; break;
+            case nameof(CoordinateInput.FirstScannerInitialStageX): _input.FirstScannerInitialStageX = number; break;
+            case nameof(CoordinateInput.FirstScannerInitialStageY): _input.FirstScannerInitialStageY = number; break;
+            case nameof(CoordinateInput.ScannerOriginTolerance): _input.ScannerOriginTolerance = Math.Abs(number); break;
             case nameof(CoordinateInput.ReviewToFirstScannerOffsetX): _input.ReviewToFirstScannerOffsetX = number; break;
             case nameof(CoordinateInput.ReviewToFirstScannerOffsetY): _input.ReviewToFirstScannerOffsetY = number; break;
             // Backward compatibility for CSV files created before the physical offset was explicit.
-            case "FirstScannerCenterX": _input.ReviewToFirstScannerOffsetX = number - _input.ReviewCenterGlobalX; break;
-            case "FirstScannerCenterY": _input.ReviewToFirstScannerOffsetY = number - _input.ReviewCenterGlobalY; break;
+            case "FirstScannerCenterX": _input.FirstScannerInitialStageX = number; break;
+            case "FirstScannerCenterY": _input.FirstScannerInitialStageY = number; break;
             case nameof(CoordinateInput.ScannerPitchX): _input.ScannerPitchX = number; break;
             case nameof(CoordinateInput.EvenScannerYOffset): _input.EvenScannerYOffset = number; break;
             case nameof(CoordinateInput.ScannerFieldHalfX): _input.ScannerFieldHalfX = number; break;
@@ -1681,6 +1728,17 @@ public partial class MainWindow : Window
         if (int.TryParse(textBox.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var value))
         {
             return Math.Max(1, value);
+        }
+
+        textBox.Text = fallback.ToString(CultureInfo.InvariantCulture);
+        return fallback;
+    }
+
+    private static int ReadSignedInt(TextBox textBox, int fallback)
+    {
+        if (int.TryParse(textBox.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var value))
+        {
+            return value;
         }
 
         textBox.Text = fallback.ToString(CultureInfo.InvariantCulture);
