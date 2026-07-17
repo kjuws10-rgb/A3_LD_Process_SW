@@ -6,6 +6,10 @@ Review Camera ↔ Scanner Physical Offset 적용 가이드
 Review Camera가 기판의 AK 및 가공점을 보는 위치와 Scanner가 레이저를 조사하는 위치는 물리적으로 떨어져 있다.
 따라서 Review Camera에서 계산한 좌표를 그대로 Scanner 명령으로 사용할 수 없으며, 두 장치 중심 사이의 고정된 거리와 방향을 반드시 적용해야 한다.
 
+장비 배치는 기판의 정물류 진행 기준으로 Review Camera가 먼저 있고 Scanner가 뒤쪽에 있다.
+기판은 Scanner 뒤쪽까지 전진한 뒤 이동 방향을 반전하며, 역물류 방향으로 돌아오면서 MOF 가공한다.
+가공이 끝나면 다음에 만나는 Review Camera에서 결과를 측정하고 Home으로 복귀한다.
+
 2. 부호 정의
 
 CameraToScannerPhysicalOffset_i = ScannerCenter_i - ReviewCameraCenter
@@ -88,3 +92,25 @@ ProcessOffsetGlobal / Dynamic Review Correction:
 - Stage 축 방향과 axisSignX/axisSignY 검증
 - Calibration 변경 시 기존 좌표 Plan 재생성
 - 허용오차 초과 시 가공 시작 금지
+
+9. 실제 Stage 왕복 시퀀스
+
+1) Home Stage Y에서 시작
+2) 정물류 방향으로 Review Camera 위치를 먼저 통과
+3) Review Camera 뒤쪽의 Scanner 가공 시작측/Turnaround 위치까지 이동
+4) Stage 이동 방향 반전
+5) 역물류 방향으로 이동하면서 MOF 가공
+6) MOF 완료 후 Review Camera 위치에서 가공 결과 측정
+7) 측정 완료 후 Home Stage Y로 복귀
+
+기본값에서 +Y가 정물류 방향이면 다음 조건을 만족해야 한다.
+
+ReviewCenterY < ScannerCenterY
+(ScannerCenterY - ReviewCenterY) * ForwardTransportSignY > 0
+
+MOF 실행 순서:
+
+ForwardTransportSignY = +1이면 ProcessStageY 큰 좌표부터 작은 좌표 순서
+ForwardTransportSignY = -1이면 ProcessStageY 작은 좌표부터 큰 좌표 순서
+
+Recipe의 Row/Column 생성 순서와 실제 MOF 실행 순서는 다를 수 있으므로, ST_PROCESS_PLAN에는 MofSequence를 별도로 저장한다.

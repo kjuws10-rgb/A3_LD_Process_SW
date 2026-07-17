@@ -37,6 +37,8 @@
 |---|---:|---:|---|
 | Board | BoardSizeX | 1500 | 기판 X 크기 mm |
 | Board | BoardSizeY | 925 | 기판 Y 크기 mm |
+| Motion | HomeStageY | 0 | 공정 시작/종료 Stage 원점 Y |
+| Motion | ForwardTransportSignY | +1 | Home→Review→Scanner 정물류 방향의 Y 부호 |
 | Align Key | AlignMarginX | 55 | 기판 좌우 AK Edge Margin mm |
 | Align Key | AlignMarginY | 45 | 기판 상하 AK Edge Margin mm |
 | Align Key | EffectiveAkDistanceX | 1390 | AK1-AK3 설계 거리 mm |
@@ -149,6 +151,14 @@ P_scanner_relative = P_camera_relative - O_RS_i
 
 예제에서 `C_review=(105,1200)`, `O_RS_H1=(374.7,440.1)`이면 `C_H1=(479.7,1640.1)`이다. 이 항등식이 맞지 않으면 장비 설계치수, 캘리브레이션 값 또는 좌표축 부호 중 하나가 잘못된 것이므로 가공 전에 검증해야 한다.
 
+기본 장비 배치에서는 +Y가 정물류 방향이다. 따라서 Review Camera Y=1200이 먼저 있고, H1 Scanner Y=1640.1이 그 뒤쪽에 있다. 다음 조건으로 장비 순서를 검증한다.
+
+```text
+(ScannerCenterY_i - ReviewCenterY) * ForwardTransportSignY > 0
+```
+
+모든 Head가 이 조건을 만족해야 `Review Camera 선행, Scanner 후행` 배치가 성립한다.
+
 ### Step 5. Scanner 선택
 
 각 Scanner는 Stage Global 좌표계 기준으로 고정된 중심 `C_i`를 가진다. Target이 Scanner Field 범위에 들어오는지 확인하고, 들어오는 Scanner를 선택한다.
@@ -240,6 +250,28 @@ Recipe / Cell Definition
   -> Global Error
   -> Process Offset Update
 ```
+
+## 4.1 실제 Stage 왕복 동작과 MOF 실행 순서
+
+```text
+Home
+  -> 정물류 전진
+  -> Review Camera 위치 통과
+  -> Scanner 뒤쪽 Turnaround 위치 도착
+  -> 이동 방향 반전
+  -> 역물류 복귀 중 MOF 가공
+  -> Review Camera 위치에서 가공 후 측정
+  -> Home 복귀
+```
+
+좌표 생성 순서와 실제 실행 순서는 구분한다. Recipe 좌표는 Cell Block/Row/Column 구조로 생성하지만, `ST_PROCESS_PLAN`에 들어가는 MOF 실행 목록은 역물류 방향에 맞춰 다시 정렬한다.
+
+```text
+ForwardTransportSignY = +1이면 ProcessStageY 큰 값 → 작은 값
+ForwardTransportSignY = -1이면 ProcessStageY 작은 값 → 큰 값
+```
+
+동일 Y 위치에서는 Head/Scanner와 X 좌표 기준으로 안정적인 순서를 부여한다. 각 가공점은 `MofSequence`를 가지며, 공정 중 현재 순서와 좌표를 추적할 수 있어야 한다.
 
 ## 5. WPF 예제 코드 구성
 

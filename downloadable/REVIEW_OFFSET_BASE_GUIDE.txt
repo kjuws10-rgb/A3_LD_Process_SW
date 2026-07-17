@@ -6,6 +6,8 @@ Review 측정 / Review Offset 구조화 가이드
 - 물리 Offset은 Calibration ID와 장비 버전으로 관리하고, 동적 보정은 Lot/Panel/Head/Batch 이력으로 관리한다.
 - 좌표식은 ScannerRelative = (ProcessStage - ReviewCenter) - CameraToScannerPhysicalOffset이다.
 - 위 결과는 ProcessStage - ScannerCenter와 반드시 같아야 한다.
+- 실제 동작은 Home → Review Camera 통과 → Scanner 뒤쪽 반전 → 역방향 MOF → Review 후측정 → Home 복귀 순서다.
+- Review 보정 Batch는 MOF 역방향 가공이 완료된 뒤 Review Camera 위치에서 생성한다.
 
 1. 현재 프로젝트에서 미개발인 부분
 - Vision PC 또는 Review Camera에서 실제 측정 좌표를 받는 I/F

@@ -83,6 +83,35 @@ public sealed class CoordinateTransformService
             }
         }
 
+        // The board moves forward past the review camera into the scanner zone, then
+        // reverses. MOF targets must therefore execute from the far Y side back toward
+        // the review camera, not in the recipe's row-generation order.
+        var forwardSignY = input.ForwardTransportSignY >= 0 ? 1 : -1;
+        var mofExecutionCommands = commands
+            .OrderByDescending(command => command.ProcessStageY * forwardSignY)
+            .ThenBy(command => command.ScannerIndex)
+            .ThenBy(command => command.ProcessStageX)
+            .ToList();
+
+        for (var index = 0; index < mofExecutionCommands.Count; index++)
+        {
+            mofExecutionCommands[index].MofSequence = index + 1;
+        }
+
+        var scannerZoneEndY = forwardSignY > 0
+            ? scanners.Max(scanner => scanner.CenterY + scanner.FieldHalfY)
+            : scanners.Min(scanner => scanner.CenterY - scanner.FieldHalfY);
+        var targetZoneEndY = forwardSignY > 0
+            ? commands.Max(command => command.ProcessStageY)
+            : commands.Min(command => command.ProcessStageY);
+        var turnaroundStageY = forwardSignY > 0
+            ? Math.Max(scannerZoneEndY, targetZoneEndY)
+            : Math.Min(scannerZoneEndY, targetZoneEndY);
+        var equipmentOrderValid = scanners.All(scanner =>
+            (scanner.CenterY - input.ReviewCenterGlobalY) * forwardSignY > 0);
+
+        var motionSteps = BuildMotionSteps(input, turnaroundStageY, forwardSignY);
+
         return new CoordinateResult
         {
             Ak1GlobalX = Round(ak1GlobalX),
@@ -91,7 +120,69 @@ public sealed class CoordinateTransformService
             DoeBeams = doeBeams,
             SelectedDoeBeam = selectedDoeBeam,
             SelectedReviewScanner = selectedReviewScanner,
-            Commands = commands
+            Commands = commands,
+            MofExecutionCommands = mofExecutionCommands,
+            MotionSteps = motionSteps,
+            TurnaroundStageY = Round(turnaroundStageY),
+            EquipmentOrderValid = equipmentOrderValid
+        };
+    }
+
+    private static IReadOnlyList<StageMotionStep> BuildMotionSteps(
+        CoordinateInput input,
+        double turnaroundStageY,
+        int forwardSignY)
+    {
+        var forward = forwardSignY > 0 ? "+Y 정방향" : "-Y 정방향";
+        var reverse = forwardSignY > 0 ? "-Y 역방향" : "+Y 역방향";
+
+        return new[]
+        {
+            new StageMotionStep
+            {
+                StepNo = 1,
+                Name = "Home → Review Camera",
+                Direction = forward,
+                FromStageY = Round(input.HomeStageY),
+                ToStageY = Round(input.ReviewCenterGlobalY),
+                Operation = "Review Camera 위치를 통과하며 Scanner 방향으로 전진"
+            },
+            new StageMotionStep
+            {
+                StepNo = 2,
+                Name = "Review Camera → Scanner Turnaround",
+                Direction = forward,
+                FromStageY = Round(input.ReviewCenterGlobalY),
+                ToStageY = Round(turnaroundStageY),
+                Operation = "Scanner 가공 시작측까지 이동 후 방향 반전"
+            },
+            new StageMotionStep
+            {
+                StepNo = 3,
+                Name = "Reverse MOF Processing",
+                Direction = reverse,
+                FromStageY = Round(turnaroundStageY),
+                ToStageY = Round(input.ReviewCenterGlobalY),
+                Operation = "역물류 이동 중 Y 먼 좌표부터 가까운 좌표 순으로 MOF 가공"
+            },
+            new StageMotionStep
+            {
+                StepNo = 4,
+                Name = "Post-Process Review",
+                Direction = "정지/측정",
+                FromStageY = Round(input.ReviewCenterGlobalY),
+                ToStageY = Round(input.ReviewCenterGlobalY),
+                Operation = "MOF 완료 후 Review Camera로 가공 결과 측정"
+            },
+            new StageMotionStep
+            {
+                StepNo = 5,
+                Name = "Review Camera → Home",
+                Direction = reverse,
+                FromStageY = Round(input.ReviewCenterGlobalY),
+                ToStageY = Round(input.HomeStageY),
+                Operation = "측정 완료 후 원점 복귀"
+            }
         };
     }
 

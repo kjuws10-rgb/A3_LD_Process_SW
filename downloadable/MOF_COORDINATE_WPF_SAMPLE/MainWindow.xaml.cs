@@ -165,9 +165,11 @@ public partial class MainWindow : Window
             $"AK1 Stage 기준 = ({_lastResult.Ak1GlobalX:0.######}, {_lastResult.Ak1GlobalY:0.######}) mm   " +
             $"전체 좌표 = {_lastResult.Commands.Count}, X 커버 좌표 = {inFieldCount}, 선택 Scanner = {selectedScannerCount}, 표시 좌표 = {filteredCount}, 선택 좌표 = {_selectedPointKeys.Count}   " +
             $"Camera→H1 물리 Offset = ({_input.ReviewToFirstScannerOffsetX:0.###}, {_input.ReviewToFirstScannerOffsetY:0.###}) mm   " +
+            $"반전 Y = {_lastResult.TurnaroundStageY:0.###} mm / 배치검증 = {(_lastResult.EquipmentOrderValid ? "정상" : "확인필요")}   " +
             $"Review 기준 = H{_lastResult.SelectedReviewScanner.Index} DOE{_lastResult.SelectedDoeBeam.BeamNo:00}";
 
         FormulaText.Text =
+            "동작 순서: Home에서 정방향으로 Review Camera를 먼저 통과해 Scanner 뒤쪽까지 이동한 뒤 방향을 반전합니다. 역방향 복귀 중 MOF 좌표를 Y 먼 위치부터 순서대로 가공하고, Review Camera에서 후측정한 다음 Home으로 복귀합니다. " +
             "고정 물리 Offset은 Review Camera 중심에서 각 Scanner 중심까지의 설비 설계/캘리브레이션 거리입니다. CameraRelative = ProcessStage - ReviewCenter, ScannerRelative = CameraRelative - CameraToScannerOffset 순서로 변환한 뒤 Gx/Gy를 생성합니다. " +
             "Dynamic Review Correction은 가공 후 측정오차를 다음 가공에 보정하는 값으로, 고정 물리 Offset과 별도로 관리합니다. 스캐너 박스 또는 주변 클릭 영역을 누르면 복수 선택/해제가 됩니다. 선택된 스캐너가 있으면 좌표 Matrix는 해당 스캐너의 X 가공 가능 범위에 포함되는 좌표만 표시합니다. " +
             "Matrix 셀은 드래그로 연속 선택하고, Shift 클릭으로 기준 셀부터 현재 셀까지 범위 선택하며, Ctrl 클릭/드래그로 추가 또는 해제할 수 있습니다. " +
@@ -187,9 +189,10 @@ public partial class MainWindow : Window
         ResizeLayoutCanvas();
 
         DrawTitle("기판 셀 선택 및 지그재그 스캐너 배치", 20, 8, 21, FontWeights.Bold);
+        DrawMotionSequence();
 
         var boardLeft = 24.0;
-        var boardTop = 82.0;
+        var boardTop = 104.0;
         var boardWidth = LayoutCanvas.Width - 48.0;
         var boardHeight = Math.Max(220.0, LayoutCanvas.Height - 390.0);
 
@@ -198,6 +201,24 @@ public partial class MainWindow : Window
         DrawScannerBandLabels(boardLeft, boardTop + boardHeight + 10.0, boardWidth, boardHeight);
         DrawScannerHeads(boardLeft, boardTop + boardHeight + 76.0, boardWidth);
         DrawLegend(Math.Max(20, LayoutCanvas.Width - 610), LayoutCanvas.Width >= 880 ? 14 : 38);
+    }
+
+    private void DrawMotionSequence()
+    {
+        if (_lastResult is null)
+        {
+            return;
+        }
+
+        var forward = _input.ForwardTransportSignY >= 0 ? "+Y" : "-Y";
+        var reverse = _input.ForwardTransportSignY >= 0 ? "-Y" : "+Y";
+        var text = $"① Home  →  ② Review Camera 통과  →  ③ Scanner 뒤쪽/반전 ({forward})  →  ④ 역방향 MOF ({reverse})  →  ⑤ Review 후측정  →  ⑥ Home";
+        DrawBadge(text, 20, 43, Math.Min(940, LayoutCanvas.Width - 640), 34,
+            new SolidColorBrush(Color.FromRgb(12, 38, 58)),
+            new SolidColorBrush(Color.FromRgb(34, 211, 238)),
+            new SolidColorBrush(Color.FromRgb(207, 250, 254)),
+            13,
+            FontWeights.SemiBold);
     }
 
     private void ResizeLayoutCanvas()
@@ -591,6 +612,7 @@ public partial class MainWindow : Window
             Tag = command,
             Cursor = Cursors.Hand,
             ToolTip = $"{command.CellIndex}\n" +
+                      $"역방향 MOF 실행 순서: #{command.MofSequence}\n" +
                       $"Camera 기준 상대좌표: {command.ReviewCameraRelativeMatrix} mm\n" +
                       $"Camera→{command.ScannerName} 물리 Offset: {command.ScannerPhysicalOffsetMatrix} mm\n" +
                       $"Scanner 상대좌표: {command.ScannerRelativeMatrix} mm\n" +
@@ -1036,6 +1058,8 @@ public partial class MainWindow : Window
         SetTip(BoardYBox, "Board Y", "기판의 전체 Y 방향 길이입니다. Board 표시 영역과 AK2/AK4 방향 기준 높이를 결정합니다.", "AK 유효 Y 거리 = BoardY - 2 * AK Margin Y", "Board");
         SetTip(AkMarginXBox, "AK Margin X", "기판 Edge에서 Align Key까지의 X 방향 설계 여유거리입니다.", "AK1~AK3 거리 계산과 Board 설명에 사용", "Board");
         SetTip(AkMarginYBox, "AK Margin Y", "기판 Edge에서 Align Key까지의 Y 방향 설계 여유거리입니다.", "AK1~AK2 거리 계산과 Board 설명에 사용", "Board");
+        SetTip(HomeStageYBox, "Home Stage Y", "공정 시작과 종료 시 기판 Stage가 대기하는 Y 원점 위치입니다. 공정은 Home에서 Scanner 방향으로 전진한 뒤 역방향 MOF, Review 후측정, Home 복귀 순서로 수행됩니다.", "Motion: Home → Review → Scanner → Reverse MOF → Review → Home", "Board");
+        SetTip(ForwardTransportSignYBox, "Forward Transport Y Sign", "Home에서 Review Camera를 먼저 지나 Scanner 쪽으로 이동하는 정물류 방향의 Stage Y 부호입니다. +1이면 +Y가 전진이고 역방향 MOF는 -Y입니다. -1이면 반대입니다.", "+1: forward +Y / MOF -Y, -1: forward -Y / MOF +Y", "Board");
 
         SetTip(ReviewCenterXBox, "Review Center X", "Review Camera 중심이 Stage 좌표계에서 가지는 X 좌표입니다. AK1 pixel 측정값을 Stage 좌표로 환산할 때 기준점입니다.", "AK1_X = ReviewCenterX + (AK1_U - U0) * PixelScaleX", "Review");
         SetTip(ReviewCenterYBox, "Review Center Y", "Review Camera 중심이 Stage 좌표계에서 가지는 Y 좌표입니다. AK1 pixel 측정값을 Stage 좌표로 환산할 때 기준점입니다.", "AK1_Y = ReviewCenterY + (AK1_V - V0) * PixelScaleY", "Review");
@@ -1257,6 +1281,8 @@ public partial class MainWindow : Window
         BoardYBox.Text = Format(input.BoardSizeY);
         AkMarginXBox.Text = Format(input.AlignMarginX);
         AkMarginYBox.Text = Format(input.AlignMarginY);
+        HomeStageYBox.Text = Format(input.HomeStageY);
+        ForwardTransportSignYBox.Text = input.ForwardTransportSignY.ToString(CultureInfo.InvariantCulture);
         ReviewCenterXBox.Text = Format(input.ReviewCenterGlobalX);
         ReviewCenterYBox.Text = Format(input.ReviewCenterGlobalY);
         U0Box.Text = Format(input.ReviewPixelCenterU);
@@ -1358,6 +1384,8 @@ public partial class MainWindow : Window
             BoardSizeY = ReadDouble(BoardYBox, _input.BoardSizeY),
             AlignMarginX = ReadDouble(AkMarginXBox, _input.AlignMarginX),
             AlignMarginY = ReadDouble(AkMarginYBox, _input.AlignMarginY),
+            HomeStageY = ReadDouble(HomeStageYBox, _input.HomeStageY),
+            ForwardTransportSignY = ReadInt(ForwardTransportSignYBox, _input.ForwardTransportSignY) >= 0 ? 1 : -1,
             ReviewCenterGlobalX = ReadDouble(ReviewCenterXBox, _input.ReviewCenterGlobalX),
             ReviewCenterGlobalY = ReadDouble(ReviewCenterYBox, _input.ReviewCenterGlobalY),
             ReviewPixelCenterU = ReadDouble(U0Box, _input.ReviewPixelCenterU),
@@ -1530,6 +1558,8 @@ public partial class MainWindow : Window
             CsvLine(nameof(CoordinateInput.BoardSizeY), _input.BoardSizeY),
             CsvLine(nameof(CoordinateInput.AlignMarginX), _input.AlignMarginX),
             CsvLine(nameof(CoordinateInput.AlignMarginY), _input.AlignMarginY),
+            CsvLine(nameof(CoordinateInput.HomeStageY), _input.HomeStageY),
+            CsvLine(nameof(CoordinateInput.ForwardTransportSignY), _input.ForwardTransportSignY),
             CsvLine(nameof(CoordinateInput.ReviewCenterGlobalX), _input.ReviewCenterGlobalX),
             CsvLine(nameof(CoordinateInput.ReviewCenterGlobalY), _input.ReviewCenterGlobalY),
             CsvLine(nameof(CoordinateInput.ReviewPixelCenterU), _input.ReviewPixelCenterU),
@@ -1592,6 +1622,8 @@ public partial class MainWindow : Window
             case nameof(CoordinateInput.BoardSizeY): _input.BoardSizeY = number; break;
             case nameof(CoordinateInput.AlignMarginX): _input.AlignMarginX = number; break;
             case nameof(CoordinateInput.AlignMarginY): _input.AlignMarginY = number; break;
+            case nameof(CoordinateInput.HomeStageY): _input.HomeStageY = number; break;
+            case nameof(CoordinateInput.ForwardTransportSignY): _input.ForwardTransportSignY = integer >= 0 ? 1 : -1; break;
             case nameof(CoordinateInput.ReviewCenterGlobalX): _input.ReviewCenterGlobalX = number; break;
             case nameof(CoordinateInput.ReviewCenterGlobalY): _input.ReviewCenterGlobalY = number; break;
             case nameof(CoordinateInput.ReviewPixelCenterU): _input.ReviewPixelCenterU = number; break;

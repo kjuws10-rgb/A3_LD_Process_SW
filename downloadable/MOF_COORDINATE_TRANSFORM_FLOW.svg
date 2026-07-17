@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1860" viewBox="0 0 1800 1860">
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="2180" viewBox="0 0 1800 2180">
   <defs>
     <style>
       .title{font-family:Segoe UI,Arial,sans-serif;font-size:30px;font-weight:700;fill:#e5f0ff}
@@ -39,7 +39,7 @@
     </marker>
   </defs>
 
-  <rect width="1800" height="1860" fill="#07111f"/>
+  <rect width="1800" height="2180" fill="#07111f"/>
   <text x="42" y="48" class="title">MOF Coordinate Transform 상세 흐름도</text>
   <text x="44" y="76" class="subtitle">Review Camera AK1 측정값을 기준으로 Recipe Cell 좌표를 Stage 좌표로 만들고, Zigzag Scanner의 X 가공 가능 Band를 통해 MOF Gx/Gy와 DOE Review 좌표를 생성하는 전체 과정</text>
 
@@ -111,7 +111,7 @@
 
   <rect x="36" y="600" width="1728" height="392" class="panel"/>
   <text x="60" y="633" class="section">2. Stage Layout 및 Scanner X 가공 가능 Band 판단</text>
-  <text x="60" y="657" class="subtitle">MOF 컨셉에서는 Scanner가 고정 배치되고 기판이 Y 방향으로 이동한다. 따라서 가공 가능 여부는 주로 X 방향 커버리지로 판단한다.</text>
+  <text x="60" y="657" class="subtitle">Review Camera가 물류 앞쪽, Scanner가 뒤쪽에 고정 배치된다. 기판은 Scanner 뒤쪽까지 전진한 뒤 역방향으로 돌아오면서 MOF 가공한다.</text>
 
   <rect x="70" y="692" width="925" height="235" class="board"/>
   <text x="82" y="682" class="tiny">Board / Cell Local 영역이 AK1 Stage Anchor 기준으로 투영된 모습</text>
@@ -305,4 +305,45 @@
 
   <rect x="60" y="1782" width="1660" height="25" fill="#0f172a" stroke="#334155" rx="6"/>
   <text x="78" y="1800" class="tiny">구분 원칙: Physical Offset = 설비 고정 Geometry / Dynamic Review Correction = 가공 후 측정오차 Feedback. 저장 위치, 변경 권한, 버전과 이력을 반드시 분리한다.</text>
+
+  <rect x="36" y="1840" width="1728" height="294" class="panel"/>
+  <text x="60" y="1874" class="section">6. 실제 물류 배치와 왕복 MOF 공정 순서</text>
+  <text x="60" y="1900" class="subtitle">+Y를 정물류 방향으로 정의한 기본 예: Home → Review Camera(Y=1200) → Scanner Zone(Y≈1640) 순서로 배치되고, MOF는 -Y 역물류 이동 중 수행한다.</text>
+
+  <rect x="65" y="1935" width="210" height="72" class="stage"/>
+  <text x="88" y="1964" class="h">① Home</text>
+  <text x="88" y="1988" class="small">Stage Y = HomeStageY</text>
+
+  <rect x="335" y="1935" width="240" height="72" class="review"/>
+  <text x="358" y="1964" class="h">② Review Camera 통과</text>
+  <text x="358" y="1988" class="small">전진 시 측정 없이 통과</text>
+
+  <rect x="635" y="1935" width="270" height="72" class="scanner"/>
+  <text x="658" y="1964" class="h">③ Scanner 뒤쪽 도착</text>
+  <text x="658" y="1988" class="small">TurnaroundStageY에서 반전</text>
+
+  <rect x="965" y="1935" width="260" height="72" class="calc"/>
+  <text x="988" y="1964" class="h">④ 역방향 MOF</text>
+  <text x="988" y="1988" class="small">큰 StageY → 작은 StageY</text>
+
+  <rect x="1285" y="1935" width="210" height="72" class="review"/>
+  <text x="1308" y="1964" class="h">⑤ Review 후측정</text>
+  <text x="1308" y="1988" class="small">가공 결과/Offset 계산</text>
+
+  <rect x="1555" y="1935" width="150" height="72" class="stage"/>
+  <text x="1578" y="1964" class="h">⑥ Home</text>
+  <text x="1578" y="1988" class="small">원점 복귀</text>
+
+  <path class="arrow2" d="M275 1971 H335"/>
+  <path class="arrow2" d="M575 1971 H635"/>
+  <path class="arrow2" d="M905 1971 H965"/>
+  <path class="arrow2" d="M1225 1971 H1285"/>
+  <path class="arrow2" d="M1495 1971 H1555"/>
+
+  <path class="dash" d="M760 2028 C760 2095, 1095 2095, 1095 2028"/>
+  <text x="800" y="2071" class="h">방향 반전 후 Scanner Zone에서 Review Camera 방향으로 돌아오면서 MOF</text>
+  <text x="800" y="2096" class="tiny">MofSequence = ForwardSignY가 +1이면 ProcessStageY 내림차순, -1이면 오름차순</text>
+
+  <rect x="60" y="2115" width="1660" height="25" fill="#0f172a" stroke="#334155" rx="6"/>
+  <text x="78" y="2133" class="tiny">배치 검증: (ScannerCenterY - ReviewCenterY) × ForwardTransportSignY &gt; 0. 모든 Head가 참이어야 Review Camera 선행 / Scanner 후행 구조가 성립한다.</text>
 </svg>

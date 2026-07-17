@@ -4,6 +4,8 @@
 
 2026-07-17 업데이트에서는 Review Camera 광학 중심과 H1 Scanner 가공 중심 사이의 고정 물리 오프셋을 좌표 변환의 필수 입력으로 분리했다. Scanner 중심은 `ReviewCenter + CameraToScannerPhysicalOffset`으로 생성되며, 가공 후 측정오차를 보정하는 `ProcessOffsetGlobal`과 서로 다른 데이터로 관리한다.
 
+장비 물류 순서는 `Home → Review Camera 통과 → Scanner 뒤쪽까지 정방향 이동 → 방향 반전 → 역방향 이동 중 MOF → Review Camera 후측정 → Home 복귀`로 반영했다. 기본 설정은 +Y가 정물류 방향이며, MOF 명령은 Stage Y가 큰 가공점부터 작은 가공점 순서로 실행된다.
+
 2026-07-16 업데이트에서는 첨부 예시 이미지처럼 기판 Cell과 Scanner Head 선택 상태를 색상으로 쉽게 파악할 수 있도록 UI를 개선했다. 또한 설계좌표, 가공좌표, 리뷰좌표계를 별도 탭으로 분리하고 모든 좌표 결과를 `(x, y)` 2D Matrix 형태로 표시한다.
 
 추가 업데이트에서는 AK1 기준 첫 번째 가공 위치, X/Y pitch, 내부 가공점 행/열, 기판 내 Cell# 블록 행/열과 pitch를 CSV 설정으로 읽을 수 있게 했다. CSV는 Excel에서 열고 저장할 수 있으므로 Recipe 설정표처럼 사용할 수 있다.
@@ -59,6 +61,34 @@ dotnet run
 - `ScannerFieldHalfY`: Scanner 설계상의 Y 방향 field 반폭 참고값. MOF 컨셉에서는 기판이 Y 방향으로 이동하므로 가공 가능 여부는 X 커버리지로 판단하고, UI의 process band는 Board Y 전체로 표시한다.
 - `ReviewToFirstScannerOffsetX/Y`: Review Camera 광학 중심에서 H1 Scanner 가공 중심까지의 고정 물리 거리. 장비 조립치수 또는 캘리브레이션 결과로 관리하며 Recipe나 Review 측정오차에 따라 바뀌면 안 된다.
 - `ProcessOffsetGlobalX/Y`: 가공 후 Review 측정오차를 다음 가공에 반영하는 동적 보정값. 고정 물리 오프셋과 별도 이력 및 버전으로 관리한다.
+- `HomeStageY`: 기판 Stage가 공정 전후에 대기하는 원점 Y 좌표.
+- `ForwardTransportSignY`: Home에서 Review Camera를 먼저 지나 Scanner 쪽으로 이동하는 정물류 방향. `+1`이면 +Y 전진/-Y 역방향 MOF이고, `-1`이면 반대이다.
+
+## 실제 장비 이송 및 가공 순서
+
+```text
+1. Home 대기
+2. 정물류 방향으로 이동하면서 Review Camera 위치를 먼저 통과
+3. Review Camera 뒤쪽에 배치된 Scanner 가공 시작측까지 이동
+4. Turnaround 위치에서 Stage 이동 방향 반전
+5. 역물류 방향으로 돌아오면서 MOF 가공
+6. MOF 종료 후 Review Camera 위치에서 가공 결과 측정
+7. 측정 완료 후 Home 복귀
+```
+
+기본 설정에서 Review Camera Y는 `1200 mm`, H1 Scanner Y는 `1640.1 mm`이므로 +Y 전진 기준으로 Camera가 앞쪽, Scanner가 뒤쪽에 있다. 프로그램은 모든 Scanner 중심이 Review Camera보다 정물류 방향 뒤쪽에 있는지 검사하고 `배치검증=정상/확인필요`로 표시한다.
+
+가공점 좌표는 Recipe 행 순서가 아니라 실제 역방향 이동 순서로 재정렬한다.
+
+```text
+ForwardTransportSignY = +1:
+  MofExecutionCommands = ProcessStageY 내림차순
+
+ForwardTransportSignY = -1:
+  MofExecutionCommands = ProcessStageY 오름차순
+```
+
+각 `CellCommand.MofSequence`는 역방향 MOF 실행 순번을 보관한다. Process Matrix 좌표에 마우스를 올리면 실행 순번을 확인할 수 있다.
 
 ## Review Camera와 Scanner 사이의 물리 Offset
 

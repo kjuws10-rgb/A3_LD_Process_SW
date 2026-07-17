@@ -1,6 +1,8 @@
 Key,Value
 BoardSizeX,1500
 BoardSizeY,925
+HomeStageY,0
+ForwardTransportSignY,1
 CellFirstX,10
 CellFirstY,20
 CellPitchX,10

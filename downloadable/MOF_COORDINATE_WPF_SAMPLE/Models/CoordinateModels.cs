@@ -11,6 +11,10 @@ public sealed class CoordinateInput
     public double BoardSizeY { get; set; } = 925;
     public double AlignMarginX { get; set; } = 55;
     public double AlignMarginY { get; set; } = 45;
+    public double HomeStageY { get; set; } = 0;
+    // +1 means the forward logistics direction increases Stage Y.
+    // The board passes the review camera first and then reaches the scanner zone.
+    public int ForwardTransportSignY { get; set; } = 1;
 
     public double ReviewCenterGlobalX { get; set; } = 105;
     public double ReviewCenterGlobalY { get; set; } = 1200;
@@ -88,6 +92,7 @@ public sealed class DoeBeamModel
 
 public sealed class CellCommand
 {
+    public int MofSequence { get; set; }
     public int Column { get; init; }
     public int Row { get; init; }
     public int CellBlock { get; init; }
@@ -139,6 +144,7 @@ public sealed class CellCommand
     public string ReviewMatrix => FormatPair(ReviewCoordinateX, ReviewCoordinateY);
     public string ReviewPixelMatrix => FormatPair(ReviewPixelU, ReviewPixelV);
     public string DoeSelection => $"H{ReviewBasisHead} / DOE{ReviewBasisBeam:00}";
+    public string MofSequenceText => $"Reverse MOF #{MofSequence}";
 
     private static string FormatPair(double x, double y) => $"({x:0.###}, {y:0.###})";
 
@@ -155,6 +161,16 @@ public sealed class CellCommand
 
         return text;
     }
+}
+
+public sealed class StageMotionStep
+{
+    public int StepNo { get; init; }
+    public string Name { get; init; } = "";
+    public string Direction { get; init; } = "";
+    public double FromStageY { get; init; }
+    public double ToStageY { get; init; }
+    public string Operation { get; init; } = "";
 }
 
 public sealed class MatrixRow
@@ -182,4 +198,8 @@ public sealed class CoordinateResult
     public DoeBeamModel SelectedDoeBeam { get; init; } = new();
     public ScannerModel SelectedReviewScanner { get; init; } = new();
     public IReadOnlyList<CellCommand> Commands { get; init; } = Array.Empty<CellCommand>();
+    public IReadOnlyList<CellCommand> MofExecutionCommands { get; init; } = Array.Empty<CellCommand>();
+    public IReadOnlyList<StageMotionStep> MotionSteps { get; init; } = Array.Empty<StageMotionStep>();
+    public double TurnaroundStageY { get; init; }
+    public bool EquipmentOrderValid { get; init; }
 }
