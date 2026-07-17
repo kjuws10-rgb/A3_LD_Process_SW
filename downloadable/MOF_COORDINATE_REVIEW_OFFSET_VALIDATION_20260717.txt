@@ -92,3 +92,16 @@ E4 | (50.052, 889.673) | (259.782, 170.417)
 
 H1 초기위치와 물리 Offset 기대값이 허용오차를 초과하면 실제 장비에서는 Process Plan 생성 또는 가공 시작을 차단해야 한다.
 본 WPF 예제는 Summary에 원점검증 정상/불일치를 표시하여 설정 오류를 확인하도록 구성한다.
+
+7. Excel 시뮬레이션 업데이트
+
+파일: Review_MasterAK_Global_MMULT_Simulation_6GH_UPDATED_20260717.xlsx
+
+- 기존 H1 Offset 예제값을 Camera→H1=(10, 1000) mm로 변경
+- H1 Initial Stage=(115, 2200) mm와 Expected H1의 일치 여부 계산 추가
+- ScannerPitchX=200 mm, EvenScannerYOffset=60 mm를 H1~H8 중심 계산에 반영
+- MOF 중 기판이 Y 방향으로 이동하는 조건에 맞춰 In Field 판정을 Scanner X Field 기준으로 변경
+- 하단 10번 표에 H2 Center=(315, 2260) mm와 Camera→H2=(210, 1060) mm 검증 추가
+- H2 Even / DOE05 기준 B1 Process G를 ScannerRelative Stage로 복원하는 계산 추가
+- 최종 B1 Review Camera/DOE05=(109.900, 35.286) mm와 동치식 결과 비교 추가
+- Excel을 열 때 전체 수식이 자동 재계산되도록 Calculation Mode를 Auto로 설정
