@@ -8,6 +8,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using Microsoft.Win32;
+using MofCoordinateDemo.Automation1;
 using MofCoordinateDemo.Models;
 using MofCoordinateDemo.Services;
 
@@ -16,8 +17,11 @@ namespace MofCoordinateDemo;
 public partial class MainWindow : Window
 {
     private readonly CoordinateTransformService _service = new();
+    private readonly AeroScriptGenerator _aeroScriptGenerator = new();
     private CoordinateInput _input = new();
     private CoordinateResult? _lastResult;
+    private AeroScriptPackage? _currentScriptPackage;
+    private CancellationTokenSource? _scriptWorkflowCancellation;
     private double _matrixCellSize = 86;
     private double _boardZoom = 1.0;
     private string? _lastConfigPath;
@@ -45,7 +49,11 @@ public partial class MainWindow : Window
         };
         SizeChanged += (_, _) => DrawLayout();
         PreviewMouseLeftButtonUp += (_, _) => CompleteMatrixDragSelection();
-        Closing += (_, _) => SaveViewState();
+        Closing += (_, _) =>
+        {
+            _scriptWorkflowCancellation?.Cancel();
+            SaveViewState();
+        };
     }
 
     private void GenerateButton_Click(object sender, RoutedEventArgs e)
@@ -127,6 +135,198 @@ public partial class MainWindow : Window
         SaveConfigCsv(_lastConfigPath);
         LoadInputToScreen(_input);
         GenerateAndRender();
+    }
+
+    private void GenerateAeroScriptButton_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            GenerateCurrentAeroScriptPackage();
+        }
+        catch (Exception ex)
+        {
+            AppendDeploymentLog($"[생성 실패] {ex.Message}");
+            ScriptJobText.Text = "Script 생성 실패";
+        }
+    }
+
+    private async void UploadAeroScriptButton_Click(object sender, RoutedEventArgs e)
+    {
+        await RunScriptUiOperationAsync(async cancellationToken =>
+        {
+            var package = _currentScriptPackage ?? GenerateCurrentAeroScriptPackage();
+            var response = await CreateAeroScriptClient().UploadAsync(package, cancellationToken);
+            ShowServerResponse("전송", response);
+        });
+    }
+
+    private async void RunAeroScriptButton_Click(object sender, RoutedEventArgs e)
+    {
+        await RunScriptUiOperationAsync(async cancellationToken =>
+        {
+            var package = _currentScriptPackage
+                          ?? throw new InvalidOperationException("먼저 Script를 생성하고 Server PC로 전송해야 합니다.");
+            var response = await CreateAeroScriptClient().RunAsync(package.JobId, cancellationToken);
+            ShowServerResponse("실행 명령", response);
+        });
+    }
+
+    private async void QueryAeroScriptStatusButton_Click(object sender, RoutedEventArgs e)
+    {
+        await RunScriptUiOperationAsync(async cancellationToken =>
+        {
+            var package = _currentScriptPackage
+                          ?? throw new InvalidOperationException("조회할 Script Job이 없습니다.");
+            var response = await CreateAeroScriptClient().GetStatusAsync(package.JobId, cancellationToken);
+            ShowServerResponse("상태 조회", response);
+        });
+    }
+
+    private async void ExecuteAeroScriptWorkflowButton_Click(object sender, RoutedEventArgs e)
+    {
+        await RunScriptUiOperationAsync(async cancellationToken =>
+        {
+            var package = GenerateCurrentAeroScriptPackage();
+            var client = CreateAeroScriptClient();
+
+            var upload = await client.UploadAsync(package, cancellationToken);
+            EnsureServerSuccess("전송", upload);
+            ShowServerResponse("전송", upload);
+
+            var run = await client.RunAsync(package.JobId, cancellationToken);
+            EnsureServerSuccess("실행 명령", run);
+            ShowServerResponse("실행 명령", run);
+
+            while (true)
+            {
+                await Task.Delay(250, cancellationToken);
+                var status = await client.GetStatusAsync(package.JobId, cancellationToken);
+                EnsureServerSuccess("상태 조회", status);
+                ShowServerResponse("상태", status);
+
+                if (status.Job?.State == ScriptJobState.Completed)
+                {
+                    AppendDeploymentLog("[완료] Server PC의 Automation1 task가 ProgramComplete 상태입니다.");
+                    return;
+                }
+
+                if (status.Job?.State is ScriptJobState.Failed or ScriptJobState.Rejected)
+                {
+                    throw new InvalidOperationException(status.Job.Message);
+                }
+            }
+        }, TimeSpan.FromMinutes(30));
+    }
+
+    private AeroScriptPackage GenerateCurrentAeroScriptPackage()
+    {
+        _input = ReadInputFromScreen();
+        GenerateAndRender();
+        var result = _lastResult ?? throw new InvalidOperationException("좌표 결과가 생성되지 않았습니다.");
+        var selectedHeads = ParseScannerHeadSet(_input.HighlightScannerHeads);
+
+        IEnumerable<CellCommand> commands = result.MofExecutionCommands.Where(command => command.InField);
+        if (selectedHeads.Count > 0)
+        {
+            commands = commands.Where(command => selectedHeads.Contains(command.ScannerIndex));
+        }
+
+        if (SelectedCoordinatesOnlyCheckBox.IsChecked == true)
+        {
+            commands = commands.Where(command => _selectedPointKeys.Contains(PointKey(command)));
+        }
+
+        var commandList = commands.OrderBy(command => command.MofSequence).ToArray();
+        var options = new AeroScriptGenerationOptions(
+            AxisXTemplateBox.Text.Trim(),
+            AxisYTemplateBox.Text.Trim(),
+            ReadDouble(CoordinatedSpeedBox, 100),
+            EnableAxes: true,
+            DisableAxesAtEnd: false);
+        var source = _aeroScriptGenerator.Generate(_input, commandList, options);
+        var taskIndex = Math.Max(1, ReadInt(Automation1TaskIndexBox, 1));
+        var controllerFile = ControllerFileNameBox.Text.Trim();
+
+        _currentScriptPackage = AeroScriptPackage.Create(controllerFile, source, taskIndex);
+        ScriptPreviewBox.Text = source;
+        ScriptJobText.Text =
+            $"생성 완료: Job={_currentScriptPackage.JobId}, 좌표={commandList.Length}, " +
+            $"SHA-256={_currentScriptPackage.Sha256[..16]}..., Task={taskIndex}";
+        AppendDeploymentLog(
+            $"[생성] Client PC에서 {commandList.Length}개 좌표로 {_currentScriptPackage.ControllerFileName} 생성");
+        return _currentScriptPackage;
+    }
+
+    private AeroScriptClient CreateAeroScriptClient()
+    {
+        return new AeroScriptClient(
+            ServerHostBox.Text.Trim(),
+            ReadInt(ServerPortBox, 46100),
+            ServerApiKeyBox.Text);
+    }
+
+    private async Task RunScriptUiOperationAsync(
+        Func<CancellationToken, Task> operation,
+        TimeSpan? timeout = null)
+    {
+        _scriptWorkflowCancellation?.Cancel();
+        _scriptWorkflowCancellation?.Dispose();
+        _scriptWorkflowCancellation = new CancellationTokenSource(timeout ?? TimeSpan.FromSeconds(15));
+        SetScriptButtonsEnabled(false);
+
+        try
+        {
+            await operation(_scriptWorkflowCancellation.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            AppendDeploymentLog("[취소] 통신 또는 실행 완료 대기 시간이 초과되었습니다.");
+            ScriptJobText.Text = "작업 취소 또는 제한시간 초과";
+        }
+        catch (Exception ex)
+        {
+            AppendDeploymentLog($"[오류] {ex.Message}");
+            ScriptJobText.Text = $"오류: {ex.Message}";
+        }
+        finally
+        {
+            SetScriptButtonsEnabled(true);
+        }
+    }
+
+    private void ShowServerResponse(string operation, ScriptServerResponse response)
+    {
+        var state = response.Job?.State.ToString() ?? "-";
+        var message = response.Job?.Message ?? response.Message;
+        AppendDeploymentLog(
+            $"[{operation}] Success={response.Success}, State={state}, Message={message}");
+        ScriptJobText.Text = response.Job is null
+            ? $"{operation}: {response.Message}"
+            : $"Job={response.Job.JobId}, State={response.Job.State}, {response.Job.Message}";
+    }
+
+    private static void EnsureServerSuccess(string operation, ScriptServerResponse response)
+    {
+        if (!response.Success)
+        {
+            throw new InvalidOperationException($"{operation} 실패: {response.ErrorCode} {response.Message}");
+        }
+    }
+
+    private void AppendDeploymentLog(string message)
+    {
+        var line = $"{DateTime.Now:HH:mm:ss.fff} {message}";
+        DeploymentLogBox.AppendText((DeploymentLogBox.Text.Length == 0 ? "" : Environment.NewLine) + line);
+        DeploymentLogBox.ScrollToEnd();
+    }
+
+    private void SetScriptButtonsEnabled(bool isEnabled)
+    {
+        GenerateAeroScriptButton.IsEnabled = isEnabled;
+        UploadAeroScriptButton.IsEnabled = isEnabled;
+        RunAeroScriptButton.IsEnabled = isEnabled;
+        QueryAeroScriptStatusButton.IsEnabled = isEnabled;
+        ExecuteAeroScriptWorkflowButton.IsEnabled = isEnabled;
     }
 
     private void SelectAllScannersButton_Click(object sender, RoutedEventArgs e)
