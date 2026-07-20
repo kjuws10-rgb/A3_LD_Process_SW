@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="980" viewBox="0 0 1600 980">
+  <defs>
+    <style>
+      .title{font:700 28px 'Segoe UI',sans-serif;fill:#e7edf6}.sub{font:14px 'Segoe UI',sans-serif;fill:#9aa9bd}
+      .head{font:700 17px 'Segoe UI',sans-serif;fill:#f8fafc}.text{font:13px 'Segoe UI',sans-serif;fill:#d5dfec}
+      .mono{font:12px Consolas,monospace;fill:#a5f3fc}.panel{fill:#111927;stroke:#34445b;stroke-width:1.5}
+      .ui{fill:#132d3a;stroke:#22d3ee;stroke-width:1.5}.service{fill:#172554;stroke:#60a5fa;stroke-width:1.5}
+      .protocol{fill:#3b2a10;stroke:#fbbf24;stroke-width:1.5}.transport{fill:#301b36;stroke:#c084fc;stroke-width:1.5}
+      .safe{fill:#3b1720;stroke:#fb7185;stroke-width:1.5}.sim{fill:#12351f;stroke:#4ade80;stroke-width:1.5}
+      .arrow{stroke:#8fa3ba;stroke-width:2;fill:none;marker-end:url(#a)}.dash{stroke:#fb7185;stroke-width:2;fill:none;stroke-dasharray:7 5;marker-end:url(#r)}
+    </style>
+    <marker id="a" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#8fa3ba"/></marker>
+    <marker id="r" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#fb7185"/></marker>
+  </defs>
+  <rect width="1600" height="980" fill="#090e17"/>
+  <text x="42" y="48" class="title">Talon Laser Driver Validation Architecture</text>
+  <text x="44" y="76" class="sub">Manual command metadata → safety validation → driver serialization → Serial/Simulator transport → parsed status and trace</text>
+
+  <rect x="38" y="105" width="1524" height="150" rx="7" class="panel"/>
+  <text x="62" y="136" class="head">WPF 검증 UI</text>
+  <rect x="62" y="158" width="270" height="70" rx="5" class="ui"/><text x="82" y="184" class="head">연결 설정</text><text x="82" y="207" class="text">Simulation / Hardware · COM · Baud · Timeout</text>
+  <rect x="360" y="158" width="270" height="70" rx="5" class="ui"/><text x="380" y="184" class="head">명령 카탈로그</text><text x="380" y="207" class="text">범위 · 단위 · 위험도 · 설명 · 실행</text>
+  <rect x="658" y="158" width="270" height="70" rx="5" class="ui"/><text x="678" y="184" class="head">상태 대시보드</text><text x="678" y="207" class="text">Event · Power · Current · Temp · Status Bits</text>
+  <rect x="956" y="158" width="270" height="70" rx="5" class="ui"/><text x="976" y="184" class="head">자동 검증</text><text x="976" y="207" class="text">Read-only Query 14개 및 형식 판정</text>
+  <rect x="1254" y="158" width="270" height="70" rx="5" class="ui"/><text x="1274" y="184" class="head">통신 Trace</text><text x="1274" y="207" class="text">TX · RX · 시간 · 성공 · 오류 메시지</text>
+
+  <path d="M793 255V305" class="arrow"/>
+  <rect x="365" y="305" width="870" height="142" rx="7" class="service"/>
+  <text x="390" y="338" class="head">CTalonDriver</text>
+  <text x="390" y="367" class="text">SemaphoreSlim으로 명령 직렬화 · Query/Set 응답정책 분리 · Status Apply · PollSafeStatus · RunReadOnlyValidation</text>
+  <rect x="390" y="389" width="385" height="37" rx="4" class="safe"/><text x="407" y="414" class="text">Safety Context: Unlock + Interlock + Beam Path + Operator</text>
+  <rect x="800" y="389" width="410" height="37" rx="4" class="service"/><text x="817" y="414" class="text">Output-reducing command는 잠금과 무관하게 허용</text>
+
+  <path d="M800 447V495" class="arrow"/>
+  <rect x="100" y="495" width="665" height="180" rx="7" class="protocol"/>
+  <text x="125" y="528" class="head">Protocol / Manual Metadata</text>
+  <text x="125" y="557" class="text">CTalonCommandCatalog</text><text x="300" y="557" class="mono">QueryText · SetTemplate · Range · Unit · Risk · ResponseKind</text>
+  <text x="125" y="586" class="text">CTalonProtocol.Build</text><text x="300" y="586" class="mono">Invariant formatting · range validation · CR terminator</text>
+  <text x="125" y="615" class="text">Response Parser</text><text x="300" y="615" class="mono">CR/LF · echo remove · number · boolean · ?FH list · *STB bits</text>
+  <text x="125" y="647" class="sub">Manual Rev. C: QMODE? / ?FH=16 event codes / Set command has no defined ACK</text>
+
+  <rect x="835" y="495" width="665" height="180" rx="7" class="safe"/>
+  <text x="860" y="528" class="head">Safety Decision</text>
+  <text x="860" y="557" class="text">ReadOnly</text><text x="1030" y="557" class="mono">항상 허용</text>
+  <text x="860" y="586" class="text">Configuration/Persistent</text><text x="1030" y="586" class="mono">Hardware unlock 필요</text>
+  <text x="860" y="615" class="text">LaserOutput 증가</text><text x="1030" y="615" class="mono">4개 안전조건 + SYSTEM READY 필요</text>
+  <text x="860" y="644" class="text">OFF / Close / Current 0</text><text x="1030" y="644" class="mono">언제든 실행 가능</text>
+
+  <path d="M430 675V735" class="arrow"/><path d="M1170 675V735" class="arrow"/>
+  <rect x="100" y="735" width="665" height="150" rx="7" class="transport"/>
+  <text x="125" y="770" class="head">CSerialTalonTransport</text>
+  <text x="125" y="801" class="mono">115200 / N / 8 / 1 / Flow None</text>
+  <text x="125" y="830" class="text">Query: CR 전송 → CR/LF 응답 대기 → Timeout</text>
+  <text x="125" y="857" class="text">Set: CR 전송 → Flush → SENT, 응답 대기 없음</text>
+
+  <rect x="835" y="735" width="665" height="150" rx="7" class="sim"/>
+  <text x="860" y="770" class="head">CTalonSimulatorTransport</text>
+  <text x="860" y="801" class="text">Identity · Event · Status Bits · Current · PRF · Shutter/Gate · Temperature 상태 전이</text>
+  <text x="860" y="830" class="text">단발 Timeout / Invalid Response 오류 주입</text>
+  <text x="860" y="857" class="text">실제 장비 없이 WPF와 자동 회귀 검증 실행</text>
+
+  <path d="M100 920H1500" class="dash"/>
+  <text x="320" y="950" class="sub">운영 반영 전: 실제 RS-232 Read-only 검증 → Interlock Manager 결합 → Set Readback → 승인된 출력 시험</text>
+</svg>
