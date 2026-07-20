@@ -179,3 +179,25 @@ RUN_AUTOMATION1_SERVER_REAL.bat
 - [Virtual Axes 제약과 Feedback 동작](https://help.aerotech.com/automation1/Content/Virtual-Axis-Overview.htm)
 - [Galvo Functions와 Hardware 조건](https://help.aerotech.com/automation1/Content/Concepts/Galvo-Functions.htm)
 - [Controller File System](https://help.aerotech.com/automation1/Content/Controller-File-System.htm)
+
+## 10. 192.168.10.200 → 192.168.10.10 연결 점검
+
+`Ping` 성공은 IP 경로만 확인한다. `대상 컴퓨터에서 연결을 거부했습니다`가 나오면 `192.168.10.10:46100`에서 이 예제의 `Automation1Server`가 수신 중인지 먼저 확인한다. MDK 설치 및 라이선스 인증은 사용자 정의 TCP Server를 자동으로 시작하지 않는다.
+
+1. `PUBLISH_AUTOMATION1_SERVER_WIN64.bat`로 독립 실행 배포 폴더를 만든다.
+2. 폴더 전체를 Server PC로 복사한다.
+3. Server PC에서 `OPEN_SERVER_FIREWALL_PORT_46100_ADMIN.bat`를 관리자 권한으로 실행한다.
+4. `START_AUTOMATION1_SERVER.bat`를 실행하고 Client와 같은 API Key를 입력한다.
+5. Client에서 `CHECK_SERVER_PORT_FROM_CLIENT.bat`의 `TcpTestSucceeded`를 확인한다.
+6. WPF에서 `Server 연결 확인`이 성공한 뒤 Upload/Run을 수행한다.
+
+Protocol v3에는 Job 없이 Server 준비 상태와 ModePolicy를 확인하는 `HealthCheck` 요청이 추가되었다.
+
+## 11. Local File, Controller File, 좌표의 구분
+
+- `Local Script File`: Client PC 디스크에 Script 생성 즉시 UTF-8(no BOM)으로 저장된다.
+- `Controller File`: Upload 후 Server가 Controller File System에 쓰는 경로이다.
+- `Process Gx/Gy`: AeroScript의 `G0 GX ... GY ...` 또는 `MoveLinear`에 전달하는 Scanner 좌표이다.
+- `Review Coordinate`: Review Camera 측정과 UI 표시를 위한 Head/DOE 기준 좌표이다.
+
+예를 들어 Process가 `(134.830466, -404.947603)`, Review가 `(-34.56, 34.882)`이면 Script가 전자를 사용하는 것이 정상이다. 두 값은 Camera-Scanner 물리 Offset과 기준 원점이 다르며 같은 좌표계가 아니다. 생성 Script의 각 명령 주석과 UI 로그에서 두 값을 나란히 확인할 수 있다.

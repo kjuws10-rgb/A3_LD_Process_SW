@@ -12,8 +12,8 @@
   <text x="80" y="140" class="h">A1 상위 프로그램 / Client PC</text>
   <rect x="85" y="175" width="390" height="95" rx="6" class="box"/><text x="110" y="207" class="h">1. 공정 입력</text><text x="110" y="235" class="t">Recipe + Review 보정 + Scanner/DOE 조건</text>
   <rect x="85" y="300" width="390" height="105" rx="6" class="box"/><text x="110" y="332" class="h">2. 좌표 계산</text><text x="110" y="360" class="t">Stage → Scanner Gx/Gy</text><text x="110" y="384" class="s">역물류 MOF 순서 / 가공 가능 Head 필터</text>
-  <rect x="85" y="435" width="390" height="110" rx="6" class="box"/><text x="110" y="467" class="h">3. AeroScript 생성</text><text x="110" y="495" class="t">AeroScriptGenerator</text><text x="110" y="520" class="s">Job ID + UTF-8 Source + SHA-256 + Task</text>
-  <rect x="85" y="575" width="390" height="165" rx="6" class="box"/><text x="110" y="607" class="h">4. 명령 분리</text><text x="110" y="638" class="t">UploadScript: Script 전송만 수행</text><text x="110" y="668" class="t">RunScript: 검증된 Job 실행 지시</text><text x="110" y="698" class="t">GetStatus: 완료/오류 상태 조회</text>
+  <rect x="85" y="435" width="390" height="110" rx="6" class="box"/><text x="110" y="467" class="h">3. AeroScript 생성 + Local 저장</text><text x="110" y="495" class="t">Process Gx/Gy 명령 / Review 좌표 주석</text><text x="110" y="520" class="s">UTF-8(no BOM) Local File + Job + SHA-256</text>
+  <rect x="85" y="575" width="390" height="165" rx="6" class="box"/><text x="110" y="607" class="h">4. 명령 분리</text><text x="110" y="638" class="t">HealthCheck: TCP/API Key/Policy 확인</text><text x="110" y="668" class="t">UploadScript / RunScript</text><text x="110" y="698" class="t">GetStatus: 완료/오류 상태 조회</text>
 
   <rect x="585" y="100" width="450" height="680" rx="8" class="server"/>
   <text x="610" y="140" class="h">스캐너 연결 Server PC</text>
@@ -35,4 +35,3 @@
   <path d="M615 705C560 830 360 830 300 740" class="arrow"/><text x="400" y="838" class="t">Completed / Failed를 Client UI에 최종 표시</text>
   <text x="60" y="850" class="s">운영 전 확정: 실제 Axis 이름, Task 점유, PSO/IFOV/레이저 Trigger, Interlock, TLS/방화벽, Timeout 및 재시도 정책</text>
 </svg>
-

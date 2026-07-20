@@ -120,10 +120,24 @@ static async Task RunSelfTestAsync()
                 WaitStepY = 10
             });
         if (!generatedSource.Contains("AxisStatusItem.PositionFeedback", StringComparison.Ordinal) ||
+            !generatedSource.Contains("Process Gx/Gy=", StringComparison.Ordinal) ||
+            !generatedSource.Contains("Review=(", StringComparison.Ordinal) ||
             generatedSource.Contains("LaserOutput", StringComparison.Ordinal) ||
             generatedSource.Contains("PsoOutput", StringComparison.Ordinal))
         {
             throw new InvalidOperationException("Virtual wait script safety contract failed.");
+        }
+
+        var localScriptPath = AeroScriptLocalFileStore.Save(
+            Path.Combine(spool, "local-output", "mof_generated.ascript"),
+            generatedSource,
+            AppContext.BaseDirectory);
+        var localBytes = await File.ReadAllBytesAsync(localScriptPath);
+        if (localBytes.Length < 3 ||
+            (localBytes[0] == 0xEF && localBytes[1] == 0xBB && localBytes[2] == 0xBF) ||
+            !File.ReadAllText(localScriptPath).Contains("program", StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException("Local AeroScript file save contract failed.");
         }
 
         var hardwareSource = generator.Generate(
@@ -141,6 +155,7 @@ static async Task RunSelfTestAsync()
         }
 
         var client = new AeroScriptClient("127.0.0.1", port, apiKey);
+        EnsureSuccess(await client.HealthCheckAsync(CancellationToken.None), "health");
         var package = AeroScriptPackage.Create(
             "programs/self-test.ascript",
             generatedSource,
@@ -175,7 +190,7 @@ static async Task RunSelfTestAsync()
             throw new InvalidOperationException("VirtualOnly server accepted a HardwareCoordinateProgram job.");
         }
 
-        Console.WriteLine("SELF-TEST PASS: generation, upload/run/completion and mode-policy rejection verified.");
+        Console.WriteLine("SELF-TEST PASS: local file, health, generation, upload/run/completion and mode-policy rejection verified.");
     }
     finally
     {

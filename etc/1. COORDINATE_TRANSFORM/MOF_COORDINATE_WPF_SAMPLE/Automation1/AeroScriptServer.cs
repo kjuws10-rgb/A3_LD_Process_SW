@@ -100,6 +100,10 @@ public sealed class AeroScriptServer : IAsyncDisposable
 
         return request.RequestType switch
         {
+            ScriptRequestType.HealthCheck => ScriptServerResponse.Ok(
+                request,
+                $"Server ready. Bind={_options.BindAddress}:{_options.Port}, ModePolicy={_options.ModePolicy}, MaxScriptBytes={_options.MaxScriptBytes}",
+                null),
             ScriptRequestType.UploadScript => await UploadAsync(request, serverCancellationToken),
             ScriptRequestType.RunScript => Run(request, serverCancellationToken),
             ScriptRequestType.GetStatus => GetStatus(request),
