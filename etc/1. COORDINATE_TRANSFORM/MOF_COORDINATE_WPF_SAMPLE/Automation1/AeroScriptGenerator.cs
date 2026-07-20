@@ -109,7 +109,9 @@ public sealed partial class AeroScriptGenerator
             {
                 source.AppendLine(
                     $"    G0 {axisX} {Format(command.Gx)} {axisY} {Format(command.Gy)} " +
-                    $"// {command.CellIndex}, MOF #{command.MofSequence}");
+                    $"// {command.CellIndex}, MOF #{command.MofSequence}, " +
+                    $"Process Gx/Gy=({Format(command.Gx)}, {Format(command.Gy)}), " +
+                    $"Review=({Format(command.ReviewCoordinateX)}, {Format(command.ReviewCoordinateY)})");
                 source.AppendLine($"    MoveDelay({axisX}, {Format(options.MoveDelayMilliseconds)})");
             }
 
@@ -193,7 +195,9 @@ public sealed partial class AeroScriptGenerator
         {
             source.AppendLine(
                 $"    // MOF #{command.MofSequence}: {command.CellIndex}, H{command.ScannerIndex}, " +
-                $"Stage=({Format(command.ProcessStageX)}, {Format(command.ProcessStageY)})");
+                $"Stage=({Format(command.ProcessStageX)}, {Format(command.ProcessStageY)}), " +
+                $"Process Gx/Gy=({Format(command.Gx)}, {Format(command.Gy)}), " +
+                $"Review=({Format(command.ReviewCoordinateX)}, {Format(command.ReviewCoordinateY)})");
             source.AppendLine(
                 $"    MoveLinear($scannerAxesH{command.ScannerIndex}, " +
                 $"[{Format(command.Gx)}, {Format(command.Gy)}], {Format(options.CoordinatedSpeed)})");

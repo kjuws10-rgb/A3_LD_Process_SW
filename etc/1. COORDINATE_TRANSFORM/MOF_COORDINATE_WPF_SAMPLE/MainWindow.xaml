@@ -221,12 +221,13 @@
                       <ComboBoxItem Content="Hardware Coordinate Program" Tag="HardwareCoordinateProgram"/>
                     </ComboBox>
                   </StackPanel>
-                  <StackPanel Margin="0,0,8,8"><TextBlock Text="Server PC Host"/><TextBox x:Name="ServerHostBox" Text="127.0.0.1" ToolTip="AeroScript를 수신하고 Automation1을 실행하는 Scanner Server PC의 IP 또는 DNS 이름입니다."/></StackPanel>
+                  <StackPanel Margin="0,0,8,8"><TextBlock Text="Server PC Host"/><TextBox x:Name="ServerHostBox" Text="192.168.10.10" ToolTip="AeroScript를 수신하는 별도 Automation1Server 프로그램이 실행되는 Scanner Server PC 주소입니다. MDK 설치만으로 Server가 자동 실행되지는 않습니다."/></StackPanel>
                   <StackPanel Margin="0,0,8,8"><TextBlock Text="Server Port"/><TextBox x:Name="ServerPortBox" Text="46100" ToolTip="Client/Server 길이 프리픽스 JSON protocol이 사용하는 TCP listen port입니다."/></StackPanel>
                   <StackPanel Margin="0,0,8,8"><TextBlock Text="API Key"/><TextBox x:Name="ServerApiKeyBox" Text="change-this-key" ToolTip="Server 요청 인증값입니다. 운영에서는 기본값을 사용하지 말고 장비망 정책에 맞는 비밀값을 설정해야 합니다."/></StackPanel>
                   <StackPanel Margin="0,0,0,8"><TextBlock Text="Automation1 Task"/><TextBox x:Name="Automation1TaskIndexBox" Text="1" ToolTip="Controller.Runtime.Tasks[index]에서 AeroScript를 실행할 User Task 번호입니다. Task index는 1부터 시작합니다."/></StackPanel>
 
-                  <StackPanel Margin="0,0,8,8"><TextBlock Text="Controller File"/><TextBox x:Name="ControllerFileNameBox" Text="programs/mof_generated.ascript" ToolTip="Server가 Controller.Files.WriteText로 저장하고 Task.Program.Run에 전달할 Controller File System 경로입니다."/></StackPanel>
+                  <StackPanel Margin="0,0,8,8"><TextBlock Text="Controller File"/><TextBox x:Name="ControllerFileNameBox" Text="programs/mof_generated.ascript" ToolTip="Server가 Controller.Files.WriteText로 저장하고 Task.Program.Run에 전달하는 Controller 내부 경로입니다. Client PC의 D:\ 경로를 입력하는 항목이 아닙니다."/></StackPanel>
+                  <StackPanel Margin="0,0,8,8"><TextBlock Text="Local Script File"/><TextBox x:Name="LocalScriptPathBox" Text="mof_generated.ascript" ToolTip="Script 생성 버튼을 누를 때 Client PC에 실제로 저장할 파일입니다. 상대 경로는 실행 파일 폴더를 기준으로 계산합니다."/></StackPanel>
                   <StackPanel Margin="0,0,8,8"><TextBlock Text="Stage Axis"/><TextBox x:Name="StageAxisNameBox" Text="Y" ToolTip="기판을 이송하는 Stage 축 이름입니다. Virtual Wait 조건은 이 축의 PositionFeedback을 읽습니다."/></StackPanel>
                   <StackPanel Margin="0,0,8,8"><TextBlock Text="GX Axis Template"/><TextBox x:Name="AxisXTemplateBox" Text="GX" ToolTip="Scanner X축 이름입니다. {0}을 넣으면 선택 Head 번호로 치환됩니다."/></StackPanel>
                   <StackPanel Margin="0,0,8,8"><TextBlock Text="GY Axis Template"/><TextBox x:Name="AxisYTemplateBox" Text="GY" ToolTip="Scanner Y축 이름입니다. {0}을 넣으면 선택 Head 번호로 치환됩니다."/></StackPanel>
@@ -266,6 +267,8 @@
 
                 <WrapPanel Margin="0,0,0,8">
                   <Button x:Name="GenerateAeroScriptButton" Content="1. Script 생성" Margin="0,0,6,0" Click="GenerateAeroScriptButton_Click"/>
+                  <Button x:Name="OpenLocalScriptFolderButton" Content="저장 위치 열기" Margin="0,0,6,0" Click="OpenLocalScriptFolderButton_Click"/>
+                  <Button x:Name="ServerHealthCheckButton" Content="Server 연결 확인" Margin="0,0,6,0" Background="#075985" BorderBrush="#38BDF8" Click="ServerHealthCheckButton_Click"/>
                   <Button x:Name="UploadAeroScriptButton" Content="2. Server 전송" Margin="0,0,6,0" Click="UploadAeroScriptButton_Click"/>
                   <Button x:Name="RunAeroScriptButton" Content="3. Server 실행" Margin="0,0,6,0" Click="RunAeroScriptButton_Click"/>
                   <Button x:Name="QueryAeroScriptStatusButton" Content="상태 조회" Margin="0,0,6,0" Click="QueryAeroScriptStatusButton_Click"/>

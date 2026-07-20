@@ -483,3 +483,9 @@ GX + Stage Y MOF pair 전제
 이 경로에는 Laser, PSO, Hardware Aux, Galvo calibration 명령을 넣지 않는다. `SimulationAutomation1Runtime`은 protocol만 모사하므로 실제 Wait 검증은 Automation1 Virtual Controller에 `Automation1ReflectionRuntime`으로 접속해야 한다. Virtual axis feedback은 command와 동일하므로 결과는 논리 순서 검증이며 실제 Encoder 지연과 광학 동기 검증이 아니다. 상세 흐름은 `AUTOMATION1_VIRTUAL_WAIT_SIMULATION_FLOW.svg`를 참조한다.
 
 Server 실행 정책은 Virtual Controller에서 `VirtualOnly`, 실제 장비에서 `HardwareOnly`로 고정한다. 반대 생성 모드의 Package는 Controller File System에 기록하기 전 `MODE_POLICY_REJECTED`로 거부한다.
+
+### 2026-07-20 연결 및 좌표 I/F 보완
+
+Client의 `Script 생성`은 `Local Script File`에 실제 `.ascript`를 저장한 뒤 별도의 `Controller File` 경로를 Package에 넣는다. `AeroScriptClient.HealthCheckAsync`와 Server의 `HealthCheck` dispatch가 Upload 전에 TCP/API Key/ModePolicy를 확인한다. Scanner UI 선택은 선택 Head별 `InField` 좌표 합집합을 `_selectedPointKeys`에 반영한다.
+
+Script 이동값은 `CellCommand.Gx/Gy`이며 Review 표시값은 `ReviewCoordinateX/Y`이다. 생성 Script 주석과 Client 로그는 두 좌표를 함께 기록하지만 Scanner 명령에는 Process Gx/Gy만 사용한다.

@@ -43,6 +43,7 @@ public partial class MainWindow : Window
         LoadViewState();
         Loaded += (_, _) =>
         {
+            LocalScriptPathBox.Text = ResolveLocalScriptPath();
             LoadInputToScreen(_input);
             ConfigureParameterTooltips();
             GenerateAndRender();
@@ -160,6 +161,35 @@ public partial class MainWindow : Window
         });
     }
 
+    private async void ServerHealthCheckButton_Click(object sender, RoutedEventArgs e)
+    {
+        await RunScriptUiOperationAsync(async cancellationToken =>
+        {
+            AppendDeploymentLog($"[연결 확인] {ServerHostBox.Text.Trim()}:{ReadInt(ServerPortBox, 46100)} TCP 접속 시도");
+            var response = await CreateAeroScriptClient().HealthCheckAsync(cancellationToken);
+            EnsureServerSuccess("연결 확인", response);
+            ShowServerResponse("연결 확인", response);
+        });
+    }
+
+    private void OpenLocalScriptFolderButton_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var path = ResolveLocalScriptPath();
+            var directory = System.IO.Path.GetDirectoryName(path)
+                            ?? throw new InvalidOperationException("Local Script 저장 폴더를 계산할 수 없습니다.");
+            Directory.CreateDirectory(directory);
+
+            var arguments = File.Exists(path) ? $"/select,\"{path}\"" : $"\"{directory}\"";
+            Process.Start(new ProcessStartInfo("explorer.exe", arguments) { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            AppendDeploymentLog($"[저장 위치 열기 실패] {ex.Message}");
+        }
+    }
+
     private async void RunAeroScriptButton_Click(object sender, RoutedEventArgs e)
     {
         if (!ConfirmHardwareExecution(_currentScriptPackage?.GenerationMode ?? GetSelectedScriptMode()))
@@ -251,16 +281,47 @@ public partial class MainWindow : Window
         var source = _aeroScriptGenerator.Generate(_input, commandList, options);
         var taskIndex = Math.Max(1, ReadInt(Automation1TaskIndexBox, 1));
         var controllerFile = ControllerFileNameBox.Text.Trim();
+        ValidateControllerFileNameForClient(controllerFile);
+        var localScriptPath = AeroScriptLocalFileStore.Save(LocalScriptPathBox.Text, source, AppContext.BaseDirectory);
 
         _currentScriptPackage = AeroScriptPackage.Create(controllerFile, source, taskIndex, options.Mode);
+        LocalScriptPathBox.Text = localScriptPath;
         ScriptPreviewBox.Text = source;
         ScriptJobText.Text =
             $"생성 완료: Job={_currentScriptPackage.JobId}, 좌표={commandList.Length}, " +
             $"Mode={options.Mode}, SHA-256={_currentScriptPackage.Sha256[..16]}..., Task={taskIndex}";
         AppendDeploymentLog(
             $"[생성] Client PC에서 {options.Mode}, {commandList.Length}개 좌표로 " +
-            $"{_currentScriptPackage.ControllerFileName} 생성");
+            $"로컬 파일 저장 완료: {localScriptPath}");
+        AppendDeploymentLog(
+            $"[Controller 대상] Server 전송 후 Controller File System의 " +
+            $"{_currentScriptPackage.ControllerFileName}에 기록");
+        var firstCommand = commandList.First();
+        AppendDeploymentLog(
+            $"[좌표 기준] Script 이동값은 Process Gx/Gy=({firstCommand.Gx:0.######}, {firstCommand.Gy:0.######}), " +
+            $"Review 표시/측정 좌표=({firstCommand.ReviewCoordinateX:0.######}, {firstCommand.ReviewCoordinateY:0.######})입니다. " +
+            "두 좌표는 기준 원점과 물리 Offset이 다르므로 동일한 값이 아니며 Review 좌표를 Scanner 이동 명령에 직접 사용하지 않습니다.");
         return _currentScriptPackage;
+    }
+
+    private string ResolveLocalScriptPath()
+    {
+        return AeroScriptLocalFileStore.ResolvePath(LocalScriptPathBox.Text, AppContext.BaseDirectory);
+    }
+
+    private static void ValidateControllerFileNameForClient(string controllerFile)
+    {
+        if (string.IsNullOrWhiteSpace(controllerFile) ||
+            controllerFile.Contains('\\') ||
+            controllerFile.Contains(':') ||
+            controllerFile.Contains("..", StringComparison.Ordinal) ||
+            !controllerFile.EndsWith(".ascript", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                "Controller File은 Client PC의 D:\\ 경로가 아닙니다. " +
+                "'programs/mof_generated.ascript'처럼 Controller 내부 경로를 '/'로 입력하고, " +
+                "Client 저장 위치는 Local Script File에 입력하십시오.");
+        }
     }
 
     private AeroScriptGenerationOptions ReadAeroScriptGenerationOptions()
@@ -383,6 +444,7 @@ public partial class MainWindow : Window
     private void SetScriptButtonsEnabled(bool isEnabled)
     {
         GenerateAeroScriptButton.IsEnabled = isEnabled;
+        ServerHealthCheckButton.IsEnabled = isEnabled;
         UploadAeroScriptButton.IsEnabled = isEnabled;
         RunAeroScriptButton.IsEnabled = isEnabled;
         QueryAeroScriptStatusButton.IsEnabled = isEnabled;
@@ -394,20 +456,26 @@ public partial class MainWindow : Window
         var count = Math.Max(1, ReadInt(ScannerCountBox, _input.ScannerCount));
         _input.HighlightScannerHeads = string.Join(",", Enumerable.Range(1, count));
         LoadInputToScreen(_input);
-        GenerateAndRender();
+        GenerateAndRender(selectHighlightedScannerPoints: true);
     }
 
     private void ClearScannerSelectionButton_Click(object sender, RoutedEventArgs e)
     {
         _input.HighlightScannerHeads = "";
+        _selectedPointKeys.Clear();
+        _selectionAnchor = null;
         LoadInputToScreen(_input);
-        GenerateAndRender();
+        GenerateAndRender(keepEmptySelection: true);
     }
 
-    private void GenerateAndRender()
+    private void GenerateAndRender(bool selectHighlightedScannerPoints = false, bool keepEmptySelection = false)
     {
         _lastResult = _service.Generate(_input);
-        if (_selectedPointKeys.Count == 0)
+        if (selectHighlightedScannerPoints)
+        {
+            SelectAllProcessablePointsForHighlightedScanners();
+        }
+        else if (_selectedPointKeys.Count == 0 && !keepEmptySelection)
         {
             ResetSelectionFromInput();
         }
@@ -812,7 +880,34 @@ public partial class MainWindow : Window
 
             _input.HighlightScannerHeads = string.Join(",", selectedHeads.OrderBy(x => x));
             LoadInputToScreen(_input);
-            GenerateAndRender();
+            GenerateAndRender(selectHighlightedScannerPoints: true, keepEmptySelection: true);
+        }
+    }
+
+    private void SelectAllProcessablePointsForHighlightedScanners()
+    {
+        _selectedPointKeys.Clear();
+        _selectionAnchor = null;
+        if (_lastResult is null)
+        {
+            return;
+        }
+
+        var selectedHeads = ParseScannerHeadSet(_input.HighlightScannerHeads);
+        var processable = _lastResult.Commands
+            .Where(command => command.InField && selectedHeads.Contains(command.ScannerIndex))
+            .OrderBy(command => command.MofSequence)
+            .ToArray();
+
+        foreach (var command in processable)
+        {
+            _selectedPointKeys.Add(PointKey(command));
+        }
+
+        _selectionAnchor = processable.FirstOrDefault();
+        if (_selectionAnchor is not null)
+        {
+            SetInputSelection(_selectionAnchor);
         }
     }
 

@@ -5028,6 +5028,15 @@ Type count: 78
   - public Void InitializeComponent()
   - private Void System.Windows.Markup.IComponentConnector.Connect(Int32 connectionId, Object target)
 
+## Automation1 Script I/F Update (2026-07-20)
+
+- `AeroScriptClient.HealthCheckAsync`: Server TCP 수신과 API Key/ModePolicy 준비 상태를 Job 생성 전에 확인한다.
+- `ScriptRequestType.HealthCheck`: protocol v3 준비 상태 요청이다.
+- `AeroScriptServer.DispatchAsync`: HealthCheck에 bind 주소, port, mode policy, 최대 Script 크기를 응답한다.
+- `AeroScriptLocalFileStore`: Local Script 경로 정규화, 폴더 생성, UTF-8(no BOM) 실제 파일 저장을 담당한다.
+- `MainWindow.GenerateCurrentAeroScriptPackage`: Process/Review 좌표 로그를 남기고 Client의 Local Script File에 UTF-8(no BOM) 파일을 실제 저장한다.
+- `MainWindow.SelectAllProcessablePointsForHighlightedScanners`: 선택 Head의 `InField` 좌표 전체를 Matrix 선택 집합으로 만든다.
+
 ## MOF Coordinate Sample - Automation1 Client/Server Classes (2026-07-20)
 
 - `AeroScriptGenerator`: Client PC에서 `VirtualWaitSimulation` 또는 `HardwareCoordinateProgram`을 생성한다. Virtual 모드는 단일 Head, Stage PositionFeedback wait, GX band/GY point 반복을 강제한다.

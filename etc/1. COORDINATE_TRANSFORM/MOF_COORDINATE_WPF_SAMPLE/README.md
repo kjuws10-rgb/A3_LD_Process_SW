@@ -171,3 +171,12 @@ Transform Consistency Error = (0, 0)
 - Cell Pitch: (50, 45) mm.
 - Pattern Offset: (10, 0) mm.
 - Scanner H5 예제 중심: H1=(479.7,1640.1), PitchX=100 이므로 H5=(879.7,1640.1).
+
+## Scanner 전체 좌표 선택 및 Script 파일
+
+- Scanner 아이콘을 선택하면 선택된 모든 Head에 대해 `InField=true`인 가공 가능 좌표 전체가 Matrix 선택 집합에 들어간다.
+- 여러 Head 선택은 각 Head의 가공 가능 좌표 합집합이며, Scanner 선택 해제 시 해당 합집합을 다시 계산한다.
+- `Local Script File`은 Client PC 실제 파일 경로이고 Script 생성 즉시 저장된다.
+- `Controller File`은 Server 전송 뒤 Automation1 Controller 내부에서 사용할 경로이다.
+- `Server 연결 확인`은 protocol v3 `HealthCheck`로 TCP 수신, API Key, Server ModePolicy를 먼저 검증한다.
+- Server PC 배포와 방화벽 설정은 `SERVER_PC_CONNECTION_GUIDE.md`를 따른다.

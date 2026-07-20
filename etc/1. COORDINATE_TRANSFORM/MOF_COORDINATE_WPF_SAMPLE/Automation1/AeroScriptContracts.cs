@@ -5,6 +5,7 @@ namespace MofCoordinateDemo.Automation1;
 
 public enum ScriptRequestType
 {
+    HealthCheck,
     UploadScript,
     RunScript,
     GetStatus
@@ -73,7 +74,10 @@ public sealed record ScriptServerRequest(
     string? JobId,
     AeroScriptPackage? Package)
 {
-    public const int CurrentProtocolVersion = 2;
+    public const int CurrentProtocolVersion = 3;
+
+    public static ScriptServerRequest Health(string apiKey) =>
+        new(CurrentProtocolVersion, ScriptRequestType.HealthCheck, NewRequestId(), apiKey, null, null);
 
     public static ScriptServerRequest Upload(string apiKey, AeroScriptPackage package) =>
         new(CurrentProtocolVersion, ScriptRequestType.UploadScript, NewRequestId(), apiKey, package.JobId, package);
