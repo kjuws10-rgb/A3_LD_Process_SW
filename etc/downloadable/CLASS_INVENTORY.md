@@ -5028,6 +5028,19 @@ Type count: 78
   - public Void InitializeComponent()
   - private Void System.Windows.Markup.IComponentConnector.Connect(Int32 connectionId, Object target)
 
+## MOF Coordinate Sample - Automation1 Client/Server Classes (2026-07-20)
+
+- `AeroScriptGenerator`: Client PC에서 좌표/가공 조건을 AeroScript source로 변환한다.
+- `AeroScriptPackage`: Job ID, controller file, UTF-8 source, SHA-256, Task index를 전달한다.
+- `ScriptServerRequest` / `ScriptServerResponse`: Upload, Run, Status protocol 계약이다.
+- `AeroScriptProtocol`: 4-byte big-endian 길이와 UTF-8 JSON frame을 읽고 쓴다.
+- `AeroScriptClient`: WPF Client에서 Scanner Server로 명령을 보낸다.
+- `AeroScriptServer`: Server PC의 검증, spool 저장, 단일 Task 실행 queue, 상태 snapshot을 관리한다.
+- `IAutomation1Runtime`: Server와 Automation1 실행 구현 사이의 경계이다.
+- `SimulationAutomation1Runtime`: SDK 없는 PC에서 전송부터 완료까지 검증한다.
+- `Automation1ReflectionRuntime`: 공식 Automation1 .NET API DLL을 런타임에 로드해 `Files.WriteText`, `Task.Program.Run`, `TaskState` 폴링을 수행한다.
+- `Automation1Server/Program`: Server PC용 독립 실행 진입점과 TCP 통합 self-test를 제공한다.
+
 ## Local Update: Shell UI / Review Offset Base
 
 This section documents the local-only changes made after the original inventory generation.

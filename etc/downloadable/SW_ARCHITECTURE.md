@@ -450,3 +450,20 @@ Requirement mapping:
 - `자동 정밀도 보정 / APC 보정`: represented as `EN_REVIEW_MEASUREMENT_MODE.ApcCorrection`; file watcher/parser still needs implementation.
 - `0선 방어`: represented as `EN_REVIEW_MEASUREMENT_MODE.ZeroLineDefense`.
 - `Fine/Rough/Simple 보정`: represented as separate review modes; detailed UI and algorithm variants remain future implementation.
+
+## Automation1 AeroScript Client/Server I/F (2026-07-20)
+
+```text
+Recipe / Review / Scanner parameters
+  -> CoordinateTransformService (Client PC)
+  -> AeroScriptGenerator (Client PC only)
+  -> UploadScript + SHA-256
+  -> Scanner Server spool
+  -> RunScript command
+  -> Controller.Files.WriteText
+  -> Runtime.Tasks[n].Program.Run
+  -> TaskState polling
+  -> Completed / Failed response to Client UI
+```
+
+Server PC는 좌표와 AeroScript를 생성하거나 수정하지 않는다. Upload와 Run은 서로 다른 명령이며, Server는 동일 Automation1 Task에 대한 동시 실행을 직렬화한다. 자세한 설정과 protocol 계약은 `AUTOMATION1_AEROSCRIPT_CLIENT_SERVER_GUIDE.md` 및 `AUTOMATION1_AEROSCRIPT_CLIENT_SERVER_FLOW.svg`를 참조한다.

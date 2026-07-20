@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900">
+  <defs>
+    <style>
+      .title{font:700 30px 'Segoe UI',sans-serif;fill:#f8fafc}.h{font:700 20px 'Segoe UI',sans-serif;fill:#f8fafc}.t{font:15px 'Segoe UI',sans-serif;fill:#cbd5e1}.s{font:13px 'Segoe UI',sans-serif;fill:#94a3b8}.box{fill:#111827;stroke:#334155;stroke-width:2}.client{fill:#0f2d3b;stroke:#22d3ee;stroke-width:2}.server{fill:#172554;stroke:#60a5fa;stroke-width:2}.controller{fill:#1f2937;stroke:#a78bfa;stroke-width:2}.ok{fill:#064e3b;stroke:#34d399;stroke-width:2}.arrow{stroke:#67e8f9;stroke-width:3;fill:none;marker-end:url(#m)}
+    </style>
+    <marker id="m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#67e8f9"/></marker>
+  </defs>
+  <rect width="1600" height="900" fill="#0b1120"/>
+  <text x="60" y="58" class="title">Automation1 AeroScript: Client 생성 → Server 실행 → 완료 확인</text>
+
+  <rect x="55" y="100" width="450" height="680" rx="8" class="client"/>
+  <text x="80" y="140" class="h">A1 상위 프로그램 / Client PC</text>
+  <rect x="85" y="175" width="390" height="95" rx="6" class="box"/><text x="110" y="207" class="h">1. 공정 입력</text><text x="110" y="235" class="t">Recipe + Review 보정 + Scanner/DOE 조건</text>
+  <rect x="85" y="300" width="390" height="105" rx="6" class="box"/><text x="110" y="332" class="h">2. 좌표 계산</text><text x="110" y="360" class="t">Stage → Scanner Gx/Gy</text><text x="110" y="384" class="s">역물류 MOF 순서 / 가공 가능 Head 필터</text>
+  <rect x="85" y="435" width="390" height="110" rx="6" class="box"/><text x="110" y="467" class="h">3. AeroScript 생성</text><text x="110" y="495" class="t">AeroScriptGenerator</text><text x="110" y="520" class="s">Job ID + UTF-8 Source + SHA-256 + Task</text>
+  <rect x="85" y="575" width="390" height="165" rx="6" class="box"/><text x="110" y="607" class="h">4. 명령 분리</text><text x="110" y="638" class="t">UploadScript: Script 전송만 수행</text><text x="110" y="668" class="t">RunScript: 검증된 Job 실행 지시</text><text x="110" y="698" class="t">GetStatus: 완료/오류 상태 조회</text>
+
+  <rect x="585" y="100" width="450" height="680" rx="8" class="server"/>
+  <text x="610" y="140" class="h">스캐너 연결 Server PC</text>
+  <rect x="615" y="175" width="390" height="105" rx="6" class="box"/><text x="640" y="207" class="h">5. 전송 검증 및 보관</text><text x="640" y="235" class="t">API Key / 크기 / 파일명 / SHA-256</text><text x="640" y="259" class="s">서버에서는 좌표와 Script를 다시 생성하지 않음</text>
+  <rect x="615" y="315" width="390" height="105" rx="6" class="box"/><text x="640" y="347" class="h">6. 실행 Queue</text><text x="640" y="375" class="t">동일 Task 동시 실행 방지</text><text x="640" y="399" class="s">Uploaded → Queued</text>
+  <rect x="615" y="455" width="390" height="145" rx="6" class="box"/><text x="640" y="487" class="h">7. Automation1 Adapter</text><text x="640" y="518" class="t">Controller.Files.WriteText()</text><text x="640" y="546" class="t">Runtime.Tasks[n].Program.Run()</text><text x="640" y="574" class="s">Simulation / 실제 .NET API 런타임 선택</text>
+  <rect x="615" y="635" width="390" height="105" rx="6" class="ok"/><text x="640" y="667" class="h">8. 상태 Snapshot</text><text x="640" y="697" class="t">ProgramRunning / ProgramComplete / Error</text><text x="640" y="721" class="s">한 번 읽은 Task Status snapshot 사용</text>
+
+  <rect x="1115" y="100" width="430" height="680" rx="8" class="controller"/>
+  <text x="1140" y="140" class="h">Automation1 Controller</text>
+  <rect x="1145" y="205" width="370" height="120" rx="6" class="box"/><text x="1170" y="238" class="h">Controller File System</text><text x="1170" y="270" class="t">programs/mof_generated.ascript</text><text x="1170" y="296" class="s">UTF-8, 동일 이름은 overwrite</text>
+  <rect x="1145" y="375" width="370" height="145" rx="6" class="box"/><text x="1170" y="408" class="h">User Task n</text><text x="1170" y="440" class="t">Load/compile 후 Program.Run</text><text x="1170" y="468" class="t">Scanner Head별 Gx/Gy 이동</text><text x="1170" y="496" class="s">Run 호출은 완료까지 대기하지 않음</text>
+  <rect x="1145" y="570" width="370" height="120" rx="6" class="ok"/><text x="1170" y="603" class="h">최종 결과</text><text x="1170" y="635" class="t">ProgramComplete 또는 ErrorInformation</text><text x="1170" y="663" class="s">Server → Client 상태 응답</text>
+
+  <path d="M475 225H615" class="arrow"/><text x="506" y="210" class="s">TCP Upload</text>
+  <path d="M475 650H615" class="arrow"/><text x="510" y="635" class="s">Run/Status</text>
+  <path d="M1005 515H1145" class="arrow"/><text x="1032" y="500" class="s">.NET API</text>
+  <path d="M1145 635H1005" class="arrow"/><text x="1030" y="620" class="s">TaskState</text>
+  <path d="M615 705C560 830 360 830 300 740" class="arrow"/><text x="400" y="838" class="t">Completed / Failed를 Client UI에 최종 표시</text>
+  <text x="60" y="850" class="s">운영 전 확정: 실제 Axis 이름, Task 점유, PSO/IFOV/레이저 Trigger, Interlock, TLS/방화벽, Timeout 및 재시도 정책</text>
+</svg>
+

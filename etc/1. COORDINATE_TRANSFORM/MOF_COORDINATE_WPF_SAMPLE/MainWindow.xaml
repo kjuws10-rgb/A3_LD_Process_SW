@@ -210,6 +210,113 @@
               </StackPanel>
             </ScrollViewer>
           </TabItem>
+          <TabItem Header="Automation1 Script I/F">
+            <Grid Margin="12">
+              <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+              </Grid.RowDefinitions>
+
+              <UniformGrid Columns="4" Margin="0,0,0,8">
+                <StackPanel Margin="0,0,8,0">
+                  <TextBlock Text="Server PC Host"/>
+                  <TextBox x:Name="ServerHostBox" Text="127.0.0.1" ToolTip="AeroScript를 수신하고 Automation1을 실행하는 Scanner Server PC의 IP 또는 DNS 이름입니다."/>
+                </StackPanel>
+                <StackPanel Margin="0,0,8,0">
+                  <TextBlock Text="Server Port"/>
+                  <TextBox x:Name="ServerPortBox" Text="46100" ToolTip="Client/Server 길이 프리픽스 JSON protocol이 사용하는 TCP listen port입니다."/>
+                </StackPanel>
+                <StackPanel Margin="0,0,8,0">
+                  <TextBlock Text="API Key"/>
+                  <TextBox x:Name="ServerApiKeyBox" Text="change-this-key" ToolTip="Server 요청 인증값입니다. 운영에서는 기본값을 사용하지 말고 장비망 정책에 맞는 비밀값을 설정해야 합니다."/>
+                </StackPanel>
+                <StackPanel>
+                  <TextBlock Text="Automation1 Task"/>
+                  <TextBox x:Name="Automation1TaskIndexBox" Text="1" ToolTip="Controller.Runtime.Tasks[index]에서 AeroScript를 실행할 Automation1 User Task 번호입니다. Task index는 1부터 시작합니다."/>
+                </StackPanel>
+                <StackPanel Margin="0,8,8,0">
+                  <TextBlock Text="Controller File"/>
+                  <TextBox x:Name="ControllerFileNameBox" Text="programs/mof_generated.ascript" ToolTip="Server가 Controller.Files.WriteText로 저장하고 Task.Program.Run에 전달할 Controller File System 경로입니다."/>
+                </StackPanel>
+                <StackPanel Margin="0,8,8,0">
+                  <TextBlock Text="Gx Axis Template"/>
+                  <TextBox x:Name="AxisXTemplateBox" Text="Gx{0}" ToolTip="Scanner Head별 X축 이름 규칙입니다. {0}이 Head 번호로 치환됩니다. 실제 MCD Axis 이름과 일치해야 합니다."/>
+                </StackPanel>
+                <StackPanel Margin="0,8,8,0">
+                  <TextBlock Text="Gy Axis Template"/>
+                  <TextBox x:Name="AxisYTemplateBox" Text="Gy{0}" ToolTip="Scanner Head별 Y축 이름 규칙입니다. {0}이 Head 번호로 치환됩니다. 실제 MCD Axis 이름과 일치해야 합니다."/>
+                </StackPanel>
+                <StackPanel Margin="0,8,0,0">
+                  <TextBlock Text="Coordinated Speed"/>
+                  <TextBox x:Name="CoordinatedSpeedBox" Text="100" ToolTip="생성되는 MoveLinear의 coordinated speed입니다. 장비 단위, 축 제한과 공정 조건을 검증한 값을 사용해야 합니다."/>
+                </StackPanel>
+              </UniformGrid>
+
+              <DockPanel Grid.Row="1" Margin="0,0,0,8">
+                <CheckBox x:Name="SelectedCoordinatesOnlyCheckBox"
+                          DockPanel.Dock="Left"
+                          Content="선택 좌표만 Script 생성"
+                          VerticalAlignment="Center"
+                          Foreground="#E2E8F0"
+                          Margin="0,0,14,0"/>
+                <WrapPanel>
+                  <Button x:Name="GenerateAeroScriptButton"
+                          Content="1. Script 생성"
+                          Margin="0,0,6,0"
+                          Click="GenerateAeroScriptButton_Click"/>
+                  <Button x:Name="UploadAeroScriptButton"
+                          Content="2. Server 전송"
+                          Margin="0,0,6,0"
+                          Click="UploadAeroScriptButton_Click"/>
+                  <Button x:Name="RunAeroScriptButton"
+                          Content="3. Server 실행"
+                          Margin="0,0,6,0"
+                          Click="RunAeroScriptButton_Click"/>
+                  <Button x:Name="QueryAeroScriptStatusButton"
+                          Content="상태 조회"
+                          Margin="0,0,6,0"
+                          Click="QueryAeroScriptStatusButton_Click"/>
+                  <Button x:Name="ExecuteAeroScriptWorkflowButton"
+                          Content="전체 실행 및 완료 대기"
+                          Background="#047857"
+                          BorderBrush="#10B981"
+                          Click="ExecuteAeroScriptWorkflowButton_Click"/>
+                </WrapPanel>
+              </DockPanel>
+
+              <Grid Grid.Row="2">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="1.45*"/>
+                  <ColumnDefinition Width="10"/>
+                  <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <TextBox x:Name="ScriptPreviewBox"
+                         FontFamily="Consolas"
+                         FontSize="11"
+                         IsReadOnly="True"
+                         AcceptsReturn="True"
+                         TextWrapping="NoWrap"
+                         VerticalScrollBarVisibility="Auto"
+                         HorizontalScrollBarVisibility="Auto"/>
+                <TextBox x:Name="DeploymentLogBox"
+                         Grid.Column="2"
+                         FontFamily="Consolas"
+                         FontSize="11"
+                         IsReadOnly="True"
+                         AcceptsReturn="True"
+                         TextWrapping="Wrap"
+                         VerticalScrollBarVisibility="Auto"/>
+              </Grid>
+
+              <TextBlock x:Name="ScriptJobText"
+                         Grid.Row="3"
+                         Margin="0,8,0,0"
+                         Foreground="#67E8F9"
+                         Text="대기: Client PC에서 Script를 생성한 뒤 Server PC로 전송하십시오."/>
+            </Grid>
+          </TabItem>
         </TabControl>
       </Border>
 
