@@ -10,7 +10,8 @@
 2. 생성된 `ServerDeployment\win-x64` 폴더 전체를 Server PC `192.168.10.10`으로 복사한다.
 3. Server PC에서 `OPEN_SERVER_FIREWALL_PORT_46100_ADMIN.bat`를 관리자 권한으로 한 번 실행한다.
 4. Server PC에서 `START_AUTOMATION1_SERVER.bat`를 실행하고 Client UI와 동일한 API Key를 입력한다.
-5. 콘솔에 `Automation1 Script Server: 0.0.0.0:46100`이 표시된 상태로 창을 계속 열어 둔다.
+5. 현재 화면처럼 `Virtual Wait Simulation` Script를 보낼 때는 기본값 `VirtualOnly`를 선택한다. 실제 장비용 `Hardware Coordinate Program`을 보낼 때만 `HardwareOnly`를 선택한다.
+6. 콘솔에 `Automation1 Script Server: 0.0.0.0:46100`이 표시된 상태로 창을 계속 열어 둔다.
 
 실제 Automation1 .NET API DLL 자동 탐색이 실패하면 Server 실행 전에 `AUTOMATION1_NET_DLL` 환경 변수에 `Aerotech.Automation1.dll`의 전체 경로를 지정한다.
 

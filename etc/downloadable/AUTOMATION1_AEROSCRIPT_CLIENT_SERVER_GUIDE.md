@@ -187,7 +187,7 @@ RUN_AUTOMATION1_SERVER_REAL.bat
 1. `PUBLISH_AUTOMATION1_SERVER_WIN64.bat`로 독립 실행 배포 폴더를 만든다.
 2. 폴더 전체를 Server PC로 복사한다.
 3. Server PC에서 `OPEN_SERVER_FIREWALL_PORT_46100_ADMIN.bat`를 관리자 권한으로 실행한다.
-4. `START_AUTOMATION1_SERVER.bat`를 실행하고 Client와 같은 API Key를 입력한다.
+4. `START_AUTOMATION1_SERVER.bat`를 실행하고 Client와 같은 API Key를 입력한다. 현재 `VirtualWaitSimulation`은 `VirtualOnly`, 실제 장비 좌표 프로그램은 `HardwareOnly`를 선택한다.
 5. Client에서 `CHECK_SERVER_PORT_FROM_CLIENT.bat`의 `TcpTestSucceeded`를 확인한다.
 6. WPF에서 `Server 연결 확인`이 성공한 뒤 Upload/Run을 수행한다.
 
