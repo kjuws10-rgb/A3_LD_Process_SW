@@ -39,6 +39,27 @@
       <Setter Property="Foreground" Value="#E2E8F0"/>
       <Setter Property="Cursor" Value="Hand"/>
     </Style>
+    <Style TargetType="CheckBox">
+      <Setter Property="Foreground" Value="#E2E8F0"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="VerticalContentAlignment" Value="Center"/>
+    </Style>
+    <Style TargetType="ComboBox">
+      <Setter Property="MinHeight" Value="25"/>
+      <Setter Property="Padding" Value="5,2"/>
+      <Setter Property="Background" Value="#0F172A"/>
+      <Setter Property="Foreground" Value="#E5E7EB"/>
+      <Setter Property="BorderBrush" Value="#334155"/>
+    </Style>
+    <Style TargetType="ComboBoxItem">
+      <Setter Property="Background" Value="#111827"/>
+      <Setter Property="Foreground" Value="#E5E7EB"/>
+      <Setter Property="Padding" Value="6,4"/>
+    </Style>
+    <Style TargetType="Expander">
+      <Setter Property="Foreground" Value="#93C5FD"/>
+      <Setter Property="Background" Value="#111827"/>
+    </Style>
     <Style x:Key="SectionTitleStyle" TargetType="TextBlock">
       <Setter Property="FontSize" Value="15"/>
       <Setter Property="FontWeight" Value="Bold"/>

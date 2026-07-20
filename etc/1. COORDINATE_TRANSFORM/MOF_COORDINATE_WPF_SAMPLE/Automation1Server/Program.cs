@@ -16,6 +16,12 @@ var port = GetInt(arguments, "port", 46100);
 var apiKey = Get(arguments, "api-key", Environment.GetEnvironmentVariable("A1_SCRIPT_API_KEY") ?? "change-this-key");
 var spool = Path.GetFullPath(Get(arguments, "spool", Path.Combine(AppContext.BaseDirectory, "script-spool")));
 var runtimeName = Get(arguments, "runtime", "simulation");
+var defaultModePolicy = runtimeName.Equals("automation1", StringComparison.OrdinalIgnoreCase)
+    ? AeroScriptModePolicy.HardwareOnly
+    : AeroScriptModePolicy.Any;
+var modePolicy = Enum.TryParse<AeroScriptModePolicy>(Get(arguments, "mode-policy", defaultModePolicy.ToString()), true, out var parsedPolicy)
+    ? parsedPolicy
+    : throw new ArgumentException("--mode-policy must be Any, VirtualOnly or HardwareOnly.");
 
 IAutomation1Runtime runtime = runtimeName.Equals("automation1", StringComparison.OrdinalIgnoreCase)
     ? new Automation1ReflectionRuntime(Get(arguments, "controller", ""), Get(arguments, "dll", ""))
@@ -27,7 +33,8 @@ var options = new ScriptServerOptions(
     apiKey,
     spool,
     24 * 1024 * 1024,
-    TimeSpan.FromMinutes(GetInt(arguments, "timeout-minutes", 30)));
+    TimeSpan.FromMinutes(GetInt(arguments, "timeout-minutes", 30)),
+    modePolicy);
 
 using var shutdown = new CancellationTokenSource();
 Console.CancelKeyPress += (_, eventArgs) =>
@@ -37,8 +44,12 @@ Console.CancelKeyPress += (_, eventArgs) =>
 };
 
 Console.WriteLine($"Automation1 Script Server: {bind}:{port}");
-Console.WriteLine($"Runtime: {runtimeName}, Spool: {spool}");
+Console.WriteLine($"Runtime: {runtimeName}, ModePolicy: {modePolicy}, Spool: {spool}");
 Console.WriteLine("Client가 생성한 AeroScript만 수신하며, 서버에서는 좌표/script를 생성하지 않습니다.");
+if (!runtimeName.Equals("automation1", StringComparison.OrdinalIgnoreCase))
+{
+    Console.WriteLine("주의: simulation runtime은 TCP/Job 상태만 모사하며 AeroScript 구문이나 Wait 동작을 실행하지 않습니다.");
+}
 Console.WriteLine("종료: Ctrl+C");
 
 await using var server = new AeroScriptServer(options, runtime);
@@ -78,7 +89,8 @@ static async Task RunSelfTestAsync()
         apiKey,
         spool,
         1024 * 1024,
-        TimeSpan.FromSeconds(10));
+        TimeSpan.FromSeconds(10),
+        AeroScriptModePolicy.VirtualOnly);
 
     using var shutdown = new CancellationTokenSource();
     await using var server = new AeroScriptServer(options, new SimulationAutomation1Runtime(TimeSpan.FromMilliseconds(150)));
@@ -89,17 +101,51 @@ static async Task RunSelfTestAsync()
         await Task.Delay(100);
         var coordinateInput = new CoordinateInput();
         var coordinateResult = new CoordinateTransformService().Generate(coordinateInput);
-        var generatedSource = new AeroScriptGenerator().Generate(
+        var generator = new AeroScriptGenerator();
+        var firstHead = coordinateResult.MofExecutionCommands[0].ScannerIndex;
+        var simulationCommands = coordinateResult.MofExecutionCommands
+            .Where(command => command.ScannerIndex == firstHead)
+            .Take(10)
+            .ToArray();
+        var generatedSource = generator.Generate(
+            coordinateInput,
+            simulationCommands,
+            new AeroScriptGenerationOptions
+            {
+                Mode = AeroScriptGenerationMode.VirtualWaitSimulation,
+                AxisXTemplate = "GX",
+                AxisYTemplate = "GY",
+                StageAxisName = "Y",
+                StageTravelDistance = 100,
+                WaitStepY = 10
+            });
+        if (!generatedSource.Contains("AxisStatusItem.PositionFeedback", StringComparison.Ordinal) ||
+            generatedSource.Contains("LaserOutput", StringComparison.Ordinal) ||
+            generatedSource.Contains("PsoOutput", StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException("Virtual wait script safety contract failed.");
+        }
+
+        var hardwareSource = generator.Generate(
             coordinateInput,
             coordinateResult.MofExecutionCommands.Take(5).ToArray(),
-            new AeroScriptGenerationOptions("Gx{0}", "Gy{0}", 100, true, false));
-        if (!generatedSource.Contains("MoveLinear", StringComparison.Ordinal))
+            new AeroScriptGenerationOptions
+            {
+                Mode = AeroScriptGenerationMode.HardwareCoordinateProgram,
+                AxisXTemplate = "GX{0}",
+                AxisYTemplate = "GY{0}"
+            });
+        if (!hardwareSource.Contains("MoveLinear", StringComparison.Ordinal))
         {
-            throw new InvalidOperationException("AeroScript generator did not create motion commands.");
+            throw new InvalidOperationException("Hardware coordinate script did not create motion commands.");
         }
 
         var client = new AeroScriptClient("127.0.0.1", port, apiKey);
-        var package = AeroScriptPackage.Create("programs/self-test.ascript", generatedSource, 1);
+        var package = AeroScriptPackage.Create(
+            "programs/self-test.ascript",
+            generatedSource,
+            1,
+            AeroScriptGenerationMode.VirtualWaitSimulation);
 
         EnsureSuccess(await client.UploadAsync(package, CancellationToken.None), "upload");
         EnsureSuccess(await client.RunAsync(package.JobId, CancellationToken.None), "run");
@@ -118,7 +164,18 @@ static async Task RunSelfTestAsync()
             throw new InvalidOperationException($"Self-test failed: {response.Job?.Message}");
         }
 
-        Console.WriteLine("SELF-TEST PASS: client generation -> upload -> run -> completion verified.");
+        var rejectedHardwarePackage = AeroScriptPackage.Create(
+            "programs/hardware-must-be-rejected.ascript",
+            hardwareSource,
+            1,
+            AeroScriptGenerationMode.HardwareCoordinateProgram);
+        var rejected = await client.UploadAsync(rejectedHardwarePackage, CancellationToken.None);
+        if (rejected.Success || rejected.ErrorCode != "MODE_POLICY_REJECTED")
+        {
+            throw new InvalidOperationException("VirtualOnly server accepted a HardwareCoordinateProgram job.");
+        }
+
+        Console.WriteLine("SELF-TEST PASS: generation, upload/run/completion and mode-policy rejection verified.");
     }
     finally
     {

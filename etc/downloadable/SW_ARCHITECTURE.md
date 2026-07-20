@@ -467,3 +467,19 @@ Recipe / Review / Scanner parameters
 ```
 
 Server PC는 좌표와 AeroScript를 생성하거나 수정하지 않는다. Upload와 Run은 서로 다른 명령이며, Server는 동일 Automation1 Task에 대한 동시 실행을 직렬화한다. 자세한 설정과 protocol 계약은 `AUTOMATION1_AEROSCRIPT_CLIENT_SERVER_GUIDE.md` 및 `AUTOMATION1_AEROSCRIPT_CLIENT_SERVER_FLOW.svg`를 참조한다.
+
+### Virtual Wait Simulation 경로
+
+```text
+GX + Stage Y MOF pair 전제
+  -> MoveAbsolute(Y, StartY + Travel, Speed) 비동기 시작
+  -> GX band별 GY drill point + MoveDelay 반복
+  -> wait(StatusGetAxisItem(Y, PositionFeedback) threshold)
+  -> 다음 GX band 진행
+  -> 마지막에 WaitForMotionDone(Y) + WaitForInPosition(Y)
+  -> ProgramComplete
+```
+
+이 경로에는 Laser, PSO, Hardware Aux, Galvo calibration 명령을 넣지 않는다. `SimulationAutomation1Runtime`은 protocol만 모사하므로 실제 Wait 검증은 Automation1 Virtual Controller에 `Automation1ReflectionRuntime`으로 접속해야 한다. Virtual axis feedback은 command와 동일하므로 결과는 논리 순서 검증이며 실제 Encoder 지연과 광학 동기 검증이 아니다. 상세 흐름은 `AUTOMATION1_VIRTUAL_WAIT_SIMULATION_FLOW.svg`를 참조한다.
+
+Server 실행 정책은 Virtual Controller에서 `VirtualOnly`, 실제 장비에서 `HardwareOnly`로 고정한다. 반대 생성 모드의 Package는 Controller File System에 기록하기 전 `MODE_POLICY_REJECTED`로 거부한다.

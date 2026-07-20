@@ -22,15 +22,33 @@ public enum ScriptJobState
     Rejected
 }
 
+public enum AeroScriptGenerationMode
+{
+    VirtualWaitSimulation,
+    HardwareCoordinateProgram
+}
+
+public enum AeroScriptModePolicy
+{
+    Any,
+    VirtualOnly,
+    HardwareOnly
+}
+
 public sealed record AeroScriptPackage(
     string JobId,
     string ControllerFileName,
     string ScriptText,
     string Sha256,
     int TaskIndex,
+    AeroScriptGenerationMode GenerationMode,
     DateTimeOffset CreatedAtUtc)
 {
-    public static AeroScriptPackage Create(string controllerFileName, string scriptText, int taskIndex)
+    public static AeroScriptPackage Create(
+        string controllerFileName,
+        string scriptText,
+        int taskIndex,
+        AeroScriptGenerationMode generationMode)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(controllerFileName);
         ArgumentException.ThrowIfNullOrWhiteSpace(scriptText);
@@ -42,6 +60,7 @@ public sealed record AeroScriptPackage(
             scriptText,
             Convert.ToHexString(SHA256.HashData(scriptBytes)),
             taskIndex,
+            generationMode,
             DateTimeOffset.UtcNow);
     }
 }
@@ -54,7 +73,7 @@ public sealed record ScriptServerRequest(
     string? JobId,
     AeroScriptPackage? Package)
 {
-    public const int CurrentProtocolVersion = 1;
+    public const int CurrentProtocolVersion = 2;
 
     public static ScriptServerRequest Upload(string apiKey, AeroScriptPackage package) =>
         new(CurrentProtocolVersion, ScriptRequestType.UploadScript, NewRequestId(), apiKey, package.JobId, package);
@@ -74,6 +93,7 @@ public sealed record ScriptJobStatus(
     string Message,
     string ControllerFileName,
     int TaskIndex,
+    AeroScriptGenerationMode GenerationMode,
     string Sha256,
     DateTimeOffset UpdatedAtUtc);
 
@@ -92,12 +112,31 @@ public sealed record ScriptServerResponse(
         new(ScriptServerRequest.CurrentProtocolVersion, request.RequestId, false, code, message, job);
 }
 
-public sealed record AeroScriptGenerationOptions(
-    string AxisXTemplate,
-    string AxisYTemplate,
-    double CoordinatedSpeed,
-    bool EnableAxes,
-    bool DisableAxesAtEnd);
+public sealed record AeroScriptGenerationOptions
+{
+    public AeroScriptGenerationMode Mode { get; init; } = AeroScriptGenerationMode.VirtualWaitSimulation;
+    public string StageAxisName { get; init; } = "Y";
+    public string AxisXTemplate { get; init; } = "GX";
+    public string AxisYTemplate { get; init; } = "GY";
+    public double StartYPosition { get; init; } = 500;
+    public double StageTravelDistance { get; init; } = 40;
+    public double StageSpeed { get; init; } = 20;
+    public double ScannerRapidSpeed { get; init; } = 1000;
+    public double CoordinatedSpeed { get; init; } = 100;
+    public double RampRate { get; init; } = 3_000_000;
+    public double TrajectoryFirFilter { get; init; } = 3;
+    public double MotionUpdateRateKhz { get; init; } = 100;
+    public int ExecuteNumLines { get; init; } = 110;
+    public double SetupDwellSeconds { get; init; } = 0.2;
+    public double MoveDelayMilliseconds { get; init; } = 0.1;
+    public double WaitStepY { get; init; } = 10;
+    public double SoftwareLimitLow { get; init; } = -10_000;
+    public double SoftwareLimitHigh { get; init; } = 10_000;
+    public bool EnableAxes { get; init; }
+    public bool DisableAxesAtEnd { get; init; }
+    public bool IncludeLaserLibraryImport { get; init; }
+    public string LaserLibraryFileName { get; init; } = "LaserOnLibrary.a1lib";
+}
 
 public sealed record ScriptServerOptions(
     string BindAddress,
@@ -105,5 +144,5 @@ public sealed record ScriptServerOptions(
     string ApiKey,
     string SpoolDirectory,
     int MaxScriptBytes,
-    TimeSpan ExecutionTimeout);
-
+    TimeSpan ExecutionTimeout,
+    AeroScriptModePolicy ModePolicy);

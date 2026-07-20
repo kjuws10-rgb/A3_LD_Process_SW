@@ -1,0 +1,84 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="950" viewBox="0 0 1600 950">
+  <defs>
+    <style>
+      .title{font:700 30px 'Segoe UI',sans-serif;fill:#f8fafc}.h{font:700 19px 'Segoe UI',sans-serif;fill:#f8fafc}.t{font:15px 'Segoe UI',sans-serif;fill:#cbd5e1}.s{font:13px 'Segoe UI',sans-serif;fill:#94a3b8}.box{fill:#111827;stroke:#334155;stroke-width:2}.cyan{fill:#0f2d3b;stroke:#22d3ee;stroke-width:2}.blue{fill:#172554;stroke:#60a5fa;stroke-width:2}.green{fill:#064e3b;stroke:#34d399;stroke-width:2}.warn{fill:#3b2f0b;stroke:#fbbf24;stroke-width:2}.line{stroke:#67e8f9;stroke-width:4;fill:none}.wait{stroke:#fbbf24;stroke-width:3;stroke-dasharray:8 6}.arrow{stroke:#67e8f9;stroke-width:3;fill:none;marker-end:url(#m)}
+    </style>
+    <marker id="m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#67e8f9"/></marker>
+  </defs>
+  <rect width="1600" height="950" fill="#0b1120"/>
+  <text x="55" y="55" class="title">Automation1 Virtual Wait Simulation: 1D MOF 타이밍 역검증</text>
+  <text x="55" y="84" class="t">Laser / PSO / Hardware Aux를 사용하지 않고 Stage Y PositionFeedback과 Scanner GX/GY 이동 순서만 확인</text>
+
+  <rect x="55" y="120" width="1490" height="285" rx="8" class="box"/>
+  <text x="80" y="155" class="h">시간축 동작과 Wait Cursor 구간</text>
+  <line x1="125" y1="350" x2="1480" y2="350" stroke="#64748b" stroke-width="2"/>
+  <line x1="125" y1="190" x2="125" y2="350" stroke="#64748b" stroke-width="2"/>
+  <text x="75" y="205" class="s">Y Position</text><text x="1450" y="380" class="s">Time</text>
+  <path d="M125 340 L1450 205" class="line"/>
+  <text x="135" y="327" class="s">StartY</text><text x="1370" y="198" class="s">StartY + Travel</text>
+
+  <line x1="430" y1="180" x2="430" y2="350" class="wait"/>
+  <line x1="740" y1="180" x2="740" y2="350" class="wait"/>
+  <line x1="1050" y1="180" x2="1050" y2="350" class="wait"/>
+  <text x="370" y="175" class="s">wait Y &gt; StartY+10</text>
+  <text x="680" y="175" class="s">wait Y &gt; StartY+20</text>
+  <text x="990" y="175" class="s">wait Y &gt; StartY+30</text>
+
+  <rect x="150" y="270" width="245" height="55" rx="5" class="cyan"/><text x="175" y="303" class="t">GX Band 1: GY Drill 반복</text>
+  <rect x="460" y="240" width="245" height="55" rx="5" class="cyan"/><text x="485" y="273" class="t">GX Band 2: GY Drill 반복</text>
+  <rect x="770" y="210" width="245" height="55" rx="5" class="cyan"/><text x="795" y="243" class="t">GX Band 3: GY Drill 반복</text>
+  <rect x="1080" y="180" width="245" height="55" rx="5" class="cyan"/><text x="1105" y="213" class="t">GX Band 4: GY Drill 반복</text>
+
+  <rect x="55" y="440" width="310" height="385" rx="8" class="blue"/>
+  <text x="80" y="478" class="h">1. Client 생성 조건</text>
+  <text x="80" y="515" class="t">Scanner Head 정확히 1개</text>
+  <text x="80" y="545" class="t">Stage Axis = Y</text>
+  <text x="80" y="575" class="t">Scanner Axis = GX / GY</text>
+  <text x="80" y="605" class="t">StartY / Travel / Speed</text>
+  <text x="80" y="635" class="t">Ramp / FIR / Update Rate</text>
+  <text x="80" y="665" class="t">MoveDelay / WaitStep</text>
+  <text x="80" y="695" class="t">Software Limit Low / High</text>
+  <rect x="80" y="735" width="260" height="62" rx="5" class="warn"/>
+  <text x="100" y="763" class="t">GX와 Y가 MOF Pair로</text>
+  <text x="100" y="786" class="t">MCD에 설정됐다는 전제</text>
+
+  <rect x="425" y="440" width="350" height="385" rx="8" class="cyan"/>
+  <text x="450" y="478" class="h">2. 생성 AeroScript</text>
+  <text x="450" y="515" class="t">SetupTaskTimeUnits(Seconds)</text>
+  <text x="450" y="545" class="t">SetupTaskWaitMode(Auto)</text>
+  <text x="450" y="575" class="t">Sine Ramp + FIR Filter</text>
+  <text x="450" y="605" class="t">MotionUpdateRate / ExecuteNumLines</text>
+  <text x="450" y="635" class="t">MoveAbsolute(Y, EndY, Speed)</text>
+  <text x="450" y="665" class="t">G0 GX n GY drillPoint</text>
+  <text x="450" y="695" class="t">MoveDelay(GX, delayMs)</text>
+  <text x="450" y="725" class="t">wait(PositionFeedback threshold)</text>
+  <text x="450" y="755" class="t">WaitForMotionDone(Y)</text>
+  <text x="450" y="785" class="t">WaitForInPosition(Y)</text>
+
+  <rect x="835" y="440" width="330" height="385" rx="8" class="green"/>
+  <text x="860" y="478" class="h">3. 확인 가능한 결과</text>
+  <text x="860" y="520" class="t">Stage feedback 증가/감소</text>
+  <text x="860" y="555" class="t">Wait 진입과 해제 순서</text>
+  <text x="860" y="590" class="t">GX band 전환 시점</text>
+  <text x="860" y="625" class="t">GY drill point 반복 순서</text>
+  <text x="860" y="660" class="t">Task ProgramComplete</text>
+  <text x="860" y="695" class="t">Task Error와 Server 응답</text>
+  <text x="860" y="730" class="t">Client Job 상태 추적</text>
+
+  <rect x="1225" y="440" width="320" height="385" rx="8" class="warn"/>
+  <text x="1250" y="478" class="h">4. 검증할 수 없는 항목</text>
+  <text x="1250" y="520" class="t">실제 Laser 출력</text>
+  <text x="1250" y="555" class="t">Hardware Aux edge</text>
+  <text x="1250" y="590" class="t">실제 PSO pulse</text>
+  <text x="1250" y="625" class="t">Galvo 광학 Calibration</text>
+  <text x="1250" y="660" class="t">Encoder 물리 지연과 Noise</text>
+  <text x="1250" y="695" class="t">Scanner-Laser 동기 정밀도</text>
+  <text x="1250" y="745" class="s">Virtual feedback은 command와</text>
+  <text x="1250" y="770" class="s">같으므로 논리 순서 검증용</text>
+
+  <path d="M365 630H425" class="arrow"/><path d="M775 630H835" class="arrow"/><path d="M1165 630H1225" class="arrow"/>
+  <text x="55" y="875" class="h">완료 판정</text>
+  <text x="170" y="875" class="t">마지막 GX band 종료 후 Stage MotionDone + InPosition을 확인하고 ProgramComplete가 Server PC에서 Client PC로 전달되어야 한다.</text>
+  <text x="55" y="915" class="s">운영 장비 적용 전 Laser library, PSO/IFOV, Interlock, 축 이름, limit, 속도와 ramp 값은 실제 H/W 및 MCD 기준으로 별도 검증한다.</text>
+</svg>
+

@@ -162,6 +162,11 @@ public partial class MainWindow : Window
 
     private async void RunAeroScriptButton_Click(object sender, RoutedEventArgs e)
     {
+        if (!ConfirmHardwareExecution(_currentScriptPackage?.GenerationMode ?? GetSelectedScriptMode()))
+        {
+            return;
+        }
+
         await RunScriptUiOperationAsync(async cancellationToken =>
         {
             var package = _currentScriptPackage
@@ -184,6 +189,11 @@ public partial class MainWindow : Window
 
     private async void ExecuteAeroScriptWorkflowButton_Click(object sender, RoutedEventArgs e)
     {
+        if (!ConfirmHardwareExecution(GetSelectedScriptMode()))
+        {
+            return;
+        }
+
         await RunScriptUiOperationAsync(async cancellationToken =>
         {
             var package = GenerateCurrentAeroScriptPackage();
@@ -237,24 +247,74 @@ public partial class MainWindow : Window
         }
 
         var commandList = commands.OrderBy(command => command.MofSequence).ToArray();
-        var options = new AeroScriptGenerationOptions(
-            AxisXTemplateBox.Text.Trim(),
-            AxisYTemplateBox.Text.Trim(),
-            ReadDouble(CoordinatedSpeedBox, 100),
-            EnableAxes: true,
-            DisableAxesAtEnd: false);
+        var options = ReadAeroScriptGenerationOptions();
         var source = _aeroScriptGenerator.Generate(_input, commandList, options);
         var taskIndex = Math.Max(1, ReadInt(Automation1TaskIndexBox, 1));
         var controllerFile = ControllerFileNameBox.Text.Trim();
 
-        _currentScriptPackage = AeroScriptPackage.Create(controllerFile, source, taskIndex);
+        _currentScriptPackage = AeroScriptPackage.Create(controllerFile, source, taskIndex, options.Mode);
         ScriptPreviewBox.Text = source;
         ScriptJobText.Text =
             $"생성 완료: Job={_currentScriptPackage.JobId}, 좌표={commandList.Length}, " +
-            $"SHA-256={_currentScriptPackage.Sha256[..16]}..., Task={taskIndex}";
+            $"Mode={options.Mode}, SHA-256={_currentScriptPackage.Sha256[..16]}..., Task={taskIndex}";
         AppendDeploymentLog(
-            $"[생성] Client PC에서 {commandList.Length}개 좌표로 {_currentScriptPackage.ControllerFileName} 생성");
+            $"[생성] Client PC에서 {options.Mode}, {commandList.Length}개 좌표로 " +
+            $"{_currentScriptPackage.ControllerFileName} 생성");
         return _currentScriptPackage;
+    }
+
+    private AeroScriptGenerationOptions ReadAeroScriptGenerationOptions()
+    {
+        return new AeroScriptGenerationOptions
+        {
+            Mode = GetSelectedScriptMode(),
+            StageAxisName = StageAxisNameBox.Text.Trim(),
+            AxisXTemplate = AxisXTemplateBox.Text.Trim(),
+            AxisYTemplate = AxisYTemplateBox.Text.Trim(),
+            StartYPosition = ReadDouble(StartYPositionBox, 500),
+            StageTravelDistance = ReadDouble(StageTravelDistanceBox, 40),
+            StageSpeed = ReadDouble(StageSpeedBox, 20),
+            ScannerRapidSpeed = ReadDouble(ScannerRapidSpeedBox, 1000),
+            CoordinatedSpeed = ReadDouble(CoordinatedSpeedBox, 100),
+            RampRate = ReadDouble(RampRateBox, 3_000_000),
+            TrajectoryFirFilter = ReadDouble(TrajectoryFirFilterBox, 3),
+            MotionUpdateRateKhz = ReadDouble(MotionUpdateRateBox, 100),
+            ExecuteNumLines = Math.Max(1, ReadInt(ExecuteNumLinesBox, 110)),
+            SetupDwellSeconds = ReadDouble(SetupDwellSecondsBox, 0.2),
+            MoveDelayMilliseconds = ReadDouble(MoveDelayMillisecondsBox, 0.1),
+            WaitStepY = ReadDouble(WaitStepYBox, 10),
+            SoftwareLimitLow = ReadDouble(SoftwareLimitLowBox, -10_000),
+            SoftwareLimitHigh = ReadDouble(SoftwareLimitHighBox, 10_000),
+            EnableAxes = EnableAxesCheckBox.IsChecked == true,
+            DisableAxesAtEnd = DisableAxesAtEndCheckBox.IsChecked == true,
+            IncludeLaserLibraryImport = IncludeLaserLibraryCheckBox.IsChecked == true,
+            LaserLibraryFileName = LaserLibraryNameBox.Text.Trim()
+        };
+    }
+
+    private AeroScriptGenerationMode GetSelectedScriptMode()
+    {
+        var tag = (ScriptModeComboBox.SelectedItem as ComboBoxItem)?.Tag?.ToString();
+        return Enum.TryParse<AeroScriptGenerationMode>(tag, out var mode)
+            ? mode
+            : AeroScriptGenerationMode.VirtualWaitSimulation;
+    }
+
+    private bool ConfirmHardwareExecution(AeroScriptGenerationMode mode)
+    {
+        if (mode != AeroScriptGenerationMode.HardwareCoordinateProgram)
+        {
+            return true;
+        }
+
+        return MessageBox.Show(
+                   this,
+                   "Hardware Coordinate Program을 Server PC에서 실행합니다.\n" +
+                   "축 이름, Software Limit, 속도, Ramp, 장비 Interlock과 Laser 안전 상태를 확인했습니까?",
+                   "Automation1 Hardware 실행 확인",
+                   MessageBoxButton.YesNo,
+                   MessageBoxImage.Warning,
+                   MessageBoxResult.No) == MessageBoxResult.Yes;
     }
 
     private AeroScriptClient CreateAeroScriptClient()

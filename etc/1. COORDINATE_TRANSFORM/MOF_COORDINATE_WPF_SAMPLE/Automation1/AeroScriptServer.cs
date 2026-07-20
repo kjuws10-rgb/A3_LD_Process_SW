@@ -127,6 +127,14 @@ public sealed class AeroScriptServer : IAsyncDisposable
             return ScriptServerResponse.Error(request, "INVALID_TARGET", "Task index 또는 controller file 이름이 올바르지 않습니다.");
         }
 
+        if (!IsGenerationModeAllowed(package.GenerationMode))
+        {
+            return ScriptServerResponse.Error(
+                request,
+                "MODE_POLICY_REJECTED",
+                $"Server policy {_options.ModePolicy}에서 {package.GenerationMode} Job은 허용되지 않습니다.");
+        }
+
         var scriptBytes = Encoding.UTF8.GetBytes(package.ScriptText);
         if (scriptBytes.Length == 0 || scriptBytes.Length > _options.MaxScriptBytes)
         {
@@ -218,6 +226,14 @@ public sealed class AeroScriptServer : IAsyncDisposable
                CryptographicOperations.FixedTimeEquals(expectedBytes, suppliedBytes);
     }
 
+    private bool IsGenerationModeAllowed(AeroScriptGenerationMode mode) => _options.ModePolicy switch
+    {
+        AeroScriptModePolicy.Any => true,
+        AeroScriptModePolicy.VirtualOnly => mode == AeroScriptGenerationMode.VirtualWaitSimulation,
+        AeroScriptModePolicy.HardwareOnly => mode == AeroScriptGenerationMode.HardwareCoordinateProgram,
+        _ => false
+    };
+
     private static bool IsSafeControllerFileName(string fileName)
     {
         return fileName.EndsWith(".ascript", StringComparison.OrdinalIgnoreCase) &&
@@ -279,6 +295,7 @@ public sealed class AeroScriptServer : IAsyncDisposable
                     _message,
                     Package.ControllerFileName,
                     Package.TaskIndex,
+                    Package.GenerationMode,
                     Package.Sha256,
                     _updatedAtUtc);
             }
