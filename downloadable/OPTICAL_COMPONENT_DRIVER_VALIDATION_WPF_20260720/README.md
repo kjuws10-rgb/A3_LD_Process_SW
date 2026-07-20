@@ -21,6 +21,7 @@
 - `Talon.Driver.Wpf`: 전체 컴포넌트 통합 WPF 검증 UI
 - `COMPONENT_DRIVER_FUNCTION_LIST.md`: 장비별 기능 및 protocol 목록
 - `COMPONENT_THEORY_OPERATION_GUIDE.md`: 이론, 동작법, 안전, 실장비 검증 절차
+- `Documentation/A3_COMPONENT_DRIVER_MANUAL_GUIDE_20260720.xlsx`: 장비별 이론·동작·필수 지식·기능·명령·매뉴얼 그림을 포함한 10개 탭 Excel 설명 자료
 - `UNIFIED_COMPONENT_DRIVER_ARCHITECTURE.svg`: 통합 구조와 데이터 흐름
 
 ## 중요 제한
