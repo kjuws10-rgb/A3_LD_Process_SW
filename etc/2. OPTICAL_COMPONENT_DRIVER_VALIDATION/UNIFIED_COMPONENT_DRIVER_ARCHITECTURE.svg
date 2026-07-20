@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1120" viewBox="0 0 1600 1120">
+  <defs>
+    <style>
+      .bg{fill:#090e17}.panel{fill:#111927;stroke:#33465f;stroke-width:2}.head{fill:#172b3d;stroke:#22d3ee;stroke-width:2}
+      .laser{fill:#36202a;stroke:#fb7185;stroke-width:2}.motion{fill:#222d20;stroke:#4ade80;stroke-width:2}.measure{fill:#2f2a18;stroke:#fbbf24;stroke-width:2}
+      .api{fill:#20233a;stroke:#a78bfa;stroke-width:2}.txt{fill:#e7edf6;font-family:'Segoe UI',Arial,sans-serif}.muted{fill:#9aa9bd;font-family:'Segoe UI',Arial,sans-serif}
+      .title{font-size:30px;font-weight:700}.h{font-size:20px;font-weight:700}.b{font-size:16px}.s{font-size:14px}.arrow{stroke:#7dd3fc;stroke-width:3;fill:none;marker-end:url(#a)}
+    </style>
+    <marker id="a" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L10,3 L0,6 Z" fill="#7dd3fc"/></marker>
+  </defs>
+  <rect class="bg" width="1600" height="1120"/>
+  <text class="txt title" x="60" y="55">A3 Optical Component Driver - Unified Architecture and Validation Flow</text>
+  <text class="muted b" x="60" y="84">manual profile 기반 동일 구조: UI → Driver → Protocol/Catalog → Transport → Hardware 또는 Simulator</text>
+
+  <rect class="head" x="60" y="115" width="1480" height="100" rx="6"/>
+  <text class="txt h" x="90" y="150">WPF 통합 검증 화면</text>
+  <text class="txt b" x="90" y="180">컴포넌트 선택 · 기능 목록 · Parameter/범위 · 안전 잠금 · 상태 Snapshot · Read-only/전체 자동 검증 · 통신 Trace · 이론/동작 Guide</text>
+
+  <path class="arrow" d="M800 215 L800 270"/>
+  <rect class="panel" x="60" y="270" width="470" height="150" rx="6"/>
+  <text class="txt h" x="90" y="307">ST_EQUIPMENT_PROFILE</text>
+  <text class="muted b" x="90" y="338">Type · DisplayName · Role · Manual</text>
+  <text class="muted b" x="90" y="366">Transport · Endpoint · Baud/Port · Terminator</text>
+  <text class="muted b" x="90" y="394">Theory · Operation · Notes · VerificationLimit</text>
+
+  <rect class="panel" x="565" y="270" width="470" height="150" rx="6"/>
+  <text class="txt h" x="595" y="307">ST_EQUIPMENT_COMMAND_SPEC</text>
+  <text class="muted b" x="595" y="338">Id · Category · Template · ExpectsResponse</text>
+  <text class="muted b" x="595" y="366">ResponseKind · Risk · Min/Max · Unit</text>
+  <text class="muted b" x="595" y="394">Description · DefaultParameter</text>
+
+  <rect class="panel" x="1070" y="270" width="470" height="150" rx="6"/>
+  <text class="txt h" x="1100" y="307">CEquipmentDriver</text>
+  <text class="muted b" x="1100" y="338">Build/범위검사 → Safety 검사 → Exchange</text>
+  <text class="muted b" x="1100" y="366">응답 정규화/형식 판정 → Status 갱신</text>
+  <text class="muted b" x="1100" y="394">Transaction Trace · Read-only validation</text>
+
+  <path class="arrow" d="M530 345 L565 345"/><path class="arrow" d="M1035 345 L1070 345"/>
+  <path class="arrow" d="M1305 420 L1305 480"/>
+
+  <rect class="panel" x="60" y="480" width="350" height="160" rx="6"/>
+  <text class="txt h" x="90" y="518">Protocol Layer</text>
+  <text class="muted b" x="90" y="550">InvariantCulture 명령 formatting</text>
+  <text class="muted b" x="90" y="578">CR/LF/echo 정규화</text>
+  <text class="muted b" x="90" y="606">Integer/Float/ACK/XPS 결과 판정</text>
+
+  <rect class="panel" x="445" y="480" width="350" height="160" rx="6"/>
+  <text class="txt h" x="475" y="518">IEquipmentTransport</text>
+  <text class="muted b" x="475" y="550">CSerialEquipmentTransport</text>
+  <text class="muted b" x="475" y="578">CTcpEquipmentTransport</text>
+  <text class="muted b" x="475" y="606">Vendor API Adapter 확장점</text>
+
+  <rect class="panel" x="830" y="480" width="350" height="160" rx="6"/>
+  <text class="txt h" x="860" y="518">Simulator Transport</text>
+  <text class="muted b" x="860" y="550">장비별 정상 응답과 위치 상태</text>
+  <text class="muted b" x="860" y="578">Timeout 1회 · Invalid 1회 주입</text>
+  <text class="muted b" x="860" y="606">실제 출력/이동 없는 자동 검증</text>
+
+  <rect class="panel" x="1215" y="480" width="325" height="160" rx="6"/>
+  <text class="txt h" x="1245" y="518">Safety Context</text>
+  <text class="muted b" x="1245" y="550">Hardware Write unlock</text>
+  <text class="muted b" x="1245" y="578">Motion area · Beam path</text>
+  <text class="muted b" x="1245" y="606">Operator confirmation</text>
+
+  <path class="arrow" d="M1070 420 L235 480"/><path class="arrow" d="M1305 420 L620 480"/><path class="arrow" d="M1305 420 L1005 480"/><path class="arrow" d="M1305 420 L1377 480"/>
+
+  <text class="txt h" x="60" y="700">연결 대상과 기능 책임</text>
+  <rect class="laser" x="60" y="730" width="230" height="170" rx="6"/>
+  <text class="txt h" x="88" y="766">Talon Laser</text><text class="muted s" x="88" y="798">RS-232 115200</text><text class="muted s" x="88" y="824">Emission / PRF / Gate</text><text class="muted s" x="88" y="850">Power / Temp / Event</text><text class="muted s" x="88" y="876">LaserOutput safety</text>
+
+  <rect class="motion" x="310" y="730" width="230" height="170" rx="6"/>
+  <text class="txt h" x="338" y="766">CONEX-AGP</text><text class="muted s" x="338" y="798">RS-232 921600</text><text class="muted s" x="338" y="824">Home / PA / PR / Stop</text><text class="muted s" x="338" y="850">TP / TH / TS readback</text><text class="muted s" x="338" y="876">Attenuation position</text>
+
+  <rect class="motion" x="560" y="730" width="230" height="170" rx="6"/>
+  <text class="txt h" x="588" y="766">Beam Expander</text><text class="muted s" x="588" y="798">RS-232 9600</text><text class="muted s" x="588" y="824">Init / Motor 1 / Motor 2</text><text class="muted s" x="588" y="850">0..4500 step / ACK !</text><text class="muted s" x="588" y="876">Beam size / divergence</text>
+
+  <rect class="measure" x="810" y="730" width="230" height="170" rx="6"/>
+  <text class="txt h" x="838" y="766">PowerMax</text><text class="muted s" x="838" y="798">RS-232 115200</text><text class="muted s" x="838" y="824">Power / wavelength</text><text class="muted s" x="838" y="850">Beam X,Y / streaming</text><text class="muted s" x="838" y="876">Independent measurement</text>
+
+  <rect class="api" x="1060" y="730" width="230" height="170" rx="6"/>
+  <text class="txt h" x="1088" y="766">XPS</text><text class="muted s" x="1088" y="798">TCP/IP :5001</text><text class="muted s" x="1088" y="824">Initialize / Home / Move</text><text class="muted s" x="1088" y="850">Group status / Position</text><text class="muted s" x="1088" y="876">Stage state machine</text>
+
+  <rect class="api" x="1310" y="730" width="230" height="170" rx="6"/>
+  <text class="txt h" x="1338" y="766">Picomotor</text><text class="muted s" x="1338" y="798">CmdLib.dll</text><text class="muted s" x="1338" y="824">Discover / Open / Move</text><text class="muted s" x="1338" y="850">Done / Error / Position</text><text class="muted s" x="1338" y="876">Fine optical alignment</text>
+
+  <path class="arrow" d="M175 900 L175 970"/><path class="arrow" d="M425 900 L425 970"/><path class="arrow" d="M675 900 L675 970"/><path class="arrow" d="M925 900 L925 970"/><path class="arrow" d="M1175 900 L1175 970"/><path class="arrow" d="M1425 900 L1425 970"/>
+  <rect class="head" x="60" y="970" width="1480" height="100" rx="6"/>
+  <text class="txt h" x="90" y="1007">통합 검증 결과</text>
+  <text class="txt b" x="90" y="1037">Validation Item: Equipment · Function · Command · Passed · Actual · Expected · Detail</text>
+  <text class="muted s" x="90" y="1062">Simulator PASS는 software protocol 검증 결과이며, 실제 광출력·방향·정밀도·interlock 성능은 별도 hardware commissioning으로 확인합니다.</text>
+</svg>
