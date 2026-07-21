@@ -239,12 +239,18 @@ public partial class MainWindow : Window
             EnsureServerSuccess("실행 명령", run);
             ShowServerResponse("실행 명령", run);
 
+            string? lastStatusKey = null;
             while (true)
             {
                 await Task.Delay(250, cancellationToken);
                 var status = await client.GetStatusAsync(package.JobId, cancellationToken);
                 EnsureServerSuccess("상태 조회", status);
-                ShowServerResponse("상태", status);
+                var statusKey = $"{status.Job?.State}|{status.Job?.Message}|{status.ErrorCode}";
+                if (!statusKey.Equals(lastStatusKey, StringComparison.Ordinal))
+                {
+                    ShowServerResponse("상태", status);
+                    lastStatusKey = statusKey;
+                }
 
                 if (status.Job?.State == ScriptJobState.Completed)
                 {

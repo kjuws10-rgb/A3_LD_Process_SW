@@ -193,7 +193,9 @@ Automation1 Console과 Controller API가 사용하는 `12200`은 Automation1 nat
 5. Client에서 `CHECK_SERVER_PORT_FROM_CLIENT.bat`의 `TcpTestSucceeded`를 확인한다.
 6. WPF에서 `Server 연결 확인`이 성공한 뒤 Upload/Run을 수행한다.
 
-Protocol v3에는 Job 없이 Server 준비 상태와 ModePolicy를 확인하는 `HealthCheck` 요청이 추가되었다.
+Protocol v3의 `HealthCheck`는 Job 없이 Gateway, ModePolicy, Simulation Runtime 또는 실제 Automation1 .NET API DLL과 Controller 연결 상태를 확인한다. `Gateway ready`만으로 끝나지 않고 응답에 `Automation1 runtime ready` 또는 `RUNTIME_NOT_READY`가 포함되는지 확인한다.
+
+Client 생성 Script의 Server 전송, Controller 실행, TaskState 완료 판정에 대한 작업자 절차는 `CLIENT_SERVER_ASCRIPT_OPERATION_PROCEDURE.md`를 따른다.
 
 ## 11. Local File, Controller File, 좌표의 구분
 

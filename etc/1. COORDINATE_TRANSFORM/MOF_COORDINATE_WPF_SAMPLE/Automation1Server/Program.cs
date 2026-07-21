@@ -169,7 +169,12 @@ static async Task RunSelfTestAsync()
         {
             // Expected: Client must use the Script Gateway, not the native controller endpoint.
         }
-        EnsureSuccess(await client.HealthCheckAsync(CancellationToken.None), "health");
+        var health = await client.HealthCheckAsync(CancellationToken.None);
+        EnsureSuccess(health, "health");
+        if (!health.Message.Contains("Simulation runtime ready", StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException("HealthCheck did not include runtime readiness.");
+        }
         var package = AeroScriptPackage.Create(
             "programs/self-test.ascript",
             generatedSource,

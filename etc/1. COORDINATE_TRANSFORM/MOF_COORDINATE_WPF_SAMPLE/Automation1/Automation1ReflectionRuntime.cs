@@ -18,6 +18,42 @@ public sealed class Automation1ReflectionRuntime : IAutomation1Runtime
         _assemblyPath = string.IsNullOrWhiteSpace(assemblyPath) ? null : assemblyPath;
     }
 
+    public Task<string> CheckHealthAsync(CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        dynamic? controller = null;
+        try
+        {
+            var assemblyPath = ResolveAssemblyPath();
+            var assembly = Assembly.LoadFrom(assemblyPath);
+            var controllerType = assembly.GetType("Aerotech.Automation1.DotNet.Controller", throwOnError: true)!;
+            controller = Connect(controllerType);
+
+            var isRunning = (bool)controller.IsRunning;
+            var host = Convert.ToString(controller.Information.Host) ?? _controllerHost ?? "local";
+            var port = Convert.ToString(controller.Information.Port) ?? "unknown";
+            var taskSummary = isRunning
+                ? $", Tasks={Convert.ToString(controller.Runtime.Tasks.Count)}"
+                : ", Controller는 연결되었지만 정지 상태이며 실행 시 Start()를 호출합니다";
+            return Task.FromResult(
+                $"Automation1 runtime ready. Controller={host}:{port}, IsRunning={isRunning}{taskSummary}, DLL={assemblyPath}");
+        }
+        finally
+        {
+            if (controller is not null)
+            {
+                try
+                {
+                    controller.Disconnect();
+                }
+                catch
+                {
+                    // Health result is based on the successful connection and query.
+                }
+            }
+        }
+    }
+
     public async Task ExecuteAsync(
         AeroScriptPackage package,
         Func<ScriptJobState, string, ValueTask> reportStatus,
@@ -44,6 +80,7 @@ public sealed class Automation1ReflectionRuntime : IAutomation1Runtime
             await reportStatus(ScriptJobState.Running,
                 $"Task {package.TaskIndex} Program.Run: {package.ControllerFileName}");
 
+            string? previousTaskState = null;
             while (true)
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -52,6 +89,15 @@ public sealed class Automation1ReflectionRuntime : IAutomation1Runtime
                 // and then using that snapshot to avoid state races.
                 dynamic status = task.Status;
                 var taskState = status.TaskState.ToString() as string ?? "Unknown";
+                if (!taskState.Equals(previousTaskState, StringComparison.OrdinalIgnoreCase))
+                {
+                    var sourceFile = Convert.ToString(status.AeroScriptSourceFileName) ?? package.ControllerFileName;
+                    await reportStatus(
+                        ScriptJobState.Running,
+                        $"Task {package.TaskIndex} TaskState={taskState}, Source={sourceFile}");
+                    previousTaskState = taskState;
+                }
+
                 if (taskState.Equals("ProgramComplete", StringComparison.OrdinalIgnoreCase))
                 {
                     return;
@@ -61,6 +107,12 @@ public sealed class Automation1ReflectionRuntime : IAutomation1Runtime
                 {
                     var error = status.Error?.ToString() as string ?? "Automation1 task error";
                     throw new InvalidOperationException(error);
+                }
+
+                if (!IsActiveTaskState(taskState))
+                {
+                    throw new InvalidOperationException(
+                        $"Task {package.TaskIndex}가 완료 전에 예상하지 못한 상태 {taskState}로 전환되었습니다.");
                 }
 
                 await Task.Delay(TimeSpan.FromMilliseconds(100), cancellationToken);
@@ -115,6 +167,11 @@ public sealed class Automation1ReflectionRuntime : IAutomation1Runtime
             // Cancellation must continue even when the controller cannot stop the task.
         }
     }
+
+    private static bool IsActiveTaskState(string taskState) =>
+        taskState.Equals("ProgramRunning", StringComparison.OrdinalIgnoreCase) ||
+        taskState.Equals("ProgramFeedhold", StringComparison.OrdinalIgnoreCase) ||
+        taskState.Equals("ProgramPaused", StringComparison.OrdinalIgnoreCase);
 
     private string ResolveAssemblyPath()
     {

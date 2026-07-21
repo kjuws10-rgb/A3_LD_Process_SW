@@ -6,5 +6,5 @@ if "%A1_SCRIPT_API_KEY%"=="" (
   exit /b 1
 )
 echo HardwareOnly policy: Virtual Wait Simulation jobs will be rejected.
-dotnet run --project "Automation1Server\Automation1Server.csproj" -- --runtime=automation1 --mode-policy=HardwareOnly --bind=0.0.0.0 --port=46100 --api-key=%A1_SCRIPT_API_KEY%
+dotnet run --project "Automation1Server\Automation1Server.csproj" -- --runtime=automation1 --mode-policy=HardwareOnly --bind=0.0.0.0 --port=46100
 if errorlevel 1 pause

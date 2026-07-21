@@ -9,6 +9,13 @@ public sealed class SimulationAutomation1Runtime : IAutomation1Runtime
         _runDelay = runDelay ?? TimeSpan.FromSeconds(1.5);
     }
 
+    public Task<string> CheckHealthAsync(CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        return Task.FromResult(
+            "Simulation runtime ready. TCP/Job 상태만 모사하며 실제 Controller/AeroScript는 실행하지 않습니다.");
+    }
+
     public async Task ExecuteAsync(
         AeroScriptPackage package,
         Func<ScriptJobState, string, ValueTask> reportStatus,
@@ -28,4 +35,3 @@ public sealed class SimulationAutomation1Runtime : IAutomation1Runtime
 
     public ValueTask DisposeAsync() => ValueTask.CompletedTask;
 }
-

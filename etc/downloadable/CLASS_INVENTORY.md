@@ -5037,6 +5037,13 @@ Type count: 78
 - `MainWindow.GenerateCurrentAeroScriptPackage`: Process/Review 좌표 로그를 남기고 Client의 Local Script File에 UTF-8(no BOM) 파일을 실제 저장한다.
 - `MainWindow.SelectAllProcessablePointsForHighlightedScanners`: 선택 Head의 `InField` 좌표 전체를 Matrix 선택 집합으로 만든다.
 - `AeroScriptEndpointRules`: Gateway 기본 포트 `46100`과 Automation1 native 포트 `12200`을 구분하고, WPF에 잘못 입력된 `12200`을 `46100`으로 교정한다.
+- `IAutomation1Runtime.CheckHealthAsync`: Gateway Health 요청 시 실제 Runtime 준비 상태를 점검한다.
+- `Automation1ReflectionRuntime.CheckHealthAsync`: 공식 DLL 로드, Controller 연결, Host/Port, IsRunning, Task Count를 확인한다.
+- `Automation1ReflectionRuntime.ExecuteAsync`: TaskState 변경을 Job Message로 보고하고 `ProgramComplete` 이외 비정상 종료를 실패 처리한다.
+- `AeroScriptServer.ExecuteJobAsync`: 실행 Semaphore 대기 취소까지 `Failed`로 기록하며 획득한 경우에만 Gate를 반환한다.
+- `AeroScriptServer.HandleClientAsync`: 요청별 Remote endpoint, Request type, Job, State, Error를 Server Console에 기록한다.
+- `AeroScriptServer.ShouldLogResponse`: 반복 GetStatus 응답은 State/Message가 변경된 경우에만 Console에 남긴다.
+- `MainWindow.ExecuteAeroScriptWorkflowButton_Click`: 250 ms Polling은 유지하고 State/Message 변경 시에만 로그를 추가한다.
 
 ## MOF Coordinate Sample - Automation1 Client/Server Classes (2026-07-20)
 
