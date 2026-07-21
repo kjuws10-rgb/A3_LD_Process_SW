@@ -180,3 +180,4 @@ Transform Consistency Error = (0, 0)
 - `Controller File`은 Server 전송 뒤 Automation1 Controller 내부에서 사용할 경로이다.
 - `Server 연결 확인`은 protocol v3 `HealthCheck`로 TCP 수신, API Key, Server ModePolicy를 먼저 검증한다.
 - Server PC 배포와 방화벽 설정은 `SERVER_PC_CONNECTION_GUIDE.md`를 따른다.
+- `12200`은 Automation1 Controller native endpoint, `46100`은 이 예제의 Script Gateway이다. Client WPF는 `46100`을 사용한다.

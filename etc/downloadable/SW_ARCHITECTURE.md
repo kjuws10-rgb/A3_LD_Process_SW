@@ -489,3 +489,7 @@ Server 실행 정책은 Virtual Controller에서 `VirtualOnly`, 실제 장비에
 Client의 `Script 생성`은 `Local Script File`에 실제 `.ascript`를 저장한 뒤 별도의 `Controller File` 경로를 Package에 넣는다. `AeroScriptClient.HealthCheckAsync`와 Server의 `HealthCheck` dispatch가 Upload 전에 TCP/API Key/ModePolicy를 확인한다. Scanner UI 선택은 선택 Head별 `InField` 좌표 합집합을 `_selectedPointKeys`에 반영한다.
 
 Script 이동값은 `CellCommand.Gx/Gy`이며 Review 표시값은 `ReviewCoordinateX/Y`이다. 생성 Script 주석과 Client 로그는 두 좌표를 함께 기록하지만 Scanner 명령에는 Process Gx/Gy만 사용한다.
+
+### Script Gateway와 Automation1 Native Endpoint 분리
+
+Client WPF는 `192.168.10.10:46100`의 `Automation1Server`와 protocol v3으로 통신한다. `Automation1Server` 내부의 `Automation1ReflectionRuntime`이 공식 .NET API `Controller.Connect()`를 호출해 Automation1 Controller native endpoint(통상 `12200`)에 연결한다. Client가 `12200`에 JSON frame을 직접 전송하면 native protocol과 불일치하여 원격 호스트가 연결을 종료한다.

@@ -45,6 +45,7 @@ Console.CancelKeyPress += (_, eventArgs) =>
 
 Console.WriteLine($"Automation1 Script Server: {bind}:{port}");
 Console.WriteLine($"Runtime: {runtimeName}, ModePolicy: {modePolicy}, Spool: {spool}");
+Console.WriteLine("이 TCP Port는 Client WPF용 Script Gateway입니다. Automation1 Controller native endpoint 12200과 다른 protocol입니다.");
 Console.WriteLine("Client가 생성한 AeroScript만 수신하며, 서버에서는 좌표/script를 생성하지 않습니다.");
 if (!runtimeName.Equals("automation1", StringComparison.OrdinalIgnoreCase))
 {
@@ -155,6 +156,19 @@ static async Task RunSelfTestAsync()
         }
 
         var client = new AeroScriptClient("127.0.0.1", port, apiKey);
+        if (AeroScriptEndpointRules.NormalizeGatewayPort(12200, out var corrected) != 46100 || !corrected)
+        {
+            throw new InvalidOperationException("Automation1 native port guard contract failed.");
+        }
+        try
+        {
+            _ = new AeroScriptClient("127.0.0.1", 12200, apiKey);
+            throw new InvalidOperationException("AeroScriptClient accepted the Automation1 native port.");
+        }
+        catch (ArgumentException)
+        {
+            // Expected: Client must use the Script Gateway, not the native controller endpoint.
+        }
         EnsureSuccess(await client.HealthCheckAsync(CancellationToken.None), "health");
         var package = AeroScriptPackage.Create(
             "programs/self-test.ascript",
@@ -190,7 +204,7 @@ static async Task RunSelfTestAsync()
             throw new InvalidOperationException("VirtualOnly server accepted a HardwareCoordinateProgram job.");
         }
 
-        Console.WriteLine("SELF-TEST PASS: local file, health, generation, upload/run/completion and mode-policy rejection verified.");
+        Console.WriteLine("SELF-TEST PASS: native-port guard, local file, health, generation, upload/run/completion and mode-policy rejection verified.");
     }
     finally
     {

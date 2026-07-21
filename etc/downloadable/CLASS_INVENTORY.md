@@ -5036,6 +5036,7 @@ Type count: 78
 - `AeroScriptLocalFileStore`: Local Script 경로 정규화, 폴더 생성, UTF-8(no BOM) 실제 파일 저장을 담당한다.
 - `MainWindow.GenerateCurrentAeroScriptPackage`: Process/Review 좌표 로그를 남기고 Client의 Local Script File에 UTF-8(no BOM) 파일을 실제 저장한다.
 - `MainWindow.SelectAllProcessablePointsForHighlightedScanners`: 선택 Head의 `InField` 좌표 전체를 Matrix 선택 집합으로 만든다.
+- `AeroScriptEndpointRules`: Gateway 기본 포트 `46100`과 Automation1 native 포트 `12200`을 구분하고, WPF에 잘못 입력된 `12200`을 `46100`으로 교정한다.
 
 ## MOF Coordinate Sample - Automation1 Client/Server Classes (2026-07-20)
 

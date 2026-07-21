@@ -3,6 +3,23 @@ using System.Text;
 
 namespace MofCoordinateDemo.Automation1;
 
+public static class AeroScriptEndpointRules
+{
+    public const int DefaultGatewayPort = 46100;
+    public const int Automation1ControllerPort = 12200;
+
+    public static int NormalizeGatewayPort(int configuredPort, out bool correctedNativeControllerPort)
+    {
+        if (configuredPort is <= 0 or > 65535)
+        {
+            throw new ArgumentOutOfRangeException(nameof(configuredPort));
+        }
+
+        correctedNativeControllerPort = configuredPort == Automation1ControllerPort;
+        return correctedNativeControllerPort ? DefaultGatewayPort : configuredPort;
+    }
+}
+
 public enum ScriptRequestType
 {
     HealthCheck,
