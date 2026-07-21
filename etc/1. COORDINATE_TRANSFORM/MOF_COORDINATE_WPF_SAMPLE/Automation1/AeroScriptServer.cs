@@ -12,6 +12,7 @@ public sealed class AeroScriptServer : IAsyncDisposable
     private readonly ScriptServerOptions _options;
     private readonly IAutomation1Runtime _runtime;
     private readonly ConcurrentDictionary<string, ServerJob> _jobs = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, string> _lastStatusLogKeys = new(StringComparer.OrdinalIgnoreCase);
     private readonly SemaphoreSlim _taskExecutionGate = new(1, 1);
     private TcpListener? _listener;
 
@@ -58,6 +59,7 @@ public sealed class AeroScriptServer : IAsyncDisposable
 
     private async Task HandleClientAsync(TcpClient client, CancellationToken serverCancellationToken)
     {
+        var remoteEndpoint = client.Client.RemoteEndPoint?.ToString() ?? "unknown";
         using (client)
         await using (var stream = client.GetStream())
         {
@@ -80,8 +82,34 @@ public sealed class AeroScriptServer : IAsyncDisposable
                 response = ScriptServerResponse.Error(request, "SERVER_ERROR", ex.Message);
             }
 
+            var jobState = response.Job?.State.ToString() ?? "-";
+            if (ShouldLogResponse(request, response))
+            {
+                Console.WriteLine(
+                    $"{DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss.fff zzz} " +
+                    $"Remote={remoteEndpoint}, Request={request.RequestType}, Job={request.JobId ?? "-"}, " +
+                    $"Success={response.Success}, State={jobState}, Code={response.ErrorCode}, Message={response.Message}");
+            }
             await AeroScriptProtocol.WriteAsync(stream, response, serverCancellationToken);
         }
+    }
+
+    private bool ShouldLogResponse(ScriptServerRequest request, ScriptServerResponse response)
+    {
+        if (request.RequestType != ScriptRequestType.GetStatus || response.Job is null)
+        {
+            return true;
+        }
+
+        var key = $"{response.Success}|{response.Job.State}|{response.Job.Message}|{response.ErrorCode}";
+        if (_lastStatusLogKeys.TryGetValue(response.Job.JobId, out var previous) &&
+            previous.Equals(key, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        _lastStatusLogKeys[response.Job.JobId] = key;
+        return true;
     }
 
     private async Task<ScriptServerResponse> DispatchAsync(
@@ -100,15 +128,34 @@ public sealed class AeroScriptServer : IAsyncDisposable
 
         return request.RequestType switch
         {
-            ScriptRequestType.HealthCheck => ScriptServerResponse.Ok(
-                request,
-                $"Server ready. Bind={_options.BindAddress}:{_options.Port}, ModePolicy={_options.ModePolicy}, MaxScriptBytes={_options.MaxScriptBytes}",
-                null),
+            ScriptRequestType.HealthCheck => await HealthCheckAsync(request, serverCancellationToken),
             ScriptRequestType.UploadScript => await UploadAsync(request, serverCancellationToken),
             ScriptRequestType.RunScript => Run(request, serverCancellationToken),
             ScriptRequestType.GetStatus => GetStatus(request),
             _ => ScriptServerResponse.Error(request, "UNKNOWN_REQUEST", "알 수 없는 요청입니다.")
         };
+    }
+
+    private async Task<ScriptServerResponse> HealthCheckAsync(
+        ScriptServerRequest request,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var runtimeHealth = await _runtime.CheckHealthAsync(cancellationToken);
+            return ScriptServerResponse.Ok(
+                request,
+                $"Gateway ready. Bind={_options.BindAddress}:{_options.Port}, ModePolicy={_options.ModePolicy}, " +
+                $"MaxScriptBytes={_options.MaxScriptBytes}. {runtimeHealth}",
+                null);
+        }
+        catch (Exception ex)
+        {
+            return ScriptServerResponse.Error(
+                request,
+                "RUNTIME_NOT_READY",
+                $"Gateway는 연결되었지만 Automation1 runtime 점검에 실패했습니다: {ex.Message}");
+        }
     }
 
     private async Task<ScriptServerResponse> UploadAsync(
@@ -191,9 +238,11 @@ public sealed class AeroScriptServer : IAsyncDisposable
 
     private async Task ExecuteJobAsync(ServerJob job, CancellationToken serverCancellationToken)
     {
-        await _taskExecutionGate.WaitAsync(serverCancellationToken);
+        var gateEntered = false;
         try
         {
+            await _taskExecutionGate.WaitAsync(serverCancellationToken);
+            gateEntered = true;
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(serverCancellationToken);
             timeout.CancelAfter(_options.ExecutionTimeout);
 
@@ -218,7 +267,10 @@ public sealed class AeroScriptServer : IAsyncDisposable
         }
         finally
         {
-            _taskExecutionGate.Release();
+            if (gateEntered)
+            {
+                _taskExecutionGate.Release();
+            }
         }
     }
 

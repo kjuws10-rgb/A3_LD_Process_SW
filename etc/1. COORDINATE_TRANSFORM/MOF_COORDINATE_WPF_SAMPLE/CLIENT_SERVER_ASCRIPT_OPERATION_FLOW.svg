@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000">
+  <defs>
+    <style>
+      .title{font:700 30px 'Segoe UI',sans-serif;fill:#f8fafc}.h{font:700 19px 'Segoe UI',sans-serif;fill:#f8fafc}.t{font:15px 'Segoe UI',sans-serif;fill:#cbd5e1}.s{font:13px 'Segoe UI',sans-serif;fill:#94a3b8}.client{fill:#0f2d3b;stroke:#22d3ee;stroke-width:2}.server{fill:#172554;stroke:#60a5fa;stroke-width:2}.controller{fill:#2e1065;stroke:#c084fc;stroke-width:2}.state{fill:#111827;stroke:#475569;stroke-width:2}.ok{fill:#064e3b;stroke:#34d399;stroke-width:2}.bad{fill:#450a0a;stroke:#f87171;stroke-width:2}.arrow{stroke:#67e8f9;stroke-width:3;fill:none;marker-end:url(#m)}
+    </style>
+    <marker id="m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#67e8f9"/></marker>
+  </defs>
+  <rect width="1600" height="1000" fill="#0b1120"/>
+  <text x="55" y="55" class="title">Client 생성 AeroScript → Server 실행 → Automation1 완료 확인</text>
+
+  <rect x="50" y="95" width="450" height="560" rx="8" class="client"/>
+  <text x="75" y="135" class="h">Client PC 192.168.10.200</text>
+  <rect x="80" y="170" width="390" height="95" rx="5" class="state"/><text x="105" y="202" class="h">1. 좌표 및 Script 생성</text><text x="105" y="232" class="t">Process Gx/Gy + MOF 순서 + 선택 Head</text>
+  <rect x="80" y="295" width="390" height="95" rx="5" class="state"/><text x="105" y="327" class="h">2. Local 저장 + Package</text><text x="105" y="357" class="t">Job ID / UTF-8 / SHA-256 / Task / Mode</text>
+  <rect x="80" y="420" width="390" height="95" rx="5" class="state"/><text x="105" y="452" class="h">3. Upload / Run / Status</text><text x="105" y="482" class="t">Protocol v3, TCP Gateway 46100</text>
+  <rect x="80" y="545" width="390" height="80" rx="5" class="ok"/><text x="105" y="577" class="h">최종 판정</text><text x="105" y="605" class="t">Completed 또는 Failed/Rejected</text>
+
+  <rect x="575" y="95" width="450" height="560" rx="8" class="server"/>
+  <text x="600" y="135" class="h">Server PC 192.168.10.10 : 46100</text>
+  <rect x="605" y="170" width="390" height="95" rx="5" class="state"/><text x="630" y="202" class="h">4. Health 및 요청 검증</text><text x="630" y="232" class="t">API Key / Protocol / Mode / Runtime</text>
+  <rect x="605" y="295" width="390" height="95" rx="5" class="state"/><text x="630" y="327" class="h">5. Server spool</text><text x="630" y="357" class="t">{JobId}.ascript + SHA-256 재검증</text>
+  <rect x="605" y="420" width="390" height="95" rx="5" class="state"/><text x="630" y="452" class="h">6. 실행 직렬화</text><text x="630" y="482" class="t">Uploaded → Queued → Runtime 실행</text>
+  <rect x="605" y="545" width="390" height="80" rx="5" class="state"/><text x="630" y="577" class="h">7. 상태 Snapshot</text><text x="630" y="605" class="t">TaskState 변경을 Client Message로 반환</text>
+
+  <rect x="1100" y="95" width="450" height="560" rx="8" class="controller"/>
+  <text x="1125" y="135" class="h">Automation1 Controller : native 12200</text>
+  <rect x="1130" y="170" width="390" height="95" rx="5" class="state"/><text x="1155" y="202" class="h">8. Files.WriteText</text><text x="1155" y="232" class="t">programs/mof_generated.ascript</text>
+  <rect x="1130" y="295" width="390" height="95" rx="5" class="state"/><text x="1155" y="327" class="h">9. Tasks[1].Program.Run</text><text x="1155" y="357" class="t">Source compile/load 후 Program 시작</text>
+  <rect x="1130" y="420" width="390" height="95" rx="5" class="state"/><text x="1155" y="452" class="h">10. Task.Status Polling</text><text x="1155" y="482" class="t">100 ms Snapshot / Error 포함</text>
+  <rect x="1130" y="545" width="185" height="80" rx="5" class="ok"/><text x="1155" y="577" class="h">정상</text><text x="1155" y="605" class="t">ProgramComplete</text>
+  <rect x="1335" y="545" width="185" height="80" rx="5" class="bad"/><text x="1360" y="577" class="h">오류</text><text x="1360" y="605" class="t">Error/Unexpected</text>
+
+  <path d="M470 465H605" class="arrow"/><text x="492" y="447" class="s">TCP 46100</text>
+  <path d="M995 465H1130" class="arrow"/><text x="1010" y="447" class="s">.NET API</text>
+  <path d="M1130 585C1055 750 870 750 800 625" class="arrow"/>
+  <path d="M605 585C530 820 325 820 275 625" class="arrow"/>
+
+  <text x="55" y="735" class="h">정상 상태 전이</text>
+  <rect x="55" y="770" width="180" height="70" rx="5" class="state"/><text x="85" y="813" class="t">Uploaded</text>
+  <rect x="275" y="770" width="180" height="70" rx="5" class="state"/><text x="320" y="813" class="t">Queued</text>
+  <rect x="495" y="770" width="250" height="70" rx="5" class="state"/><text x="530" y="813" class="t">TransferringToController</text>
+  <rect x="785" y="770" width="280" height="70" rx="5" class="state"/><text x="825" y="800" class="t">Running</text><text x="825" y="823" class="s">TaskState=ProgramRunning</text>
+  <rect x="1105" y="770" width="220" height="70" rx="5" class="ok"/><text x="1140" y="800" class="t">Completed</text><text x="1140" y="823" class="s">ProgramComplete</text>
+  <rect x="1365" y="770" width="180" height="70" rx="5" class="bad"/><text x="1400" y="800" class="t">Failed</text><text x="1390" y="823" class="s">Error/Timeout</text>
+  <path d="M235 805H275M455 805H495M745 805H785M1065 805H1105" class="arrow"/>
+  <path d="M1065 825C1190 910 1365 870 1365 825" class="arrow"/>
+
+  <text x="55" y="925" class="t">완료 판정은 Run 요청 성공이 아니라 Controller TaskState=ProgramComplete와 Client JobState=Completed가 모두 확인된 시점이다.</text>
+  <text x="55" y="958" class="s">12200은 Automation1 native endpoint이며 Client WPF의 JSON protocol을 직접 전송하지 않는다.</text>
+</svg>

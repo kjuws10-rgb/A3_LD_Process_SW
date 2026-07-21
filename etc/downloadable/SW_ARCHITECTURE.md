@@ -489,3 +489,15 @@ Server 실행 정책은 Virtual Controller에서 `VirtualOnly`, 실제 장비에
 Client의 `Script 생성`은 `Local Script File`에 실제 `.ascript`를 저장한 뒤 별도의 `Controller File` 경로를 Package에 넣는다. `AeroScriptClient.HealthCheckAsync`와 Server의 `HealthCheck` dispatch가 Upload 전에 TCP/API Key/ModePolicy를 확인한다. Scanner UI 선택은 선택 Head별 `InField` 좌표 합집합을 `_selectedPointKeys`에 반영한다.
 
 Script 이동값은 `CellCommand.Gx/Gy`이며 Review 표시값은 `ReviewCoordinateX/Y`이다. 생성 Script 주석과 Client 로그는 두 좌표를 함께 기록하지만 Scanner 명령에는 Process Gx/Gy만 사용한다.
+
+### Script Gateway와 Automation1 Native Endpoint 분리
+
+Client WPF는 `192.168.10.10:46100`의 `Automation1Server`와 protocol v3으로 통신한다. `Automation1Server` 내부의 `Automation1ReflectionRuntime`이 공식 .NET API `Controller.Connect()`를 호출해 Automation1 Controller native endpoint(통상 `12200`)에 연결한다. Client가 `12200`에 JSON frame을 직접 전송하면 native protocol과 불일치하여 원격 호스트가 연결을 종료한다.
+
+### Runtime Health 및 완료 판정 강화
+
+`HealthCheck`는 Gateway TCP/API Key뿐 아니라 `IAutomation1Runtime.CheckHealthAsync`를 호출해 Simulation 여부 또는 실제 Automation1 DLL, Controller Host/Port, IsRunning, Task Count를 점검한다. 실행 중에는 Task Status snapshot을 한 번씩 읽어 상태가 변경될 때 `ProgramRunning`, `ProgramFeedhold`, `ProgramPaused`를 Job Message에 기록한다. `ProgramComplete`만 정상 완료이며 `Error` 또는 예상하지 못한 `Idle/Inactive/ProgramReady` 전환은 즉시 `Failed`가 된다.
+
+Client의 250 ms 상태 Polling은 유지하되 동일 State/Message를 반복 기록하지 않는다. Server Console은 API Key를 제외한 Remote endpoint, Request type, Job ID, 성공 여부, State, Error Code를 기록하며 반복 GetStatus는 State/Message 변경 시에만 남긴다.
+
+상세 배포·실행·검증 절차와 판정표는 `CLIENT_SERVER_ASCRIPT_OPERATION_PROCEDURE.md`, 한눈에 보는 흐름은 `CLIENT_SERVER_ASCRIPT_OPERATION_FLOW.svg`를 참조한다.

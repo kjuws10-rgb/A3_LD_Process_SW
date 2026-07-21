@@ -165,8 +165,10 @@ public partial class MainWindow : Window
     {
         await RunScriptUiOperationAsync(async cancellationToken =>
         {
-            AppendDeploymentLog($"[연결 확인] {ServerHostBox.Text.Trim()}:{ReadInt(ServerPortBox, 46100)} TCP 접속 시도");
-            var response = await CreateAeroScriptClient().HealthCheckAsync(cancellationToken);
+            var client = CreateAeroScriptClient();
+            AppendDeploymentLog(
+                $"[연결 확인] Script Gateway {ServerHostBox.Text.Trim()}:{ReadInt(ServerPortBox, AeroScriptEndpointRules.DefaultGatewayPort)} TCP 접속 시도");
+            var response = await client.HealthCheckAsync(cancellationToken);
             EnsureServerSuccess("연결 확인", response);
             ShowServerResponse("연결 확인", response);
         });
@@ -237,12 +239,18 @@ public partial class MainWindow : Window
             EnsureServerSuccess("실행 명령", run);
             ShowServerResponse("실행 명령", run);
 
+            string? lastStatusKey = null;
             while (true)
             {
                 await Task.Delay(250, cancellationToken);
                 var status = await client.GetStatusAsync(package.JobId, cancellationToken);
                 EnsureServerSuccess("상태 조회", status);
-                ShowServerResponse("상태", status);
+                var statusKey = $"{status.Job?.State}|{status.Job?.Message}|{status.ErrorCode}";
+                if (!statusKey.Equals(lastStatusKey, StringComparison.Ordinal))
+                {
+                    ShowServerResponse("상태", status);
+                    lastStatusKey = statusKey;
+                }
 
                 if (status.Job?.State == ScriptJobState.Completed)
                 {
@@ -380,9 +388,21 @@ public partial class MainWindow : Window
 
     private AeroScriptClient CreateAeroScriptClient()
     {
+        var configuredPort = ReadInt(ServerPortBox, AeroScriptEndpointRules.DefaultGatewayPort);
+        var gatewayPort = AeroScriptEndpointRules.NormalizeGatewayPort(
+            configuredPort,
+            out var correctedNativeControllerPort);
+        if (correctedNativeControllerPort)
+        {
+            ServerPortBox.Text = gatewayPort.ToString(CultureInfo.InvariantCulture);
+            AppendDeploymentLog(
+                $"[포트 자동 수정] {configuredPort}은 Automation1 Controller native endpoint입니다. " +
+                $"이 WPF의 Script Gateway 포트를 {gatewayPort}으로 변경했습니다.");
+        }
+
         return new AeroScriptClient(
             ServerHostBox.Text.Trim(),
-            ReadInt(ServerPortBox, 46100),
+            gatewayPort,
             ServerApiKeyBox.Text);
     }
 

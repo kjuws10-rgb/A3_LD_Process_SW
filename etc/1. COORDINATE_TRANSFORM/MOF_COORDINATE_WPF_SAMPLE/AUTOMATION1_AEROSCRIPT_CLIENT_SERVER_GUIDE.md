@@ -184,6 +184,8 @@ RUN_AUTOMATION1_SERVER_REAL.bat
 
 `Ping` 성공은 IP 경로만 확인한다. `대상 컴퓨터에서 연결을 거부했습니다`가 나오면 `192.168.10.10:46100`에서 이 예제의 `Automation1Server`가 수신 중인지 먼저 확인한다. MDK 설치 및 라이선스 인증은 사용자 정의 TCP Server를 자동으로 시작하지 않는다.
 
+Automation1 Console과 Controller API가 사용하는 `12200`은 Automation1 native endpoint이다. 이 프로젝트의 길이 프리픽스 JSON frame을 `12200`에 보내면 native 서비스가 protocol을 해석할 수 없어 연결을 종료한다. WPF의 `Script Gateway Port`에는 `46100`을 사용하며, Server 내부의 `Automation1ReflectionRuntime`만 공식 .NET API로 Controller에 연결한다.
+
 1. `PUBLISH_AUTOMATION1_SERVER_WIN64.bat`로 독립 실행 배포 폴더를 만든다.
 2. 폴더 전체를 Server PC로 복사한다.
 3. Server PC에서 `OPEN_SERVER_FIREWALL_PORT_46100_ADMIN.bat`를 관리자 권한으로 실행한다.
@@ -191,7 +193,9 @@ RUN_AUTOMATION1_SERVER_REAL.bat
 5. Client에서 `CHECK_SERVER_PORT_FROM_CLIENT.bat`의 `TcpTestSucceeded`를 확인한다.
 6. WPF에서 `Server 연결 확인`이 성공한 뒤 Upload/Run을 수행한다.
 
-Protocol v3에는 Job 없이 Server 준비 상태와 ModePolicy를 확인하는 `HealthCheck` 요청이 추가되었다.
+Protocol v3의 `HealthCheck`는 Job 없이 Gateway, ModePolicy, Simulation Runtime 또는 실제 Automation1 .NET API DLL과 Controller 연결 상태를 확인한다. `Gateway ready`만으로 끝나지 않고 응답에 `Automation1 runtime ready` 또는 `RUNTIME_NOT_READY`가 포함되는지 확인한다.
+
+Client 생성 Script의 Server 전송, Controller 실행, TaskState 완료 판정에 대한 작업자 절차는 `CLIENT_SERVER_ASCRIPT_OPERATION_PROCEDURE.md`를 따른다.
 
 ## 11. Local File, Controller File, 좌표의 구분
 

@@ -222,7 +222,7 @@
                     </ComboBox>
                   </StackPanel>
                   <StackPanel Margin="0,0,8,8"><TextBlock Text="Server PC Host"/><TextBox x:Name="ServerHostBox" Text="192.168.10.10" ToolTip="AeroScript를 수신하는 별도 Automation1Server 프로그램이 실행되는 Scanner Server PC 주소입니다. MDK 설치만으로 Server가 자동 실행되지는 않습니다."/></StackPanel>
-                  <StackPanel Margin="0,0,8,8"><TextBlock Text="Server Port"/><TextBox x:Name="ServerPortBox" Text="46100" ToolTip="Client/Server 길이 프리픽스 JSON protocol이 사용하는 TCP listen port입니다."/></StackPanel>
+                  <StackPanel Margin="0,0,8,8"><TextBlock Text="Script Gateway Port"/><TextBox x:Name="ServerPortBox" Text="46100" ToolTip="이 예제의 Automation1Server가 수신하는 JSON protocol 포트입니다. Automation1 Controller native endpoint 12200을 입력하면 안 됩니다."/></StackPanel>
                   <StackPanel Margin="0,0,8,8"><TextBlock Text="API Key"/><TextBox x:Name="ServerApiKeyBox" Text="change-this-key" ToolTip="Server 요청 인증값입니다. 운영에서는 기본값을 사용하지 말고 장비망 정책에 맞는 비밀값을 설정해야 합니다."/></StackPanel>
                   <StackPanel Margin="0,0,0,8"><TextBlock Text="Automation1 Task"/><TextBox x:Name="Automation1TaskIndexBox" Text="1" ToolTip="Controller.Runtime.Tasks[index]에서 AeroScript를 실행할 User Task 번호입니다. Task index는 1부터 시작합니다."/></StackPanel>
 
@@ -233,6 +233,11 @@
                   <StackPanel Margin="0,0,8,8"><TextBlock Text="GY Axis Template"/><TextBox x:Name="AxisYTemplateBox" Text="GY" ToolTip="Scanner Y축 이름입니다. {0}을 넣으면 선택 Head 번호로 치환됩니다."/></StackPanel>
                   <StackPanel Margin="0,0,0,8"><TextBlock Text="Laser Library"/><TextBox x:Name="LaserLibraryNameBox" Text="LaserOnLibrary.a1lib" ToolTip="Hardware 모드에서 import 문만 생성할 검증된 Library 이름입니다. 함수 호출은 장비 Interlock 확정 후 구현해야 합니다."/></StackPanel>
                 </UniformGrid>
+
+                <Border Background="#172554" BorderBrush="#3B82F6" BorderThickness="1" CornerRadius="4" Padding="10" Margin="0,0,0,8">
+                  <TextBlock Foreground="#BFDBFE" TextWrapping="Wrap"
+                             Text="통신 경로: Client WPF → 192.168.10.10:46100 Script Gateway → Automation1 .NET API → Controller native endpoint 12200. 이 화면에는 46100을 입력합니다."/>
+                </Border>
 
                 <Expander Header="MOF Script 생성 조건" IsExpanded="False" Foreground="#93C5FD" Margin="0,0,0,8">
                   <UniformGrid Columns="5" Margin="0,8,0,0">
