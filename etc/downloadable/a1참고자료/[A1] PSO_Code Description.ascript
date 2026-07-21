@@ -1,0 +1,94 @@
+//=========================================================================
+// Command Queue 사용시 변수는 삭제해야함
+//=========================================================================
+
+program
+var $CpuGX as real
+var $CpuGY as real
+var $PsoDistance as real 
+var $JumpSpeed as real
+var $MarkingSpeed as real
+var $LaserFrequency as real 
+var $TotalTime as real 
+var $OnTime as real
+
+// 변수 Setting
+$LaserFrequency  = 100000	// 주파수 100KHz
+$TotalTime = (1 / $LaserFrequency) * 1000000
+$OnTime = $TotalTime * 0.8
+$PsoDistance = 0.1
+$JumpSpeed = 500
+$MarkingSpeed = 300
+
+// Default Setting
+SetupTaskTargetMode(TargetMode.Absolute)											// G-Code 이동명령을 절대 좌표계로 설정
+SetupTaskTimeUnits(TimeUnits.Seconds)												// 시간 단위를 초 단위로 설정
+SetupTaskWaitMode(WaitMode.Auto)													// 동작간 최소 시간만큼 기다리고 다음 동작 실행
+SetupTaskDistanceUnits(DistanceUnits.Primary)										// 거리 단위계를 기본단위(mm) 사용
+ParameterSetTaskValue(TaskGetIndex(), TaskParameter.MotionUpdateRate, 100)			// 모터가 이동할 궤적 계산 빈도를 설정(현재 활성화된 Task의 MotionUpdateRate를 100(GL4:100, XC4e:20)으로 설정)
+ParameterSetTaskValue(TaskGetIndex(), TaskParameter.ExecuteNumLines, 110)			// Look Ahead의 미리 읽어둘 줄수를 설정
+VelocityBlendingOn()																// Marking(Interpolation Move) 시 속도가 0으로 떨어지지 않고 부드럽게 이어지도록 속도 블렌딩(Velocity Blending)을 On
+//GalvoRotationSet(GX, 0.0)															// 스캐너 회전 각도를 0으로 설정
+IfovOff()																			// IFOV 설정 해제
+
+// Moving Velocity Setting
+SetupAxisRampType(GX, RampType.Sine)												// Jump 가감속 Type 설정
+SetupAxisRampType(GY, RampType.Sine)												// Jump 가감속 Type 설정
+SetupAxisRampValue([GX, GY], RampMode.Rate, 1000000, RampMode.Rate, 1000000)		// Jump 가감속 설정
+		
+SetupCoordinatedRampType(RampType.Sine)												// Marking 가감속 Type 설정
+SetupCoordinatedRampValue(RampMode.Rate, 1000000, RampMode.Rate, 1000000)			// Marking 가감속 설정
+		
+SetupDependentCoordinatedAccelLimit(1000000)										// Marking 종속축 가감속 Limit 설정(현재 Task)
+SetupCoordinatedAccelLimit(1000000, 1000000)										// Marking 가감속 Limit 설정(현재 Task)
+
+SetupAxisSpeed(GX, $JumpSpeed)														// Jump 속도 설정
+SetupAxisSpeed(GY, $JumpSpeed)														// Jump 속도 설정
+SetupCoordinatedSpeed($MarkingSpeed)												// Marking 속도 설정(Vector 속도)
+
+
+G90 G0 GX 0 GY 0																	// 스캐너 초기 위치 이동
+Dwell(0.1)																			// 0.1초 대기
+
+// MarkingSpeed 기준 Maximum Quadrature Output Frequencies를 초과하지 않도록 EQD 값을 설정하기 위한 계산
+$CpuGX = ParameterGetAxisValue(GX, AxisParameter.CountsPerUnit) * $MarkingSpeed / 15000000	// Maximum Quadrature Output Frequencies-GL4 : 30MHz이고, 1축당 15MHz
+$CpuGY = ParameterGetAxisValue(GY, AxisParameter.CountsPerUnit) * $MarkingSpeed / 15000000	// Maximum Quadrature Output Frequencies-GL4 : 30MHz이고, 1축당 15MHz
+
+ParameterSetAxisValue(GX, AxisParameter.PrimaryEmulatedQuadratureDivider, $CpuGX)	// 계산된 EQD Parameter 설정
+ParameterSetAxisValue(GY, AxisParameter.PrimaryEmulatedQuadratureDivider, $CpuGY)	// 계산된 EQD Parameter 설정
+
+
+// PSO Setting
+PsoReset(GX)																		// PSO 설정 Reset(기존에 남아있을지 모르는 PSO 설정을 초기화)
+PsoDistanceConfigureInputs(GX, [PsoDistanceInput.GL4PrimaryFeedbackAxis1, PsoDistanceInput.GL4PrimaryFeedbackAxis2])	// PSO Distance Count하는 Input Source를 설정-Only 스캐너 가공
+//PsoDistanceConfigureInputs(GX, [PsoDistanceInput.GL4IfovFeedbackAxis1, PsoDistanceInput.GL4IfovFeedbackAxis2])		// PSO Distance Count하는 Input Source를 설정-IFOV
+PsoDistanceConfigureFixedDistance(GX, Round(UnitsToCounts(GX, $PsoDistance) / $CpuGX ))	// PSO 거리 설정
+PsoDistanceCounterOn(GX)															// 스캐너의 움직임을 실시간 누적 계산하기 시작
+PsoDistanceEventsOn(GX)																// 목표 거리 도달시 이벤트(Trigger) 발생 허용
+PsoWaveformConfigureMode(GX, PsoWaveformMode.Pulse)									// 목표 거리 도달시 출력 형태는 Pulse로 설정
+PsoWaveformConfigurePulseFixedTotalTime(GX, $TotalTime)								// Total Time 설정
+PsoWaveformConfigurePulseFixedOnTime(GX, $OnTime)									// On Time 설정 
+PsoWaveformConfigurePulseFixedCount(GX, 1)											// 설정한 PSO Distance에 도달하면 Pulse를 1샷 발생하도록 설정
+PsoWaveformApplyPulseConfiguration(GX)												// 위 PSO 설정값들을 드라이버 레지스터에 등록(Save)
+PsoWaveformOn(GX)																	// 파형 생성기 모듈 전원을 On 함(Standby 상태)
+PsoOutputConfigureSource(GX, PsoOutputSource.Waveform)								// PSO 거리에 도달시 출력 소스 지정
+PsoOutputConfigureOutput(GX, PsoOutputPin.GL4LaserOutput0)							// 파형 신호를 장비 밖으로 내보낼 실제 물리적인 포트(핀 번호)를 지정
+PsoEventConfigureMask(GX, PsoEventMask.LaserMask)									// GalvoLaser.Auto & PSO 거리가 충족 될때 Laser 발사
+GalvoLaserOutput(GX, GalvoLaser.Auto)												// 이 시점부터 Laser를 켜고 끄는 타이밍은 코드를 거치지 않고 H/W 단에서 바로 출력되도록 설정(통신 딜레이에 의한 오차 감소)
+
+AppDataCollectionSnapshot()															// Visualize Data Collect 시작
+Dwell(0.1)																			// 0.1초 대기
+
+// 가공
+G90 G0 GX 0 GY 0																	// MoveRapid([GX, GY], [0, 0])
+G90 G1 GX 10 GY 0																	// MoveLinear([GX, GY], [10, 0])
+G90 G1 GX 10 GY 10																	// MoveLinear([GX, GY], [10, 10])
+G90 G1 GX 0 GY 10																	// MoveLinear([GX, GY], [0, 10])
+G90 G1 GX 0 GY 0																	// MoveLinear([GX, GY], [0, 0])
+
+WaitForMotionDone([GX, GY])															// GX, GY Motiondone Check
+Dwell(0.1)																			// 0.1초 대기_가공 완료 후 데이터 수집 마무리를 위한 짧은 대기
+AppDataCollectionStop()																// Visualize Data Collect 종료
+GalvoLaserOutput(GX, GalvoLaser.Off)												// 레이저 하드웨어 Off
+PsoWaveformOff(GX)																	// PSO 파형 출력 Off
+end
