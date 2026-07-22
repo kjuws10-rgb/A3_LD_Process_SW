@@ -5,6 +5,7 @@
     <UseWPF>true</UseWPF>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <PlatformTarget>x64</PlatformTarget>
   </PropertyGroup>
   <ItemGroup>
     <None Update="CELL_LAYOUT_CONFIG_TEMPLATE.csv" CopyToOutputDirectory="PreserveNewest"/>
@@ -12,6 +13,19 @@
     <None Update="VIRTUAL_WAIT_SIMULATION_REFERENCE.ascript" CopyToOutputDirectory="PreserveNewest"/>
   </ItemGroup>
   <ItemGroup>
-    <Compile Remove="Automation1Server\**\*.cs"/>
+    <Reference Include="Aerotech.Automation1.DotNet">
+      <HintPath>Automation1Sdk\Aerotech.Automation1.DotNet.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="Aerotech.Automation1.Communication">
+      <HintPath>Automation1Sdk\Aerotech.Automation1.Communication.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Content Include="Automation1Sdk\Automation1Compiler.dll"
+             Link="Automation1Compiler.dll"
+             CopyToOutputDirectory="PreserveNewest"/>
+    <Content Include="Automation1Sdk\Automation1Compiler64.dll"
+             Link="Automation1Compiler64.dll"
+             CopyToOutputDirectory="PreserveNewest"/>
   </ItemGroup>
 </Project>

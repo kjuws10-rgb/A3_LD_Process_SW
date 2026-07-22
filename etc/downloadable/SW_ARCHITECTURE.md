@@ -451,22 +451,22 @@ Requirement mapping:
 - `0선 방어`: represented as `EN_REVIEW_MEASUREMENT_MODE.ZeroLineDefense`.
 - `Fine/Rough/Simple 보정`: represented as separate review modes; detailed UI and algorithm variants remain future implementation.
 
-## Automation1 AeroScript Client/Server I/F (2026-07-20)
+## Automation1 직접 연결 I/F (2026-07-22)
 
 ```text
 Recipe / Review / Scanner parameters
   -> CoordinateTransformService (Client PC)
   -> AeroScriptGenerator (Client PC only)
-  -> UploadScript + SHA-256
-  -> Scanner Server spool
-  -> RunScript command
-  -> Controller.Files.WriteText
-  -> Runtime.Tasks[n].Program.Run
+  -> Local .ascript + SHA-256
+  -> Controller.Connect(Server IP, 12200)
+  -> Controller.Files.WriteText(controllerFile, source)
+  -> Controller.Runtime.Tasks[n].Program.Run(controllerFile)
   -> TaskState polling
-  -> Completed / Failed response to Client UI
+  -> ProgramComplete / Error
+  -> Controller.Files.WriteText(mof_job_*.json, audit)
 ```
 
-Server PC는 좌표와 AeroScript를 생성하거나 수정하지 않는다. Upload와 Run은 서로 다른 명령이며, Server는 동일 Automation1 Task에 대한 동시 실행을 직렬화한다. 자세한 설정과 protocol 계약은 `AUTOMATION1_AEROSCRIPT_CLIENT_SERVER_GUIDE.md` 및 `AUTOMATION1_AEROSCRIPT_CLIENT_SERVER_FLOW.svg`를 참조한다.
+WPF가 A1 Studio 원격 접속과 같은 개념으로 Automation1 Controller endpoint에 직접 연결한다. 별도 `Automation1Server`, 자체 TCP framing, JSON Gateway, API Key, spool 폴더는 없다. 좌표와 Script는 Client에서만 생성하며 Server PC의 Automation1 Controller는 공식 API를 통해 파일 기록과 Task 실행을 담당한다.
 
 ### Virtual Wait Simulation 경로
 
@@ -480,24 +480,24 @@ GX + Stage Y MOF pair 전제
   -> ProgramComplete
 ```
 
-이 경로에는 Laser, PSO, Hardware Aux, Galvo calibration 명령을 넣지 않는다. `SimulationAutomation1Runtime`은 protocol만 모사하므로 실제 Wait 검증은 Automation1 Virtual Controller에 `Automation1ReflectionRuntime`으로 접속해야 한다. Virtual axis feedback은 command와 동일하므로 결과는 논리 순서 검증이며 실제 Encoder 지연과 광학 동기 검증이 아니다. 상세 흐름은 `AUTOMATION1_VIRTUAL_WAIT_SIMULATION_FLOW.svg`를 참조한다.
+이 경로에는 Laser, PSO, Hardware Aux, Galvo calibration 명령을 넣지 않는다. Virtual Wait Script도 공식 API를 통해 Automation1 Virtual Controller에 직접 기록하고 실행한다. Virtual axis feedback은 command와 동일하므로 결과는 논리 순서 검증이며 실제 Encoder 지연과 광학 동기 검증이 아니다. 상세 흐름은 `AUTOMATION1_VIRTUAL_WAIT_SIMULATION_FLOW.svg`를 참조한다.
 
-Server 실행 정책은 Virtual Controller에서 `VirtualOnly`, 실제 장비에서 `HardwareOnly`로 고정한다. 반대 생성 모드의 Package는 Controller File System에 기록하기 전 `MODE_POLICY_REJECTED`로 거부한다.
+실제 장비에서 Hardware Script를 실행하기 전 UI 확인창, 축 이름, Software Limit, 속도, Ramp, 장비 Interlock, Laser 안전 조건을 작업자가 검토해야 한다. Virtual Mode는 하드웨어 명령을 자동 생성하지 않는다.
 
 ### 2026-07-20 연결 및 좌표 I/F 보완
 
-Client의 `Script 생성`은 `Local Script File`에 실제 `.ascript`를 저장한 뒤 별도의 `Controller File` 경로를 Package에 넣는다. `AeroScriptClient.HealthCheckAsync`와 Server의 `HealthCheck` dispatch가 Upload 전에 TCP/API Key/ModePolicy를 확인한다. Scanner UI 선택은 선택 Head별 `InField` 좌표 합집합을 `_selectedPointKeys`에 반영한다.
+Client의 `Script 생성`은 `Local Script File`에 실제 `.ascript`를 저장한 뒤 별도의 `Controller File` 경로를 Package에 넣는다. `Automation1DirectClient.ConnectAsync`는 공식 `Controller.Connect(host, port)` 결과에서 Host, Port, IsRunning, 암호화 여부, Task 수를 확인한다. Scanner UI 선택은 선택 Head별 `InField` 좌표 합집합을 `_selectedPointKeys`에 반영한다.
 
 Script 이동값은 `CellCommand.Gx/Gy`이며 Review 표시값은 `ReviewCoordinateX/Y`이다. 생성 Script 주석과 Client 로그는 두 좌표를 함께 기록하지만 Scanner 명령에는 Process Gx/Gy만 사용한다.
 
-### Script Gateway와 Automation1 Native Endpoint 분리
+### Automation1 Native Endpoint 직접 사용
 
-Client WPF는 `192.168.10.10:46100`의 `Automation1Server`와 protocol v3으로 통신한다. `Automation1Server` 내부의 `Automation1ReflectionRuntime`이 공식 .NET API `Controller.Connect()`를 호출해 Automation1 Controller native endpoint(통상 `12200`)에 연결한다. Client가 `12200`에 JSON frame을 직접 전송하면 native protocol과 불일치하여 원격 호스트가 연결을 종료한다.
+Client WPF는 `192.168.10.10:12200`에 공식 Automation1 .NET API로 직접 연결한다. `12200`에 임의 JSON이나 일반 Socket 데이터를 쓰지 않는다. 해당 endpoint는 Automation1 native protocol이므로 공식 `Controller.Connect`를 사용해야 한다.
 
 ### Runtime Health 및 완료 판정 강화
 
-`HealthCheck`는 Gateway TCP/API Key뿐 아니라 `IAutomation1Runtime.CheckHealthAsync`를 호출해 Simulation 여부 또는 실제 Automation1 DLL, Controller Host/Port, IsRunning, Task Count를 점검한다. 실행 중에는 Task Status snapshot을 한 번씩 읽어 상태가 변경될 때 `ProgramRunning`, `ProgramFeedhold`, `ProgramPaused`를 Job Message에 기록한다. `ProgramComplete`만 정상 완료이며 `Error` 또는 예상하지 못한 `Idle/Inactive/ProgramReady` 전환은 즉시 `Failed`가 된다.
+연결 확인은 Controller Host/Port, IsRunning, 암호화 여부, Task Count, API DLL 버전을 표시한다. 실행 중에는 Task Status snapshot을 읽어 `ProgramRunning`, `ProgramFeedhold`, `ProgramPaused`, `ProgramComplete`, `Error`를 판정한다. 실행 직후 2초는 상태 전환 유예 구간이며 이후 완료 전 `Idle/Inactive/ProgramReady` 전환은 실패로 처리한다.
 
-Client의 250 ms 상태 Polling은 유지하되 동일 State/Message를 반복 기록하지 않는다. Server Console은 API Key를 제외한 Remote endpoint, Request type, Job ID, 성공 여부, State, Error Code를 기록하며 반복 GetStatus는 State/Message 변경 시에만 남긴다.
+Client의 250 ms 상태 Polling은 유지하되 동일 State/Message를 반복 기록하지 않는다. Script 기록, 실행, 상태 변경, 완료, 오류, 중지 이벤트는 `mof_job_yyyyMMdd_HHmmss_jobid.json`으로 Controller File System에 갱신된다. 이 파일은 Server PC 일반 Windows 경로가 아니라 A1 Studio에서 확인하는 Controller 파일이다.
 
-상세 배포·실행·검증 절차와 판정표는 `CLIENT_SERVER_ASCRIPT_OPERATION_PROCEDURE.md`, 한눈에 보는 흐름은 `CLIENT_SERVER_ASCRIPT_OPERATION_FLOW.svg`를 참조한다.
+상세 실행·검증 절차와 판정표는 `AUTOMATION1_DIRECT_OPERATION_PROCEDURE.md`, 한눈에 보는 흐름은 `AUTOMATION1_DIRECT_CLIENT_FLOW.svg`를 참조한다.

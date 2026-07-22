@@ -21,6 +21,8 @@ public partial class MainWindow : Window
     private CoordinateInput _input = new();
     private CoordinateResult? _lastResult;
     private AeroScriptPackage? _currentScriptPackage;
+    private Automation1DirectClient? _automation1Client;
+    private Automation1ConnectionOptions? _connectedAutomation1Options;
     private CancellationTokenSource? _scriptWorkflowCancellation;
     private double _matrixCellSize = 86;
     private double _boardZoom = 1.0;
@@ -53,6 +55,10 @@ public partial class MainWindow : Window
         Closing += (_, _) =>
         {
             _scriptWorkflowCancellation?.Cancel();
+            if (_automation1Client is not null)
+            {
+                _automation1Client.DisposeAsync().AsTask().GetAwaiter().GetResult();
+            }
             SaveViewState();
         };
     }
@@ -156,21 +162,24 @@ public partial class MainWindow : Window
         await RunScriptUiOperationAsync(async cancellationToken =>
         {
             var package = _currentScriptPackage ?? GenerateCurrentAeroScriptPackage();
-            var response = await CreateAeroScriptClient().UploadAsync(package, cancellationToken);
-            ShowServerResponse("전송", response);
+            var client = await GetAutomation1DirectClientAsync(cancellationToken);
+            var response = await client.UploadAsync(package, cancellationToken);
+            ShowAutomation1Response("Controller 기록", response);
         });
     }
 
-    private async void ServerHealthCheckButton_Click(object sender, RoutedEventArgs e)
+    private async void ControllerConnectionButton_Click(object sender, RoutedEventArgs e)
     {
         await RunScriptUiOperationAsync(async cancellationToken =>
         {
-            var client = CreateAeroScriptClient();
+            var client = await GetAutomation1DirectClientAsync(cancellationToken, forceReconnect: true);
             AppendDeploymentLog(
-                $"[연결 확인] Script Gateway {ServerHostBox.Text.Trim()}:{ReadInt(ServerPortBox, AeroScriptEndpointRules.DefaultGatewayPort)} TCP 접속 시도");
-            var response = await client.HealthCheckAsync(cancellationToken);
-            EnsureServerSuccess("연결 확인", response);
-            ShowServerResponse("연결 확인", response);
+                $"[직접 연결] Automation1 Controller {ControllerHostBox.Text.Trim()}:" +
+                $"{ReadInt(ControllerPortBox, Automation1ConnectionOptions.DefaultControllerPort)} API 접속 시도");
+            var response = client.LastConnectionInfo
+                           ?? throw new InvalidOperationException("Automation1 direct connection information is unavailable.");
+            EnsureAutomation1Success("연결 확인", response);
+            ShowAutomation1Response("연결 확인", response);
         });
     }
 
@@ -202,9 +211,10 @@ public partial class MainWindow : Window
         await RunScriptUiOperationAsync(async cancellationToken =>
         {
             var package = _currentScriptPackage
-                          ?? throw new InvalidOperationException("먼저 Script를 생성하고 Server PC로 전송해야 합니다.");
-            var response = await CreateAeroScriptClient().RunAsync(package.JobId, cancellationToken);
-            ShowServerResponse("실행 명령", response);
+                          ?? throw new InvalidOperationException("먼저 Script를 생성하고 Controller File System에 기록해야 합니다.");
+            var client = await GetAutomation1DirectClientAsync(cancellationToken);
+            var response = await client.RunAsync(package.JobId, cancellationToken);
+            ShowAutomation1Response("실행 명령", response);
         });
     }
 
@@ -214,8 +224,21 @@ public partial class MainWindow : Window
         {
             var package = _currentScriptPackage
                           ?? throw new InvalidOperationException("조회할 Script Job이 없습니다.");
-            var response = await CreateAeroScriptClient().GetStatusAsync(package.JobId, cancellationToken);
-            ShowServerResponse("상태 조회", response);
+            var client = await GetAutomation1DirectClientAsync(cancellationToken);
+            var response = await client.GetStatusAsync(package.JobId, cancellationToken);
+            ShowAutomation1Response("상태 조회", response);
+        });
+    }
+
+    private async void StopAeroScriptButton_Click(object sender, RoutedEventArgs e)
+    {
+        await RunScriptUiOperationAsync(async cancellationToken =>
+        {
+            var package = _currentScriptPackage
+                          ?? throw new InvalidOperationException("중지할 Script Job이 없습니다.");
+            var client = await GetAutomation1DirectClientAsync(cancellationToken);
+            var status = await client.StopAsync(package.JobId, cancellationToken);
+            ShowAutomation1Response("실행 중지", status);
         });
     }
 
@@ -229,38 +252,38 @@ public partial class MainWindow : Window
         await RunScriptUiOperationAsync(async cancellationToken =>
         {
             var package = GenerateCurrentAeroScriptPackage();
-            var client = CreateAeroScriptClient();
+            var client = await GetAutomation1DirectClientAsync(cancellationToken);
 
             var upload = await client.UploadAsync(package, cancellationToken);
-            EnsureServerSuccess("전송", upload);
-            ShowServerResponse("전송", upload);
+            EnsureAutomation1Success("Controller 기록", upload);
+            ShowAutomation1Response("Controller 기록", upload);
 
             var run = await client.RunAsync(package.JobId, cancellationToken);
-            EnsureServerSuccess("실행 명령", run);
-            ShowServerResponse("실행 명령", run);
+            EnsureAutomation1Success("실행 명령", run);
+            ShowAutomation1Response("실행 명령", run);
 
             string? lastStatusKey = null;
             while (true)
             {
                 await Task.Delay(250, cancellationToken);
                 var status = await client.GetStatusAsync(package.JobId, cancellationToken);
-                EnsureServerSuccess("상태 조회", status);
-                var statusKey = $"{status.Job?.State}|{status.Job?.Message}|{status.ErrorCode}";
+                EnsureAutomation1Success("상태 조회", status);
+                var statusKey = $"{status.State}|{status.TaskState}|{status.Message}|{status.Error}";
                 if (!statusKey.Equals(lastStatusKey, StringComparison.Ordinal))
                 {
-                    ShowServerResponse("상태", status);
+                    ShowAutomation1Response("상태", status);
                     lastStatusKey = statusKey;
                 }
 
-                if (status.Job?.State == ScriptJobState.Completed)
+                if (status.State == Automation1DirectState.Completed)
                 {
-                    AppendDeploymentLog("[완료] Server PC의 Automation1 task가 ProgramComplete 상태입니다.");
+                    AppendDeploymentLog("[완료] 원격 Automation1 Task가 ProgramComplete 상태입니다.");
                     return;
                 }
 
-                if (status.Job?.State is ScriptJobState.Failed or ScriptJobState.Rejected)
+                if (status.State == Automation1DirectState.Failed)
                 {
-                    throw new InvalidOperationException(status.Job.Message);
+                    throw new InvalidOperationException(status.Message);
                 }
             }
         }, TimeSpan.FromMinutes(30));
@@ -285,6 +308,11 @@ public partial class MainWindow : Window
         }
 
         var commandList = commands.OrderBy(command => command.MofSequence).ToArray();
+        if (commandList.Length == 0)
+        {
+            throw new InvalidOperationException("No process coordinates are selected for AeroScript generation.");
+        }
+
         var options = ReadAeroScriptGenerationOptions();
         var source = _aeroScriptGenerator.Generate(_input, commandList, options);
         var taskIndex = Math.Max(1, ReadInt(Automation1TaskIndexBox, 1));
@@ -292,7 +320,13 @@ public partial class MainWindow : Window
         ValidateControllerFileNameForClient(controllerFile);
         var localScriptPath = AeroScriptLocalFileStore.Save(LocalScriptPathBox.Text, source, AppContext.BaseDirectory);
 
-        _currentScriptPackage = AeroScriptPackage.Create(controllerFile, source, taskIndex, options.Mode);
+        _currentScriptPackage = AeroScriptPackage.Create(
+            controllerFile,
+            source,
+            taskIndex,
+            commandList.Length,
+            options.Mode,
+            PreserveControllerJobFileCheckBox.IsChecked == true);
         LocalScriptPathBox.Text = localScriptPath;
         ScriptPreviewBox.Text = source;
         ScriptJobText.Text =
@@ -302,7 +336,7 @@ public partial class MainWindow : Window
             $"[생성] Client PC에서 {options.Mode}, {commandList.Length}개 좌표로 " +
             $"로컬 파일 저장 완료: {localScriptPath}");
         AppendDeploymentLog(
-            $"[Controller 대상] Server 전송 후 Controller File System의 " +
+            $"[Controller 대상] 직접 연결 후 Controller File System의 " +
             $"{_currentScriptPackage.ControllerFileName}에 기록");
         var firstCommand = commandList.First();
         AppendDeploymentLog(
@@ -378,7 +412,7 @@ public partial class MainWindow : Window
 
         return MessageBox.Show(
                    this,
-                   "Hardware Coordinate Program을 Server PC에서 실행합니다.\n" +
+                   "Hardware Coordinate Program을 원격 Automation1 Controller에서 실행합니다.\n" +
                    "축 이름, Software Limit, 속도, Ramp, 장비 Interlock과 Laser 안전 상태를 확인했습니까?",
                    "Automation1 Hardware 실행 확인",
                    MessageBoxButton.YesNo,
@@ -386,24 +420,33 @@ public partial class MainWindow : Window
                    MessageBoxResult.No) == MessageBoxResult.Yes;
     }
 
-    private AeroScriptClient CreateAeroScriptClient()
+    private async Task<Automation1DirectClient> GetAutomation1DirectClientAsync(
+        CancellationToken cancellationToken,
+        bool forceReconnect = false)
     {
-        var configuredPort = ReadInt(ServerPortBox, AeroScriptEndpointRules.DefaultGatewayPort);
-        var gatewayPort = AeroScriptEndpointRules.NormalizeGatewayPort(
-            configuredPort,
-            out var correctedNativeControllerPort);
-        if (correctedNativeControllerPort)
+        var options = new Automation1ConnectionOptions(
+            ControllerHostBox.Text.Trim(),
+            ReadInt(ControllerPortBox, Automation1ConnectionOptions.DefaultControllerPort),
+            Automation1ConnectionMode.NoAuthentication,
+            "",
+            "",
+            "",
+            StartControllerIfStoppedCheckBox.IsChecked == true);
+
+        if (!forceReconnect && _automation1Client is not null && _connectedAutomation1Options == options)
         {
-            ServerPortBox.Text = gatewayPort.ToString(CultureInfo.InvariantCulture);
-            AppendDeploymentLog(
-                $"[포트 자동 수정] {configuredPort}은 Automation1 Controller native endpoint입니다. " +
-                $"이 WPF의 Script Gateway 포트를 {gatewayPort}으로 변경했습니다.");
+            return _automation1Client;
         }
 
-        return new AeroScriptClient(
-            ServerHostBox.Text.Trim(),
-            gatewayPort,
-            ServerApiKeyBox.Text);
+        if (_automation1Client is not null)
+        {
+            await _automation1Client.DisposeAsync();
+        }
+
+        _automation1Client = new Automation1DirectClient(options);
+        await _automation1Client.ConnectAsync(cancellationToken);
+        _connectedAutomation1Options = options;
+        return _automation1Client;
     }
 
     private async Task RunScriptUiOperationAsync(
@@ -435,22 +478,38 @@ public partial class MainWindow : Window
         }
     }
 
-    private void ShowServerResponse(string operation, ScriptServerResponse response)
+    private void ShowAutomation1Response(string operation, Automation1ConnectionInfo response)
     {
-        var state = response.Job?.State.ToString() ?? "-";
-        var message = response.Job?.Message ?? response.Message;
-        AppendDeploymentLog(
-            $"[{operation}] Success={response.Success}, State={state}, Message={message}");
-        ScriptJobText.Text = response.Job is null
-            ? $"{operation}: {response.Message}"
-            : $"Job={response.Job.JobId}, State={response.Job.State}, {response.Job.Message}";
+        AppendDeploymentLog($"[{operation}] {response.Message}");
+        ScriptJobText.Text = response.Message;
     }
 
-    private static void EnsureServerSuccess(string operation, ScriptServerResponse response)
+    private void ShowAutomation1Response(string operation, Automation1DirectStatus response)
     {
-        if (!response.Success)
+        AppendDeploymentLog(
+            $"[{operation}] State={response.State}, TaskState={response.TaskState}, Message={response.Message}");
+        if (!string.IsNullOrWhiteSpace(response.ControllerAuditFileName))
         {
-            throw new InvalidOperationException($"{operation} 실패: {response.ErrorCode} {response.Message}");
+            AppendDeploymentLog($"[Controller 기록] Audit={response.ControllerAuditFileName}");
+        }
+
+        ScriptJobText.Text =
+            $"Job={response.JobId}, State={response.State}, Task={response.TaskIndex}, {response.Message}";
+    }
+
+    private static void EnsureAutomation1Success(string operation, Automation1ConnectionInfo response)
+    {
+        if (!response.IsRunning)
+        {
+            throw new InvalidOperationException($"{operation} 실패: Automation1 Controller가 실행 중이 아닙니다.");
+        }
+    }
+
+    private static void EnsureAutomation1Success(string operation, Automation1DirectStatus response)
+    {
+        if (response.State == Automation1DirectState.Failed)
+        {
+            throw new InvalidOperationException($"{operation} 실패: {response.Message} {response.Error}".Trim());
         }
     }
 
@@ -464,10 +523,11 @@ public partial class MainWindow : Window
     private void SetScriptButtonsEnabled(bool isEnabled)
     {
         GenerateAeroScriptButton.IsEnabled = isEnabled;
-        ServerHealthCheckButton.IsEnabled = isEnabled;
+        ControllerConnectionButton.IsEnabled = isEnabled;
         UploadAeroScriptButton.IsEnabled = isEnabled;
         RunAeroScriptButton.IsEnabled = isEnabled;
         QueryAeroScriptStatusButton.IsEnabled = isEnabled;
+        StopAeroScriptButton.IsEnabled = true;
         ExecuteAeroScriptWorkflowButton.IsEnabled = isEnabled;
     }
 

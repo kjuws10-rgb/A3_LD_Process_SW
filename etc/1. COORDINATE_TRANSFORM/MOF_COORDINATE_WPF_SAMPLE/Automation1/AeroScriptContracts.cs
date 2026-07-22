@@ -3,55 +3,62 @@ using System.Text;
 
 namespace MofCoordinateDemo.Automation1;
 
-public static class AeroScriptEndpointRules
-{
-    public const int DefaultGatewayPort = 46100;
-    public const int Automation1ControllerPort = 12200;
-
-    public static int NormalizeGatewayPort(int configuredPort, out bool correctedNativeControllerPort)
-    {
-        if (configuredPort is <= 0 or > 65535)
-        {
-            throw new ArgumentOutOfRangeException(nameof(configuredPort));
-        }
-
-        correctedNativeControllerPort = configuredPort == Automation1ControllerPort;
-        return correctedNativeControllerPort ? DefaultGatewayPort : configuredPort;
-    }
-}
-
-public enum ScriptRequestType
-{
-    HealthCheck,
-    UploadScript,
-    RunScript,
-    GetStatus
-}
-
-public enum ScriptJobState
-{
-    Unknown,
-    Uploaded,
-    Queued,
-    TransferringToController,
-    Running,
-    Completed,
-    Failed,
-    Rejected
-}
-
 public enum AeroScriptGenerationMode
 {
     VirtualWaitSimulation,
     HardwareCoordinateProgram
 }
 
-public enum AeroScriptModePolicy
+public enum Automation1ConnectionMode
 {
-    Any,
-    VirtualOnly,
-    HardwareOnly
+    NoAuthentication,
+    UserPassword,
+    SecureCertificate,
+    SecureUserPassword
 }
+
+public enum Automation1DirectState
+{
+    Disconnected,
+    Connected,
+    Uploaded,
+    Running,
+    Completed,
+    Failed,
+    Stopped
+}
+
+public sealed record Automation1ConnectionOptions(
+    string Host,
+    int Port,
+    Automation1ConnectionMode Mode,
+    string UserName,
+    string Password,
+    string ExpectedCertificate,
+    bool StartControllerIfStopped)
+{
+    public const int DefaultControllerPort = 12200;
+}
+
+public sealed record Automation1ConnectionInfo(
+    string Host,
+    int Port,
+    bool IsRunning,
+    bool IsEncrypted,
+    int TaskCount,
+    string ApiVersion,
+    string Message);
+
+public sealed record Automation1DirectStatus(
+    string JobId,
+    Automation1DirectState State,
+    string TaskState,
+    string Message,
+    string Error,
+    string ControllerFileName,
+    string ControllerAuditFileName,
+    int TaskIndex,
+    DateTimeOffset UpdatedAtUtc);
 
 public sealed record AeroScriptPackage(
     string JobId,
@@ -59,6 +66,7 @@ public sealed record AeroScriptPackage(
     string ScriptText,
     string Sha256,
     int TaskIndex,
+    int TargetCount,
     AeroScriptGenerationMode GenerationMode,
     DateTimeOffset CreatedAtUtc)
 {
@@ -66,71 +74,43 @@ public sealed record AeroScriptPackage(
         string controllerFileName,
         string scriptText,
         int taskIndex,
-        AeroScriptGenerationMode generationMode)
+        int targetCount,
+        AeroScriptGenerationMode generationMode,
+        bool preserveJobFile)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(controllerFileName);
         ArgumentException.ThrowIfNullOrWhiteSpace(scriptText);
+        if (taskIndex <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(taskIndex), "Automation1 task index must be 1 or greater.");
+        }
 
+        var jobId = Guid.NewGuid().ToString("N");
+        var createdAt = DateTimeOffset.UtcNow;
+        var resolvedControllerFile = preserveJobFile
+            ? AddJobSuffix(controllerFileName, createdAt, jobId)
+            : controllerFileName;
         var scriptBytes = Encoding.UTF8.GetBytes(scriptText);
         return new AeroScriptPackage(
-            Guid.NewGuid().ToString("N"),
-            controllerFileName,
+            jobId,
+            resolvedControllerFile,
             scriptText,
             Convert.ToHexString(SHA256.HashData(scriptBytes)),
             taskIndex,
+            targetCount,
             generationMode,
-            DateTimeOffset.UtcNow);
+            createdAt);
     }
-}
 
-public sealed record ScriptServerRequest(
-    int ProtocolVersion,
-    ScriptRequestType RequestType,
-    string RequestId,
-    string ApiKey,
-    string? JobId,
-    AeroScriptPackage? Package)
-{
-    public const int CurrentProtocolVersion = 3;
-
-    public static ScriptServerRequest Health(string apiKey) =>
-        new(CurrentProtocolVersion, ScriptRequestType.HealthCheck, NewRequestId(), apiKey, null, null);
-
-    public static ScriptServerRequest Upload(string apiKey, AeroScriptPackage package) =>
-        new(CurrentProtocolVersion, ScriptRequestType.UploadScript, NewRequestId(), apiKey, package.JobId, package);
-
-    public static ScriptServerRequest Run(string apiKey, string jobId) =>
-        new(CurrentProtocolVersion, ScriptRequestType.RunScript, NewRequestId(), apiKey, jobId, null);
-
-    public static ScriptServerRequest Status(string apiKey, string jobId) =>
-        new(CurrentProtocolVersion, ScriptRequestType.GetStatus, NewRequestId(), apiKey, jobId, null);
-
-    private static string NewRequestId() => Guid.NewGuid().ToString("N");
-}
-
-public sealed record ScriptJobStatus(
-    string JobId,
-    ScriptJobState State,
-    string Message,
-    string ControllerFileName,
-    int TaskIndex,
-    AeroScriptGenerationMode GenerationMode,
-    string Sha256,
-    DateTimeOffset UpdatedAtUtc);
-
-public sealed record ScriptServerResponse(
-    int ProtocolVersion,
-    string RequestId,
-    bool Success,
-    string ErrorCode,
-    string Message,
-    ScriptJobStatus? Job)
-{
-    public static ScriptServerResponse Ok(ScriptServerRequest request, string message, ScriptJobStatus? job) =>
-        new(ScriptServerRequest.CurrentProtocolVersion, request.RequestId, true, "", message, job);
-
-    public static ScriptServerResponse Error(ScriptServerRequest request, string code, string message, ScriptJobStatus? job = null) =>
-        new(ScriptServerRequest.CurrentProtocolVersion, request.RequestId, false, code, message, job);
+    private static string AddJobSuffix(string controllerFileName, DateTimeOffset createdAt, string jobId)
+    {
+        var extensionIndex = controllerFileName.LastIndexOf('.');
+        var slashIndex = controllerFileName.LastIndexOf('/');
+        var suffix = $"_{createdAt:yyyyMMdd_HHmmss}_{jobId[..8]}";
+        return extensionIndex > slashIndex
+            ? controllerFileName.Insert(extensionIndex, suffix)
+            : controllerFileName + suffix + ".ascript";
+    }
 }
 
 public sealed record AeroScriptGenerationOptions
@@ -158,12 +138,3 @@ public sealed record AeroScriptGenerationOptions
     public bool IncludeLaserLibraryImport { get; init; }
     public string LaserLibraryFileName { get; init; } = "LaserOnLibrary.a1lib";
 }
-
-public sealed record ScriptServerOptions(
-    string BindAddress,
-    int Port,
-    string ApiKey,
-    string SpoolDirectory,
-    int MaxScriptBytes,
-    TimeSpan ExecutionTimeout,
-    AeroScriptModePolicy ModePolicy);
