@@ -216,8 +216,9 @@
                 <UniformGrid Columns="5" Margin="0,0,0,8">
                   <StackPanel Margin="0,0,8,8">
                     <TextBlock Text="실행 환경 / Script Mode"/>
-                    <ComboBox x:Name="ScriptModeComboBox" SelectedIndex="0" ToolTip="시뮬레이션은 Virtual 축과 wait 흐름만 검증합니다. 설비 모드는 실제 축과 안전 조건을 모두 확인한 뒤 실행합니다.">
+                    <ComboBox x:Name="ScriptModeComboBox" SelectedIndex="1" ToolTip="외부 Stage AUX MOF 모드는 타사 Stage 엔코더가 Scanner GY AUX 입력으로 들어오는 실제 설비 구성을 사용합니다.">
                       <ComboBoxItem Content="Simulation - Virtual Wait" Tag="VirtualWaitSimulation"/>
+                      <ComboBoxItem Content="Equipment - External Stage AUX MOF" Tag="ExternalStageAuxMofProgram"/>
                       <ComboBoxItem Content="Equipment - Hardware Coordinate" Tag="HardwareCoordinateProgram"/>
                     </ComboBox>
                   </StackPanel>
@@ -228,7 +229,7 @@
 
                   <StackPanel Margin="0,0,8,8"><TextBlock Text="Controller File"/><TextBox x:Name="ControllerFileNameBox" Text="programs/mof_generated.ascript" ToolTip="Controller.Files.WriteText로 기록하고 Task.Program.Run에 전달하는 Automation1 Controller File System 내부 경로입니다."/></StackPanel>
                   <StackPanel Margin="0,0,8,8"><TextBlock Text="Local Script File"/><TextBox x:Name="LocalScriptPathBox" Text="mof_generated.ascript" ToolTip="Script 생성 버튼을 누를 때 Client PC에 실제로 저장할 파일입니다. 상대 경로는 실행 파일 폴더를 기준으로 계산합니다."/></StackPanel>
-                  <StackPanel Margin="0,0,8,8"><TextBlock Text="Stage Axis"/><TextBox x:Name="StageAxisNameBox" Text="Y" ToolTip="기판을 이송하는 Stage 축 이름입니다. Virtual Wait 조건은 이 축의 PositionFeedback을 읽습니다."/></StackPanel>
+                  <StackPanel Margin="0,0,8,8"><TextBlock Text="Virtual Stage Axis"/><TextBox x:Name="StageAxisNameBox" Text="Y" ToolTip="Simulation - Virtual Wait 전용 축 이름입니다. External Stage AUX MOF에서는 이 축을 요구하거나 이동시키지 않습니다."/></StackPanel>
                   <StackPanel Margin="0,0,8,8"><TextBlock Text="GX Axis Template"/><TextBox x:Name="AxisXTemplateBox" Text="GX" ToolTip="Scanner X축 이름입니다. {0}을 넣으면 선택 Head 번호로 치환됩니다."/></StackPanel>
                   <StackPanel Margin="0,0,8,8"><TextBlock Text="GY Axis Template"/><TextBox x:Name="AxisYTemplateBox" Text="GY" ToolTip="Scanner Y축 이름입니다. {0}을 넣으면 선택 Head 번호로 치환됩니다."/></StackPanel>
                   <StackPanel Margin="0,0,0,8"><TextBlock Text="Laser Library"/><TextBox x:Name="LaserLibraryNameBox" Text="LaserOnLibrary.a1lib" ToolTip="Hardware 모드에서 import 문만 생성할 검증된 Library 이름입니다. 함수 호출은 장비 Interlock 확정 후 구현해야 합니다."/></StackPanel>
@@ -255,6 +256,9 @@
 
                     <StackPanel Margin="0,0,8,8"><TextBlock Text="MoveDelay ms"/><TextBox x:Name="MoveDelayMillisecondsBox" Text="0.1" ToolTip="각 GY drill point 사이 MoveDelay 값이며 단위는 밀리초입니다."/></StackPanel>
                     <StackPanel Margin="0,0,8,8"><TextBlock Text="Wait Step Y"/><TextBox x:Name="WaitStepYBox" Text="10" ToolTip="GX band 하나가 끝날 때마다 증가하는 Stage PositionFeedback wait 임계 간격입니다."/></StackPanel>
+                    <StackPanel Margin="0,0,8,8"><TextBlock Text="External Encoder cnt/mm"/><TextBox x:Name="ExternalEncoderCountsPerUnitBox" Text="2000" ToolTip="타사 Stage 엔코더가 1 mm 이동할 때 Scanner AUX 입력에 들어오는 count입니다. 실제 엔코더 분해능과 배선 설정값을 입력합니다."/></StackPanel>
+                    <StackPanel Margin="0,0,8,8"><TextBlock Text="Encoder Direction"/><TextBox x:Name="ExternalEncoderDirectionSignBox" Text="-1" ToolTip="Scanner 보정 방향과 외부 Stage 엔코더 방향이 반대이면 -1, 같으면 1을 입력합니다."/></StackPanel>
+                    <StackPanel Margin="0,0,8,8"><TextBlock Text="AUX Initial Wait mm"/><TextBox x:Name="AuxiliaryInitialWaitDistanceBox" Text="0.1" ToolTip="AUX 피드백을 0점화한 뒤 첫 가공 구간을 허용할 최소 외부 Stage 이동 거리입니다."/></StackPanel>
                     <StackPanel Margin="0,0,8,8"><TextBlock Text="Software Limit Low"/><TextBox x:Name="SoftwareLimitLowBox" Text="-10000" ToolTip="GX/GY active software lower limit입니다. 실제 장비 유효 범위를 사용해야 합니다."/></StackPanel>
                     <StackPanel Margin="0,0,8,8"><TextBlock Text="Software Limit High"/><TextBox x:Name="SoftwareLimitHighBox" Text="10000" ToolTip="GX/GY active software upper limit입니다. 실제 장비 유효 범위를 사용해야 합니다."/></StackPanel>
                   </UniformGrid>
@@ -280,7 +284,7 @@
                   </StackPanel>
                 </Border>
 
-                <TextBlock Text="Virtual Mode는 Laser/PSO/HW Aux 출력이 아니라 Y PositionFeedback wait 해제 순서만 검증합니다. 한 번에 Scanner Head 한 개만 선택하십시오."
+                <TextBlock Text="External Stage AUX MOF는 Stage Y를 명령하지 않습니다. 타사 Stage가 이동하는 동안 Scanner GY의 AuxiliaryFeedback을 감시하여 MOF 구간을 진행합니다. Simulation 모드는 H/W AUX를 사용할 수 없으므로 Virtual Stage PositionFeedback만 검증합니다."
                            Foreground="#FBBF24" TextWrapping="Wrap" Margin="0,0,0,8"/>
 
                 <WrapPanel Margin="0,0,0,8">

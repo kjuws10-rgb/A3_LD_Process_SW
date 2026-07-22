@@ -156,6 +156,8 @@ public sealed class Automation1DirectClient : IAsyncDisposable
             _compiledAeroScript = controller.Compiler.CompileControllerFile(
                 package.ControllerFileName,
                 compileWithDebugInformation: true);
+            var compiledControllerFileName = GetCompiledControllerFileName(package.ControllerFileName);
+            controller.Files.WriteBytes(compiledControllerFileName, _compiledAeroScript.CompiledBytes);
             var warnings = _compiledAeroScript.CompilerWarnings.ToArray();
             var warningText = warnings.Length == 0
                 ? "No compiler warnings."
@@ -165,7 +167,7 @@ public sealed class Automation1DirectClient : IAsyncDisposable
                 package,
                 Automation1DirectState.Compiled,
                 taskState,
-                $"AeroScript compile succeeded. {warningText}",
+                $"AeroScript compile succeeded and wrote {compiledControllerFileName}. {warningText}",
                 "",
                 _audit?.ControllerAuditFileName ?? "");
             UpdateStatusAndAudit(compiled);
@@ -385,7 +387,8 @@ public sealed class Automation1DirectClient : IAsyncDisposable
     private static void ValidateExecutionEnvironment(Controller controller, AeroScriptPackage package)
     {
         var configuredAxes = controller.Runtime.Axes
-            .ToDictionary(axis => axis.AxisName, StringComparer.OrdinalIgnoreCase);
+            .GroupBy(axis => axis.AxisName, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
         var missingAxes = package.RequiredAxisNames
             .Where(axisName => !configuredAxes.ContainsKey(axisName))
             .ToArray();
@@ -440,6 +443,15 @@ public sealed class Automation1DirectClient : IAsyncDisposable
             $"({result.StartingLine},{result.StartingColumn})-" +
             $"({result.EndingLine},{result.EndingColumn}): {result.Message}").ToArray();
         return lines.Length == 0 ? "No compiler diagnostic details were returned." : string.Join(Environment.NewLine, lines);
+    }
+
+    private static string GetCompiledControllerFileName(string sourceControllerFileName)
+    {
+        var extensionIndex = sourceControllerFileName.LastIndexOf('.');
+        var slashIndex = sourceControllerFileName.LastIndexOf('/');
+        return extensionIndex > slashIndex
+            ? sourceControllerFileName[..extensionIndex] + ".a1exe"
+            : sourceControllerFileName + ".a1exe";
     }
 
     private static Automation1DirectStatus CreateStatus(

@@ -11,7 +11,7 @@ namespace MofCoordinateDemo.Automation1;
 /// </summary>
 public sealed partial class AeroScriptGenerator
 {
-    public const string GeneratorRevision = "20260722-dynamic-axis-v4";
+    public const string GeneratorRevision = "20260722-external-stage-aux-v5";
 
     public static IReadOnlyList<string> ResolveRequiredAxisNames(
         IReadOnlyList<CellCommand> commands,
@@ -59,6 +59,7 @@ public sealed partial class AeroScriptGenerator
         var source = options.Mode switch
         {
             AeroScriptGenerationMode.VirtualWaitSimulation => GenerateVirtualWaitSimulation(input, commands, options),
+            AeroScriptGenerationMode.ExternalStageAuxMofProgram => GenerateExternalStageAuxMofProgram(input, commands, options),
             AeroScriptGenerationMode.HardwareCoordinateProgram => GenerateHardwareCoordinateProgram(input, commands, options),
             _ => throw new ArgumentOutOfRangeException(nameof(options.Mode))
         };
@@ -185,6 +186,133 @@ public sealed partial class AeroScriptGenerator
         if (options.DisableAxesAtEnd)
         {
             source.AppendLine($"    Disable([{stageAxisVariable}, {scannerXAxisVariable}, {scannerYAxisVariable}])");
+        }
+
+        source.AppendLine("end");
+        return source.ToString();
+    }
+
+    private static string GenerateExternalStageAuxMofProgram(
+        CoordinateInput input,
+        IReadOnlyList<CellCommand> commands,
+        AeroScriptGenerationOptions options)
+    {
+        var headNumbers = commands.Select(command => command.ScannerIndex).Distinct().OrderBy(index => index).ToArray();
+        if (headNumbers.Length > 1 &&
+            (!options.AxisXTemplate.Contains("{0}", StringComparison.Ordinal) ||
+             !options.AxisYTemplate.Contains("{0}", StringComparison.Ordinal)))
+        {
+            throw new InvalidOperationException(
+                "External Stage AUX MOF mode requires {0} in both scanner axis templates when multiple heads are selected.");
+        }
+
+        var axesByHead = headNumbers.ToDictionary(
+            head => head,
+            head => (
+                X: ResolveAxisName(options.AxisXTemplate, head),
+                Y: ResolveAxisName(options.AxisYTemplate, head)));
+        var allAxes = axesByHead.Values
+            .SelectMany(pair => new[] { pair.X, pair.Y })
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var gxGroups = commands
+            .GroupBy(command => Math.Round(command.Gx, 6))
+            .OrderBy(group => group.Key)
+            .ToArray();
+        var requiredTravel = options.AuxiliaryInitialWaitDistance +
+                             Math.Max(0, gxGroups.Length - 1) * options.WaitStepY;
+        if (Math.Abs(options.StageTravelDistance) + 1e-9 < requiredTravel)
+        {
+            throw new InvalidOperationException(
+                $"External Stage travel must be at least the final AUX wait distance ({requiredTravel:0.###} mm).");
+        }
+
+        var source = CreateHeader(input, commands, options);
+        source.AppendLine("// MODE: Equipment - External Stage AUX MOF");
+        source.AppendLine("// The third-party Stage is not an Automation1 axis and is never commanded by this script.");
+        source.AppendLine("// Stage encoder feedback enters each scanner GY auxiliary feedback input.");
+        source.AppendLine("// Laser/PSO output remains disabled; validate the AUX signal and MOF compensation before enabling laser output.");
+        source.AppendLine();
+        source.AppendLine("program");
+        source.AppendLine("    var $StageEncoderCountsPerUnit as real");
+        foreach (var head in headNumbers)
+        {
+            source.AppendLine($"    var $EncoderScaleGYH{head} as real");
+        }
+
+        source.AppendLine();
+        source.AppendLine($"    $StageEncoderCountsPerUnit = {Format(options.ExternalEncoderCountsPerUnit)}");
+        source.AppendLine();
+        AppendCommonMotionSetup(source, allAxes, options);
+        if (options.EnableAxes)
+        {
+            foreach (var head in headNumbers)
+            {
+                var axes = axesByHead[head];
+                source.AppendLine($"    Enable([{axes.X}, {axes.Y}])");
+            }
+
+            source.AppendLine();
+        }
+
+        foreach (var head in headNumbers)
+        {
+            var axes = axesByHead[head];
+            source.AppendLine($"    WaitForInPosition([{axes.X}, {axes.Y}])");
+            source.AppendLine($"    GalvoEncoderScaleFactorSet({axes.Y}, 0)");
+            source.AppendLine($"    DriveSetAuxiliaryFeedback({axes.Y}, 0)");
+            source.AppendLine(
+                $"    $EncoderScaleGYH{head} = ParameterGetAxisValue({axes.Y}, AxisParameter.CountsPerUnit) / $StageEncoderCountsPerUnit");
+            source.AppendLine(
+                $"    GalvoEncoderScaleFactorSet({axes.Y}, {Format(options.ExternalEncoderDirectionSign)} * $EncoderScaleGYH{head})");
+            source.AppendLine($"    SetupAxisSpeed({axes.X}, {Format(options.ScannerRapidSpeed)})");
+            source.AppendLine($"    SetupAxisSpeed({axes.Y}, {Format(options.ScannerRapidSpeed)})");
+            source.AppendLine(
+                $"    MoveRapid([{axes.X}, {axes.Y}], [0, 0], " +
+                $"[{Format(options.ScannerRapidSpeed)}, {Format(options.ScannerRapidSpeed)}])");
+        }
+
+        source.AppendLine();
+        AppendSoftwareLimits(source, allAxes, options);
+        for (var groupIndex = 0; groupIndex < gxGroups.Length; groupIndex++)
+        {
+            var group = gxGroups[groupIndex];
+            var threshold = options.AuxiliaryInitialWaitDistance + groupIndex * options.WaitStepY;
+            source.AppendLine($"    // AUX gate {groupIndex + 1}: external Stage travel > {Format(threshold)} mm");
+            foreach (var head in group.Select(command => command.ScannerIndex).Distinct().OrderBy(index => index))
+            {
+                source.AppendLine(
+                    $"    wait(Abs(StatusGetAxisItem({axesByHead[head].Y}, AxisStatusItem.AuxiliaryFeedback)) " +
+                    $"> $StageEncoderCountsPerUnit * {Format(threshold)})");
+            }
+
+            foreach (var command in group.OrderBy(command => command.MofSequence))
+            {
+                var axes = axesByHead[command.ScannerIndex];
+                source.AppendLine(
+                    $"    MoveRapid([{axes.X}, {axes.Y}], [{Format(command.Gx)}, {Format(command.Gy)}], " +
+                    $"[{Format(options.ScannerRapidSpeed)}, {Format(options.ScannerRapidSpeed)}]) " +
+                    $"// {command.CellIndex}, H{command.ScannerIndex}, MOF #{command.MofSequence}");
+                source.AppendLine($"    MoveDelay([{axes.X}, {axes.Y}], {Format(options.MoveDelayMilliseconds)})");
+            }
+
+            source.AppendLine();
+        }
+
+        source.AppendLine($"    WaitForMotionDone([{string.Join(", ", allAxes)}])");
+        foreach (var head in headNumbers)
+        {
+            source.AppendLine($"    GalvoEncoderScaleFactorSet({axesByHead[head].Y}, 0)");
+        }
+
+        source.AppendLine("    VelocityBlendingOff()");
+        if (options.DisableAxesAtEnd)
+        {
+            foreach (var head in headNumbers)
+            {
+                var axes = axesByHead[head];
+                source.AppendLine($"    Disable([{axes.X}, {axes.Y}])");
+            }
         }
 
         source.AppendLine("end");
@@ -341,7 +469,8 @@ public sealed partial class AeroScriptGenerator
             ["Ramp rate"] = options.RampRate,
             ["Motion update rate"] = options.MotionUpdateRateKhz,
             ["Stage speed"] = options.StageSpeed,
-            ["Wait step Y"] = options.WaitStepY
+            ["Wait step Y"] = options.WaitStepY,
+            ["External encoder counts per unit"] = options.ExternalEncoderCountsPerUnit
         };
 
         foreach (var (name, value) in positiveValues)
@@ -360,7 +489,9 @@ public sealed partial class AeroScriptGenerator
             options.MoveDelayMilliseconds,
             options.SetupDwellSeconds,
             options.SoftwareLimitLow,
-            options.SoftwareLimitHigh
+            options.SoftwareLimitHigh,
+            options.ExternalEncoderDirectionSign,
+            options.AuxiliaryInitialWaitDistance
         };
         if (finiteValues.Any(value => !double.IsFinite(value)) ||
             options.ExecuteNumLines <= 0 ||
@@ -379,6 +510,12 @@ public sealed partial class AeroScriptGenerator
         if (options.SoftwareLimitLow >= options.SoftwareLimitHigh)
         {
             throw new InvalidOperationException("SoftwareLimitLow는 SoftwareLimitHigh보다 작아야 합니다.");
+        }
+
+        if (options.ExternalEncoderDirectionSign is not (-1 or 1) || options.AuxiliaryInitialWaitDistance < 0)
+        {
+            throw new InvalidOperationException(
+                "External encoder direction must be -1 or 1, and AUX initial wait distance must be zero or greater.");
         }
     }
 

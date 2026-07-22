@@ -1,5 +1,14 @@
 # MOF Coordinate WPF Sample
 
+## 2026-07-22 External Stage AUX MOF V5
+
+- 타사 Stage Y는 Automation1 축 목록과 Script의 이동 명령에서 제외합니다.
+- Stage encoder는 Scanner GY AUX 입력으로 수신하며 `AuxiliaryFeedback` 누적값으로 가공 구간을 해제합니다.
+- `External Encoder cnt/mm`, `Encoder Direction`, `AUX Initial Wait mm`을 UI에서 설정합니다.
+- Compile 성공 시 source와 같은 이름의 `.a1exe`를 Controller File System에 기록합니다.
+- Controller 축 목록에 `z`/`Z`처럼 대소문자만 다른 항목이 있어도 중복 Key 예외가 발생하지 않습니다.
+- 상세 내용은 `EXTERNAL_STAGE_AUX_MOF_UPDATE_20260722.md`를 참고합니다.
+
 ## 2026-07-22 AeroScript Task 실행 문법 수정
 
 - `$StartYPos`를 `program` 블록 안에서 선언합니다.
@@ -10,7 +19,7 @@
 
 이 샘플은 Review Camera에서 측정한 AK1 Pixel 좌표를 기반으로 기판 내부 Cell 좌표를 Stage Global 좌표로 변환하고, Multi Scanner의 Zigzag Odd/Even 배치에 따라 MOF 가공 명령 `Gx`, `Gy`를 생성하는 예제이다.
 
-2026-07-22 업데이트에서는 Automation1 실행을 `Simulation - Virtual Wait`와 `Equipment - Hardware Coordinate`로 분리했다. Controller 기록 후 `Controller.Compiler.CompileControllerFile`로 사전 컴파일하고, 파일/행/열별 오류가 없을 때만 `CompiledAeroScript`를 Task에 실행한다. Simulation은 MCD의 Virtual 축만 허용하며, Equipment 실행은 축 상태·Safety Interlock·Laser/Beam Path·작업자 최종 승인 확인을 모두 요구한다.
+2026-07-22 업데이트에서는 Automation1 실행을 `Simulation - Virtual Wait`, `Equipment - External Stage AUX MOF`, `Equipment - Hardware Coordinate`로 분리했다. Controller 기록 후 `Controller.Compiler.CompileControllerFile`로 사전 컴파일하고, 파일/행/열별 오류가 없을 때만 `CompiledAeroScript`를 Task에 실행한다. Simulation은 MCD의 Virtual 축만 허용하며, Equipment 실행은 축 상태·Safety Interlock·Laser/Beam Path·작업자 최종 승인 확인을 모두 요구한다.
 
 2026-07-17 업데이트에서는 Review Camera 광학 중심과 H1 Scanner 가공 중심 사이의 고정 물리 오프셋을 좌표 변환의 필수 입력으로 분리했다. Scanner 배치는 명시적인 `FirstScannerInitialStageX/Y`에서 시작하고, 이 값이 `ReviewCenter + CameraToScannerPhysicalOffset`과 일치하는지 검증한다. 가공 후 측정오차를 보정하는 `ProcessOffsetGlobal`은 별도 데이터로 관리한다.
 

@@ -1,10 +1,18 @@
 # A3 LD Process SW Architecture
 
+## External Stage AUX MOF V5 (2026-07-22)
+
+- The third-party Stage Y is not represented as an Automation1 axis and is never commanded by generated AeroScript.
+- The physical Stage encoder enters the scanner GY auxiliary input. Generated equipment scripts reset that counter, calculate scanner-count/encoder-count scale, enable MOF compensation, and gate processing with `AxisStatusItem.AuxiliaryFeedback`.
+- `ExternalEncoderCountsPerUnit`, `ExternalEncoderDirectionSign`, and `AuxiliaryInitialWaitDistance` are explicit generation inputs.
+- `Automation1DirectClient` now tolerates case-insensitive duplicate axis names returned by the runtime collection.
+- Successful .NET compilation writes `CompiledAeroScript.CompiledBytes` to a matching `.a1exe` controller file.
+
 ## AeroScript Dynamic Axis Update V4 (2026-07-22)
 
 - Simulation scripts store the configured Stage/GX/GY names in string variables and convert them to the AeroScript `axis` type with the official `@` operator.
 - Motion and status commands use `$StageAxis`, `$ScannerXAxis`, and `$ScannerYAxis`; the compiler therefore does not have to parse bare identifiers such as `Y` before the controller configuration is checked.
-- The direct Automation1 client compares the configured names with `controller.Runtime.Axes` before compilation and reports missing or non-virtual axes explicitly.
+- The direct Automation1 client compares required names with `controller.Runtime.Axes` before compilation. External Stage AUX mode requires scanner axes only; Virtual Wait additionally requires its configured Stage axis.
 - A generated-source guard rejects spaced G-code variable operands such as `Y $value` before upload.
 - Equipment mode keeps direct axis literals because its hardware MCD must provide the exact configured axis names and hardware capabilities.
 - `MainWindow.DeploymentLogBox_MouseDoubleClick` clears only the visible deployment log; Controller audit history remains unchanged.

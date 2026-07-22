@@ -6,6 +6,7 @@ namespace MofCoordinateDemo.Automation1;
 public enum AeroScriptGenerationMode
 {
     VirtualWaitSimulation,
+    ExternalStageAuxMofProgram,
     HardwareCoordinateProgram
 }
 
@@ -159,6 +160,9 @@ public sealed record AeroScriptGenerationOptions
     public double SetupDwellSeconds { get; init; } = 0.2;
     public double MoveDelayMilliseconds { get; init; } = 0.1;
     public double WaitStepY { get; init; } = 10;
+    public double ExternalEncoderCountsPerUnit { get; init; } = 2000;
+    public double ExternalEncoderDirectionSign { get; init; } = -1;
+    public double AuxiliaryInitialWaitDistance { get; init; } = 0.1;
     public double SoftwareLimitLow { get; init; } = -10_000;
     public double SoftwareLimitHigh { get; init; } = 10_000;
     public bool EnableAxes { get; init; }

@@ -1,12 +1,20 @@
 # A3 LD Process SW Class Inventory
 
+## External Stage AUX MOF V5 (2026-07-22)
+
+- `AeroScriptGenerationMode.ExternalStageAuxMofProgram`: equipment mode for a third-party Stage encoder wired to scanner GY AUX feedback.
+- `AeroScriptGenerationOptions`: adds encoder counts/unit, direction sign, and initial AUX wait distance.
+- `AeroScriptGenerator.GenerateExternalStageAuxMofProgram`: emits AUX reset, MOF scale, AUX wait gates, scanner motion, and final scale reset without a Stage-axis command.
+- `Automation1DirectClient.ValidateExecutionEnvironment`: groups runtime axes case-insensitively before lookup, preventing duplicate-key failures such as `z` and `Z`.
+- `Automation1DirectClient.CompileCore`: persists the returned compiled bytes as a matching `.a1exe` Controller file.
+
 Generated from Debug build assemblies. Compiler generated backing fields are hidden; explicit private fields, properties, constructors, events, enum values, and declared methods are listed.
 
 ## AeroScript Dynamic Axis Update V4 (2026-07-22)
 
-- `AeroScriptGenerator.Generate`: generates the selected mode, adds revision `20260722-dynamic-axis-v4`, and validates the final source before packaging.
+- `AeroScriptGenerator.Generate`: generates the selected mode, adds the current generator revision, and validates the final source before packaging.
 - `AeroScriptGenerator.GenerateVirtualWaitSimulation`: declares axis-name strings and `axis` variables, converts names with `@`, and uses the variables for motion/status commands.
-- `Automation1DirectClient.ValidateExecutionEnvironment`: verifies exact, case-sensitive Stage/GX/GY names against `controller.Runtime.Axes` and validates Simulation versus Equipment requirements.
+- `Automation1DirectClient.ValidateExecutionEnvironment`: verifies required scanner axes and, for Virtual Wait only, the configured Stage axis against `controller.Runtime.Axes`.
 - `AeroScriptGenerator.GenerateHardwareCoordinateProgram`: emits direct hardware-axis literals because the equipment MCD must contain those axes.
 - `AeroScriptGenerator.ValidateGeneratedSource`: blocks missing program/end blocks and invalid spaced G-code variable operands.
 - `MainWindow.DeploymentLogBox_MouseDoubleClick`: clears the visible WPF deployment log on double-click.

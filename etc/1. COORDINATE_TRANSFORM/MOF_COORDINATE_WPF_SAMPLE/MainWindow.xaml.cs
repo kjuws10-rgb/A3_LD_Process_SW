@@ -415,6 +415,9 @@ public partial class MainWindow : Window
             SetupDwellSeconds = ReadDouble(SetupDwellSecondsBox, 0.2),
             MoveDelayMilliseconds = ReadDouble(MoveDelayMillisecondsBox, 0.1),
             WaitStepY = ReadDouble(WaitStepYBox, 10),
+            ExternalEncoderCountsPerUnit = ReadDouble(ExternalEncoderCountsPerUnitBox, 2000),
+            ExternalEncoderDirectionSign = ReadDouble(ExternalEncoderDirectionSignBox, -1),
+            AuxiliaryInitialWaitDistance = ReadDouble(AuxiliaryInitialWaitDistanceBox, 0.1),
             SoftwareLimitLow = ReadDouble(SoftwareLimitLowBox, -10_000),
             SoftwareLimitHigh = ReadDouble(SoftwareLimitHighBox, 10_000),
             EnableAxes = EnableAxesCheckBox.IsChecked == true,
@@ -434,7 +437,7 @@ public partial class MainWindow : Window
 
     private bool ConfirmHardwareExecution(AeroScriptGenerationMode mode)
     {
-        if (mode != AeroScriptGenerationMode.HardwareCoordinateProgram)
+        if (mode == AeroScriptGenerationMode.VirtualWaitSimulation)
         {
             return true;
         }
