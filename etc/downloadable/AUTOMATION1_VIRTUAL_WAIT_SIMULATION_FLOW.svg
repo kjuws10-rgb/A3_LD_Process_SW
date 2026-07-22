@@ -6,8 +6,8 @@
     <marker id="m" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#67e8f9"/></marker>
   </defs>
   <rect width="1600" height="950" fill="#0b1120"/>
-  <text x="55" y="55" class="title">Automation1 Virtual Wait Simulation: 1D MOF 타이밍 역검증</text>
-  <text x="55" y="84" class="t">Laser / PSO / Hardware Aux를 사용하지 않고 Stage Y PositionFeedback과 Scanner GX/GY 이동 순서만 확인</text>
+  <text x="55" y="55" class="title">Automation1 Virtual Counter Simulation: AK1→AK2 MOF 모니터링</text>
+  <text x="55" y="84" class="t">Stage Y 축 없이 속도×Tick 소프트웨어 카운터와 Scanner GX/GY 실행 순서를 확인</text>
 
   <rect x="55" y="120" width="1490" height="285" rx="8" class="box"/>
   <text x="80" y="155" class="h">시간축 동작과 Wait Cursor 구간</text>
@@ -32,7 +32,7 @@
   <rect x="55" y="440" width="310" height="385" rx="8" class="blue"/>
   <text x="80" y="478" class="h">1. Client 생성 조건</text>
   <text x="80" y="515" class="t">Scanner Head 정확히 1개</text>
-  <text x="80" y="545" class="t">Stage Axis = Y</text>
+  <text x="80" y="545" class="t">$rglobal[0] = Virtual Stage Y</text>
   <text x="80" y="575" class="t">Scanner Axis = GX / GY</text>
   <text x="80" y="605" class="t">StartY / Travel / Speed</text>
   <text x="80" y="635" class="t">Ramp / FIR / Update Rate</text>
@@ -51,7 +51,7 @@
   <text x="450" y="635" class="t">MoveAbsolute(Y, EndY, Speed)</text>
   <text x="450" y="665" class="t">G0 GX n GY drillPoint</text>
   <text x="450" y="695" class="t">MoveDelay(GX, delayMs)</text>
-  <text x="450" y="725" class="t">wait(PositionFeedback threshold)</text>
+  <text x="450" y="725" class="t">AdvanceVirtualStageCounter(Target, Speed, Tick)</text>
   <text x="450" y="755" class="t">WaitForMotionDone(Y)</text>
   <text x="450" y="785" class="t">WaitForInPosition(Y)</text>
 

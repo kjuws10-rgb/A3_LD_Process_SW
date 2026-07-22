@@ -90,14 +90,14 @@ public sealed class CoordinateTransformService
             }
         }
 
-        // The board moves forward past the review camera into the scanner zone, then
-        // reverses. MOF targets must therefore execute from the far Y side back toward
-        // the review camera, not in the recipe's row-generation order.
+        // During reverse transport the board features pass the fixed scanner array from
+        // AK1 toward AK2. Local board Y is independent of the Stage axis sign, so it is
+        // the stable ordering key for both positive and negative transport conventions.
         var forwardSignY = input.ForwardTransportSignY >= 0 ? 1 : -1;
         var mofExecutionCommands = commands
-            .OrderByDescending(command => command.ProcessStageY * forwardSignY)
+            .OrderBy(command => command.LocalY)
+            .ThenBy(command => command.LocalX)
             .ThenBy(command => command.ScannerIndex)
-            .ThenBy(command => command.ProcessStageX)
             .ToList();
 
         for (var index = 0; index < mofExecutionCommands.Count; index++)
@@ -175,7 +175,7 @@ public sealed class CoordinateTransformService
                 Direction = reverse,
                 FromStageY = Round(turnaroundStageY),
                 ToStageY = Round(input.ReviewCenterGlobalY),
-                Operation = "역물류 이동 중 Y 먼 좌표부터 가까운 좌표 순으로 MOF 가공"
+                Operation = "역물류 이동 중 기판 AK1 측에서 AK2 측 순서로 MOF 가공"
             },
             new StageMotionStep
             {

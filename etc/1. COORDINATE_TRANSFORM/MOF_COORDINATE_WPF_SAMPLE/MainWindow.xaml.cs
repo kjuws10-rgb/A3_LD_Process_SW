@@ -7,6 +7,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using System.Windows.Threading;
 using Microsoft.Win32;
 using MofCoordinateDemo.Automation1;
 using MofCoordinateDemo.Models;
@@ -34,8 +35,16 @@ public partial class MainWindow : Window
     private CellCommand? _selectionAnchor;
     private readonly HashSet<string> _dragVisitedPointKeys = new();
     private readonly HashSet<string> _selectedPointKeys = new();
+    private readonly Dictionary<int, Rectangle> _boardProcessVisuals = new();
+    private readonly DispatcherTimer _layoutRenderTimer;
+    private readonly DispatcherTimer _processMonitorTimer;
+    private IReadOnlyList<CellCommand> _activeScriptCommands = Array.Empty<CellCommand>();
+    private int _lastMonitorSequence;
+    private bool _isProcessMonitorPolling;
+    private Automation1DirectStatus? _lastMonitorStatus;
     private const double MinimumLayoutCanvasWidth = 640.0;
     private const double MinimumLayoutCanvasHeight = 560.0;
+    private const int MaximumDeploymentLogCharacters = 120_000;
     private static readonly string ViewStatePath = System.IO.Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "MofCoordinateDemo",
@@ -44,6 +53,20 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        _layoutRenderTimer = new DispatcherTimer(DispatcherPriority.Background)
+        {
+            Interval = TimeSpan.FromMilliseconds(120)
+        };
+        _layoutRenderTimer.Tick += (_, _) =>
+        {
+            _layoutRenderTimer.Stop();
+            DrawLayout();
+        };
+        _processMonitorTimer = new DispatcherTimer(DispatcherPriority.Background)
+        {
+            Interval = TimeSpan.FromMilliseconds(300)
+        };
+        _processMonitorTimer.Tick += ProcessMonitorTimer_Tick;
         LoadViewState();
         Loaded += (_, _) =>
         {
@@ -52,11 +75,17 @@ public partial class MainWindow : Window
             ConfigureParameterTooltips();
             GenerateAndRender();
         };
-        SizeChanged += (_, _) => DrawLayout();
+        SizeChanged += (_, _) =>
+        {
+            _layoutRenderTimer.Stop();
+            _processMonitorTimer.Stop();
+            _layoutRenderTimer.Start();
+        };
         PreviewMouseLeftButtonUp += (_, _) => CompleteMatrixDragSelection();
         Closing += (_, _) =>
         {
             _scriptWorkflowCancellation?.Cancel();
+            _layoutRenderTimer.Stop();
             if (_automation1Client is not null)
             {
                 _automation1Client.DisposeAsync().AsTask().GetAwaiter().GetResult();
@@ -220,6 +249,7 @@ public partial class MainWindow : Window
                 ReadHardwareReadiness(package.GenerationMode),
                 cancellationToken);
             ShowAutomation1Response("실행 명령", response);
+            StartProcessMonitorPolling();
         });
     }
 
@@ -256,6 +286,7 @@ public partial class MainWindow : Window
                           ?? throw new InvalidOperationException("중지할 Script Job이 없습니다.");
             var client = await GetAutomation1DirectClientAsync(cancellationToken);
             var status = await client.StopAsync(package.JobId, cancellationToken);
+            _processMonitorTimer.Stop();
             ShowAutomation1Response("실행 중지", status);
         });
     }
@@ -293,6 +324,7 @@ public partial class MainWindow : Window
                 await Task.Delay(250, cancellationToken);
                 var status = await client.GetStatusAsync(package.JobId, cancellationToken);
                 EnsureAutomation1Success("상태 조회", status);
+                UpdateProcessMonitor(status);
                 var statusKey = $"{status.State}|{status.TaskState}|{status.Message}|{status.Error}";
                 if (!statusKey.Equals(lastStatusKey, StringComparison.Ordinal))
                 {
@@ -339,6 +371,8 @@ public partial class MainWindow : Window
         }
 
         var options = ReadAeroScriptGenerationOptions();
+        _activeScriptCommands = commandList;
+        ResetProcessMonitor(commandList.Length);
         var source = _aeroScriptGenerator.Generate(_input, commandList, options);
         var taskIndex = Math.Max(1, ReadInt(Automation1TaskIndexBox, 1));
         var controllerFile = ControllerFileNameBox.Text.Trim();
@@ -400,7 +434,6 @@ public partial class MainWindow : Window
         return new AeroScriptGenerationOptions
         {
             Mode = GetSelectedScriptMode(),
-            StageAxisName = StageAxisNameBox.Text.Trim(),
             AxisXTemplate = AxisXTemplateBox.Text.Trim(),
             AxisYTemplate = AxisYTemplateBox.Text.Trim(),
             StartYPosition = ReadDouble(StartYPositionBox, 500),
@@ -414,10 +447,10 @@ public partial class MainWindow : Window
             ExecuteNumLines = Math.Max(1, ReadInt(ExecuteNumLinesBox, 110)),
             SetupDwellSeconds = ReadDouble(SetupDwellSecondsBox, 0.2),
             MoveDelayMilliseconds = ReadDouble(MoveDelayMillisecondsBox, 0.1),
-            WaitStepY = ReadDouble(WaitStepYBox, 10),
             ExternalEncoderCountsPerUnit = ReadDouble(ExternalEncoderCountsPerUnitBox, 2000),
             ExternalEncoderDirectionSign = ReadDouble(ExternalEncoderDirectionSignBox, -1),
             AuxiliaryInitialWaitDistance = ReadDouble(AuxiliaryInitialWaitDistanceBox, 0.1),
+            VirtualStageTickSeconds = ReadDouble(VirtualStageTickSecondsBox, 0.02),
             SoftwareLimitLow = ReadDouble(SoftwareLimitLowBox, -10_000),
             SoftwareLimitHigh = ReadDouble(SoftwareLimitHighBox, 10_000),
             EnableAxes = EnableAxesCheckBox.IsChecked == true,
@@ -532,6 +565,7 @@ public partial class MainWindow : Window
 
     private void ShowAutomation1Response(string operation, Automation1DirectStatus response)
     {
+        UpdateProcessMonitor(response);
         AppendDeploymentLog(
             $"[{operation}] State={response.State}, TaskState={response.TaskState}, Message={response.Message}");
         if (!string.IsNullOrWhiteSpace(response.Error))
@@ -546,6 +580,94 @@ public partial class MainWindow : Window
 
         ScriptJobText.Text =
             $"Job={response.JobId}, State={response.State}, Task={response.TaskIndex}, {response.Message}";
+    }
+
+    private void ResetProcessMonitor(int totalTargets)
+    {
+        _processMonitorTimer.Stop();
+        RestoreBoardMonitorStroke(_lastMonitorSequence);
+        _lastMonitorSequence = 0;
+        _lastMonitorStatus = null;
+        ProcessProgressBar.Value = 0;
+        ProcessMonitorText.Text = totalTargets > 0 ? $"가공 모니터: 0 / {totalTargets}" : "가공 모니터: 대기";
+        VirtualStagePositionText.Text = "Virtual Stage Y: -";
+    }
+
+    private void UpdateProcessMonitor(Automation1DirectStatus status)
+    {
+        _lastMonitorStatus = status;
+        var total = status.TotalMofTargets > 0 ? status.TotalMofTargets : _activeScriptCommands.Count;
+        var current = Math.Clamp(status.CurrentMofSequence, 0, Math.Max(0, total));
+        ProcessProgressBar.Value = total > 0 ? current * 100.0 / total : 0;
+        VirtualStagePositionText.Text = $"Virtual Stage Y: {status.VirtualStagePosition:0.###}";
+
+        var command = current > 0 && current <= _activeScriptCommands.Count
+            ? _activeScriptCommands[(int)current - 1]
+            : null;
+        ProcessMonitorText.Text = command is null
+            ? $"가공 모니터: {current} / {total}"
+            : $"가공 중: #{current} {command.CellIndex} / {command.ScannerName}";
+
+        var boardSequence = command?.MofSequence ?? 0;
+        if (_lastMonitorSequence != boardSequence)
+        {
+            RestoreBoardMonitorStroke(_lastMonitorSequence);
+            if (boardSequence > 0 && _boardProcessVisuals.TryGetValue(boardSequence, out var active))
+            {
+                active.Stroke = new SolidColorBrush(Color.FromRgb(34, 211, 238));
+                active.StrokeThickness = 4;
+            }
+
+            _lastMonitorSequence = boardSequence;
+        }
+    }
+
+    private void StartProcessMonitorPolling()
+    {
+        _processMonitorTimer.Stop();
+        _processMonitorTimer.Start();
+    }
+
+    private async void ProcessMonitorTimer_Tick(object? sender, EventArgs e)
+    {
+        if (_isProcessMonitorPolling || _automation1Client is null || _currentScriptPackage is null)
+        {
+            return;
+        }
+
+        _isProcessMonitorPolling = true;
+        try
+        {
+            var status = await _automation1Client.GetStatusAsync(_currentScriptPackage.JobId, CancellationToken.None);
+            UpdateProcessMonitor(status);
+            if (status.State is Automation1DirectState.Completed or Automation1DirectState.Failed or Automation1DirectState.Stopped)
+            {
+                _processMonitorTimer.Stop();
+            }
+        }
+        catch (Exception ex)
+        {
+            _processMonitorTimer.Stop();
+            AppendDeploymentLog($"[모니터 중지] {ex.Message}");
+        }
+        finally
+        {
+            _isProcessMonitorPolling = false;
+        }
+    }
+
+    private void RestoreBoardMonitorStroke(int sequence)
+    {
+        if (sequence <= 0 || !_boardProcessVisuals.TryGetValue(sequence, out var visual) ||
+            _lastResult?.MofExecutionCommands.FirstOrDefault(item => item.MofSequence == sequence) is not { } command)
+        {
+            return;
+        }
+
+        visual.Stroke = command.ScannerIndex % 2 == 1
+            ? new SolidColorBrush(Color.FromRgb(250, 204, 21))
+            : new SolidColorBrush(Color.FromRgb(167, 139, 250));
+        visual.StrokeThickness = IsPointSelected(command) ? 2.6 : 1.0;
     }
 
     private static void EnsureAutomation1Success(string operation, Automation1ConnectionInfo response)
@@ -566,6 +688,11 @@ public partial class MainWindow : Window
 
     private void AppendDeploymentLog(string message)
     {
+        if (DeploymentLogBox.Text.Length > MaximumDeploymentLogCharacters)
+        {
+            DeploymentLogBox.Text = DeploymentLogBox.Text[^80_000..];
+        }
+
         var line = $"{DateTime.Now:HH:mm:ss.fff} {message}";
         DeploymentLogBox.AppendText((DeploymentLogBox.Text.Length == 0 ? "" : Environment.NewLine) + line);
         DeploymentLogBox.ScrollToEnd();
@@ -618,9 +745,7 @@ public partial class MainWindow : Window
             ResetSelectionFromInput();
         }
 
-        BuildMatrixCanvas(DesignMatrixCanvas, "Design");
-        BuildMatrixCanvas(ProcessMatrixCanvas, "Process");
-        BuildMatrixCanvas(ReviewMatrixCanvas, "Review");
+        BuildActiveMatrixCanvas();
         BuildDoeMatrixPanel();
 
         var selected = _lastResult.Commands.FirstOrDefault(x => x.IsSelectedCell);
@@ -636,13 +761,48 @@ public partial class MainWindow : Window
             $"Review 기준 = H{_lastResult.SelectedReviewScanner.Index} DOE{_lastResult.SelectedDoeBeam.BeamNo:00}";
 
         FormulaText.Text =
-            "동작 순서: Home에서 정방향으로 Review Camera를 먼저 통과해 Scanner 뒤쪽까지 이동한 뒤 방향을 반전합니다. 역방향 복귀 중 MOF 좌표를 Y 먼 위치부터 순서대로 가공하고, Review Camera에서 후측정한 다음 Home으로 복귀합니다. " +
+            "동작 순서: Home에서 정방향으로 Review Camera를 먼저 통과해 Scanner 뒤쪽까지 이동한 뒤 방향을 반전합니다. 역방향 복귀 중 기판의 AK1 측에서 AK2 측 순서로 MOF 가공하고, Review Camera에서 후측정한 다음 Home으로 복귀합니다. " +
             "H1 초기 Stage 위치는 ReviewCenter + CameraToH1PhysicalOffset과 허용오차 안에서 같아야 합니다. Process G는 실제 H1 초기위치에서 만든 Scanner Center 기준이며, Review 좌표는 ScannerRelative(Stage축) + CameraToScannerPhysicalOffset + DOE Stage Offset으로 계산합니다. " +
             "Dynamic Review Correction은 가공 후 측정오차를 다음 가공에 보정하는 값으로, 고정 물리 Offset과 별도로 관리합니다. 스캐너 박스 또는 주변 클릭 영역을 누르면 복수 선택/해제가 됩니다. 선택된 스캐너가 있으면 좌표 Matrix는 해당 스캐너의 X 가공 가능 범위에 포함되는 좌표만 표시합니다. " +
             "Matrix 셀은 드래그로 연속 선택하고, Shift 클릭으로 기준 셀부터 현재 셀까지 범위 선택하며, Ctrl 클릭/드래그로 추가 또는 해제할 수 있습니다. " +
             "Ctrl + 마우스 휠로 Board와 Matrix를 확대/축소하면 마지막 비율이 다음 실행에도 유지됩니다.";
 
         DrawLayout();
+    }
+
+    private void BuildActiveMatrixCanvas()
+    {
+        if (_lastResult is null || CoordinateTabControl is null)
+        {
+            return;
+        }
+
+        switch (CoordinateTabControl.SelectedIndex)
+        {
+            case 0:
+                BuildMatrixCanvas(DesignMatrixCanvas, "Design");
+                break;
+            case 1:
+                BuildMatrixCanvas(ProcessMatrixCanvas, "Process");
+                break;
+            case 2:
+                BuildMatrixCanvas(ReviewMatrixCanvas, "Review");
+                break;
+        }
+    }
+
+    private void CoordinateTabControl_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (!ReferenceEquals(e.Source, CoordinateTabControl) || _lastResult is null)
+        {
+            return;
+        }
+
+        BuildActiveMatrixCanvas();
+        if (CoordinateTabControl.SelectedIndex == 3)
+        {
+            BuildDoeMatrixPanel();
+        }
     }
 
     private void DrawLayout()
@@ -653,6 +813,7 @@ public partial class MainWindow : Window
         }
 
         LayoutCanvas.Children.Clear();
+        _boardProcessVisuals.Clear();
         ResizeLayoutCanvas();
 
         DrawTitle("기판 셀 선택 및 지그재그 스캐너 배치", 20, 8, 21, FontWeights.Bold);
@@ -675,6 +836,12 @@ public partial class MainWindow : Window
         else
         {
             DrawLegend(Math.Max(20.0, LayoutCanvas.Width - 610.0), 14.0);
+        }
+
+        if (_lastMonitorStatus is not null)
+        {
+            _lastMonitorSequence = 0;
+            UpdateProcessMonitor(_lastMonitorStatus);
         }
     }
 
@@ -778,6 +945,10 @@ public partial class MainWindow : Window
             Canvas.SetLeft(rect, x);
             Canvas.SetTop(rect, y);
             LayoutCanvas.Children.Add(rect);
+            if (command.MofSequence > 0)
+            {
+                _boardProcessVisuals[command.MofSequence] = rect;
+            }
 
             var hitSizeW = Math.Max(cellW, 20);
             var hitSizeH = Math.Max(cellH, 20);
@@ -1072,9 +1243,7 @@ public partial class MainWindow : Window
         SaveViewState();
         if (_lastResult is not null)
         {
-            BuildMatrixCanvas(DesignMatrixCanvas, "Design");
-            BuildMatrixCanvas(ProcessMatrixCanvas, "Process");
-            BuildMatrixCanvas(ReviewMatrixCanvas, "Review");
+            BuildActiveMatrixCanvas();
         }
 
         e.Handled = true;

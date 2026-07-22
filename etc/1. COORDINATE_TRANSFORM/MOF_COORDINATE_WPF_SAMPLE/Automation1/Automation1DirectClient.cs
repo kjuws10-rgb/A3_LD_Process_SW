@@ -274,6 +274,7 @@ public sealed class Automation1DirectClient : IAsyncDisposable
     private Automation1DirectStatus RefreshTaskStatus(Controller controller, AeroScriptPackage package)
     {
         var snapshot = controller.Runtime.Tasks[package.TaskIndex].Status;
+        var monitor = ReadProcessMonitor(controller);
         var taskState = snapshot.TaskState.ToString();
         var error = snapshot.Error?.ToString() ?? "";
         var inRunTransition = _runRequestedAtUtc is not null &&
@@ -304,7 +305,10 @@ public sealed class Automation1DirectClient : IAsyncDisposable
             taskState,
             message,
             error,
-            _audit?.ControllerAuditFileName ?? "");
+            _audit?.ControllerAuditFileName ?? "",
+            monitor.StagePosition,
+            monitor.CurrentSequence,
+            monitor.TotalTargets);
         UpdateStatusAndAudit(status);
         return status;
     }
@@ -460,7 +464,10 @@ public sealed class Automation1DirectClient : IAsyncDisposable
         string taskState,
         string message,
         string error,
-        string auditFile) =>
+        string auditFile,
+        double virtualStagePosition = 0,
+        long currentMofSequence = 0,
+        long totalMofTargets = 0) =>
         new(
             package.JobId,
             state,
@@ -470,7 +477,28 @@ public sealed class Automation1DirectClient : IAsyncDisposable
             package.ControllerFileName,
             auditFile,
             package.TaskIndex,
-            DateTimeOffset.UtcNow);
+            DateTimeOffset.UtcNow,
+            virtualStagePosition,
+            currentMofSequence,
+            totalMofTargets);
+
+    private static ProcessMonitorSnapshot ReadProcessMonitor(Controller controller)
+    {
+        try
+        {
+            var globals = controller.Runtime.Variables.Global;
+            return new ProcessMonitorSnapshot(
+                globals.GetReal(AeroScriptGenerator.MonitorStagePositionGlobalRealIndex),
+                globals.GetInteger(AeroScriptGenerator.MonitorCurrentSequenceGlobalIntegerIndex),
+                globals.GetInteger(AeroScriptGenerator.MonitorTotalTargetsGlobalIntegerIndex));
+        }
+        catch
+        {
+            return new ProcessMonitorSnapshot(0, 0, 0);
+        }
+    }
+
+    private sealed record ProcessMonitorSnapshot(double StagePosition, long CurrentSequence, long TotalTargets);
 
     private static void ValidateOptions(Automation1ConnectionOptions options)
     {

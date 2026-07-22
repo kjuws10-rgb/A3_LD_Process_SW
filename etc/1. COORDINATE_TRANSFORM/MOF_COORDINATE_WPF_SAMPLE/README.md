@@ -1,5 +1,14 @@
 # MOF Coordinate WPF Sample
 
+## 2026-07-22 Virtual Counter Monitor V6
+
+- Simulation은 Automation1 Stage Y 축을 생성하거나 요구하지 않습니다.
+- Script 내부의 `$rglobal[0]`을 `Stage Speed × Virtual Counter Tick`만큼 갱신하여 Stage 이동을 모사합니다.
+- `$rglobal[0..2]`, `$iglobal[0..1]`을 WPF가 읽어 Stage 위치, 현재 Cell, 진행률을 표시합니다.
+- 역물류 가공 순서는 기판 로컬 좌표 기준 AK1 측에서 AK2 측으로 고정됩니다.
+- Matrix는 열린 탭만 생성하고 창 크기 변경은 지연 처리하여 UI 부하를 줄였습니다.
+- 상세 내용은 `VIRTUAL_STAGE_COUNTER_MONITOR_UPDATE_20260722.md`를 참고합니다.
+
 ## 2026-07-22 External Stage AUX MOF V5
 
 - 타사 Stage Y는 Automation1 축 목록과 Script의 이동 명령에서 제외합니다.
@@ -23,7 +32,7 @@
 
 2026-07-17 업데이트에서는 Review Camera 광학 중심과 H1 Scanner 가공 중심 사이의 고정 물리 오프셋을 좌표 변환의 필수 입력으로 분리했다. Scanner 배치는 명시적인 `FirstScannerInitialStageX/Y`에서 시작하고, 이 값이 `ReviewCenter + CameraToScannerPhysicalOffset`과 일치하는지 검증한다. 가공 후 측정오차를 보정하는 `ProcessOffsetGlobal`은 별도 데이터로 관리한다.
 
-장비 물류 순서는 `Home → Review Camera 통과 → Scanner 뒤쪽까지 정방향 이동 → 방향 반전 → 역방향 이동 중 MOF → Review Camera 후측정 → Home 복귀`로 반영했다. 기본 설정은 +Y가 정물류 방향이며, MOF 명령은 Stage Y가 큰 가공점부터 작은 가공점 순서로 실행된다.
+장비 물류 순서는 `Home → Review Camera 통과 → Scanner 뒤쪽까지 정방향 이동 → 방향 반전 → 역방향 이동 중 MOF → Review Camera 후측정 → Home 복귀`로 반영했다. 역물류 중 가공점은 Stage 축 부호와 무관한 기판 Local 좌표를 기준으로 AK1 측에서 AK2 측 순서로 실행된다.
 
 2026-07-16 업데이트에서는 첨부 예시 이미지처럼 기판 Cell과 Scanner Head 선택 상태를 색상으로 쉽게 파악할 수 있도록 UI를 개선했다. 또한 설계좌표, 가공좌표, 리뷰좌표계를 별도 탭으로 분리하고 모든 좌표 결과를 `(x, y)` 2D Matrix 형태로 표시한다.
 

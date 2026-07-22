@@ -1,5 +1,14 @@
 # A3 LD Process SW Architecture
 
+## Virtual Counter Monitor V6 (2026-07-22)
+
+- Virtual simulation no longer creates or validates a Stage Y axis. Scanner GX/GY are the only required axes.
+- AeroScript advances `$rglobal[0]` by `StageSpeed * VirtualStageTickSeconds` until `$rglobal[2]` is reached.
+- `$iglobal[0]` and `$iglobal[1]` expose current/total process sequence to the WPF client.
+- `CoordinateTransformService` orders all reverse-transport targets by board-local Y and X, which represents AK1-to-AK2 processing independently of the Stage sign convention.
+- WPF polling updates only progress text, progress bar, Stage position, and the active board-cell outline.
+- Matrix rendering is lazy per selected tab; window resize rendering is debounced.
+
 ## External Stage AUX MOF V5 (2026-07-22)
 
 - The third-party Stage Y is not represented as an Automation1 axis and is never commanded by generated AeroScript.
@@ -485,19 +494,19 @@ Recipe / Review / Scanner parameters
 
 WPF가 A1 Studio 원격 접속과 같은 개념으로 Automation1 Controller endpoint에 직접 연결한다. 별도 `Automation1Server`, 자체 TCP framing, JSON Gateway, API Key, spool 폴더는 없다. 좌표와 Script는 Client에서만 생성하며 Server PC의 Automation1 Controller는 공식 API를 통해 파일 기록과 Task 실행을 담당한다.
 
-### Virtual Wait Simulation 경로
+### Virtual Counter Simulation 경로
 
 ```text
-GX + Stage Y MOF pair 전제
-  -> MoveAbsolute(Y, StartY + Travel, Speed) 비동기 시작
-  -> GX band별 GY drill point + MoveDelay 반복
-  -> wait(StatusGetAxisItem(Y, PositionFeedback) threshold)
-  -> 다음 GX band 진행
-  -> 마지막에 WaitForMotionDone(Y) + WaitForInPosition(Y)
+Virtual GX/GY pair 전제
+  -> $rglobal[0] = StartY
+  -> AdvanceVirtualStageCounter(TargetY, Speed, Tick)
+  -> AK1→AK2 순서의 GX/GY point + MoveDelay
+  -> $iglobal[0] current sequence 갱신
+  -> WPF가 Stage/좌표/진행률 모니터링
   -> ProgramComplete
 ```
 
-이 경로에는 Laser, PSO, Hardware Aux, Galvo calibration 명령을 넣지 않는다. Virtual Wait Script도 공식 API를 통해 Automation1 Virtual Controller에 직접 기록하고 실행한다. Virtual axis feedback은 command와 동일하므로 결과는 논리 순서 검증이며 실제 Encoder 지연과 광학 동기 검증이 아니다. 상세 흐름은 `AUTOMATION1_VIRTUAL_WAIT_SIMULATION_FLOW.svg`를 참조한다.
+이 경로에는 Stage Y 축, Laser, PSO, Hardware Aux, Galvo calibration 명령을 넣지 않는다. 소프트웨어 카운터 결과는 논리 순서 검증이며 실제 Encoder 지연과 광학 동기 검증이 아니다. 상세 흐름은 `AUTOMATION1_VIRTUAL_WAIT_SIMULATION_FLOW.svg`를 참조한다.
 
 실제 장비에서 Hardware Script를 실행하기 전 UI 확인창, 축 이름, Software Limit, 속도, Ramp, 장비 Interlock, Laser 안전 조건을 작업자가 검토해야 한다. Virtual Mode는 하드웨어 명령을 자동 생성하지 않는다.
 
@@ -505,7 +514,7 @@ GX + Stage Y MOF pair 전제
 
 Client의 `Script 생성`은 `Local Script File`에 실제 `.ascript`를 저장한 뒤 별도의 `Controller File` 경로를 Package에 넣는다. `Automation1DirectClient.ConnectAsync`는 공식 `Controller.Connect(host, port)` 결과에서 Host, Port, IsRunning, 암호화 여부, Task 수와 Virtual/Physical 축 구성을 확인한다. Scanner UI 선택은 선택 Head별 `InField` 좌표 합집합을 `_selectedPointKeys`에 반영한다.
 
-실행 환경은 `Simulation`과 `Equipment`로 분리한다. Simulation Package는 MCD에 필요한 `Y/GX/GY` 축이 존재하고 모두 Virtual 축인지 확인한 뒤 Laser/PSO/HW Aux/Galvo 명령이 없는 Virtual Wait Script를 사용한다. Equipment Package는 실제 좌표 Script를 사용하며 축 준비, Safety Interlock, Laser/Beam Path, 작업자 최종 승인을 모두 통과해야 실행할 수 있다.
+실행 환경은 `Simulation`과 `Equipment`로 분리한다. Simulation Package는 MCD의 `GX/GY`가 Virtual 축인지 확인하고 Stage는 전역변수 카운터로 모사한다. Equipment Package는 실제 좌표 Script를 사용하며 축 준비, Safety Interlock, Laser/Beam Path, 작업자 최종 승인을 모두 통과해야 실행할 수 있다.
 
 Controller 기록 뒤에는 `Controller.Compiler.CompileControllerFile(file, true)`를 명시적으로 호출한다. 문법, 축 이름, MCD 또는 Library 오류는 `CompileException.CompilerErrors`의 파일/행/열/메시지로 UI와 Audit에 기록된다. 성공한 `CompiledAeroScript` 객체만 `Runtime.Tasks[n].Program.Run(compiledProgram)`으로 실행하므로 컴파일 실패와 실행 중 Fault를 서로 구분할 수 있다.
 

@@ -18,8 +18,10 @@ Automation1 GY AUX counter   -> MOF compensation and wait gates
 4. Calculate `scanner counts per unit / external encoder counts per unit`.
 5. Apply direction sign and enable MOF compensation.
 6. Wait until `Abs(AuxiliaryFeedback)` crosses each configured travel threshold.
-7. Execute only the scanner GX/GY commands assigned to that threshold.
+7. Execute scanner GX/GY commands in board-local AK1-to-AK2 order.
 8. Wait for scanner motion completion and reset the MOF scale to zero.
+
+The script writes current travel and command progress to `$rglobal[0]`, `$iglobal[0]`, and `$iglobal[1]` so the WPF monitor can show the active cell without redrawing the full board.
 
 No `MoveAbsolute(Y, ...)`, `WaitForInPosition(Y)`, or Stage `PositionFeedback` command is generated in this mode.
 
@@ -28,7 +30,6 @@ No `MoveAbsolute(Y, ...)`, `WaitForInPosition(Y)`, or Stage `PositionFeedback` c
 - `External Encoder cnt/mm`: physical Stage encoder counts received for 1 mm of travel. Default sample value is 2000.
 - `Encoder Direction`: `-1` when scanner compensation and Stage encoder directions are opposite, otherwise `1`.
 - `AUX Initial Wait mm`: minimum encoder travel after AUX zeroing before the first processing group is released.
-- `Wait Step Y`: additional encoder travel between processing groups.
 - `Stage Travel`: validation-only expected physical travel. The script does not command this movement.
 
 ## Simulation Boundary

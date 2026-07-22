@@ -11,7 +11,13 @@ namespace MofCoordinateDemo.Automation1;
 /// </summary>
 public sealed partial class AeroScriptGenerator
 {
-    public const string GeneratorRevision = "20260722-external-stage-aux-v5";
+    public const string GeneratorRevision = "20260722-virtual-counter-monitor-v6";
+
+    public const int MonitorStagePositionGlobalRealIndex = 0;
+    public const int MonitorStageSpeedGlobalRealIndex = 1;
+    public const int MonitorStageTargetGlobalRealIndex = 2;
+    public const int MonitorCurrentSequenceGlobalIntegerIndex = 0;
+    public const int MonitorTotalTargetsGlobalIntegerIndex = 1;
 
     public static IReadOnlyList<string> ResolveRequiredAxisNames(
         IReadOnlyList<CellCommand> commands,
@@ -27,10 +33,6 @@ public sealed partial class AeroScriptGenerator
         }
 
         var axes = new List<string>();
-        if (options.Mode == AeroScriptGenerationMode.VirtualWaitSimulation)
-        {
-            axes.Add(ResolveAxisName(options.StageAxisName, heads[0]));
-        }
         foreach (var head in heads)
         {
             axes.Add(ResolveAxisName(options.AxisXTemplate, head));
@@ -58,138 +60,13 @@ public sealed partial class AeroScriptGenerator
         ValidateTargetsWithinLimits(commands, options);
         var source = options.Mode switch
         {
-            AeroScriptGenerationMode.VirtualWaitSimulation => GenerateVirtualWaitSimulation(input, commands, options),
+            AeroScriptGenerationMode.VirtualWaitSimulation => GenerateVirtualCounterSimulation(input, commands, options),
             AeroScriptGenerationMode.ExternalStageAuxMofProgram => GenerateExternalStageAuxMofProgram(input, commands, options),
             AeroScriptGenerationMode.HardwareCoordinateProgram => GenerateHardwareCoordinateProgram(input, commands, options),
             _ => throw new ArgumentOutOfRangeException(nameof(options.Mode))
         };
         ValidateGeneratedSource(source);
         return source;
-    }
-
-    private static string GenerateVirtualWaitSimulation(
-        CoordinateInput input,
-        IReadOnlyList<CellCommand> commands,
-        AeroScriptGenerationOptions options)
-    {
-        var headNumbers = commands.Select(command => command.ScannerIndex).Distinct().ToArray();
-        if (headNumbers.Length != 1)
-        {
-            throw new InvalidOperationException(
-                "Virtual Wait Simulation은 GX-Y MOF pair 한 개를 검증하므로 Scanner Head를 정확히 한 개만 선택해야 합니다.");
-        }
-
-        var head = headNumbers[0];
-        var stageAxis = ResolveAxisName(options.StageAxisName, head);
-        var axisX = ResolveAxisName(options.AxisXTemplate, head);
-        var axisY = ResolveAxisName(options.AxisYTemplate, head);
-        const string stageAxisVariable = "$StageAxis";
-        const string scannerXAxisVariable = "$ScannerXAxis";
-        const string scannerYAxisVariable = "$ScannerYAxis";
-        var gxGroups = commands
-            .GroupBy(command => Math.Round(command.Gx, 6))
-            .OrderBy(group => group.Key)
-            .ToArray();
-        var waitCount = Math.Max(0, gxGroups.Length - 1);
-        var requiredTravel = waitCount * options.WaitStepY;
-        if (Math.Abs(options.StageTravelDistance) + 1e-9 < requiredTravel)
-        {
-            throw new InvalidOperationException(
-                $"Stage travel distance는 wait 임계값 범위({requiredTravel:0.###}) 이상이어야 합니다.");
-        }
-
-        var source = CreateHeader(input, commands, options);
-        source.AppendLine("// MODE: Automation1 Virtual Wait Simulation");
-        source.AppendLine("// Laser, PSO, Hardware Aux, Galvo calibration commands are intentionally excluded.");
-        source.AppendLine($"// Assumption: {axisX} and {stageAxis} are configured as the MOF pair in the test MCD.");
-        source.AppendLine("// Purpose: verify that each wait condition releases as Stage position feedback crosses its threshold.");
-        source.AppendLine("// import \"LaserOnLibrary.a1lib\" as static  // Virtual mode: disabled");
-        source.AppendLine();
-        source.AppendLine("program");
-        source.AppendLine("    var $StageAxisName as string");
-        source.AppendLine("    var $ScannerXAxisName as string");
-        source.AppendLine("    var $ScannerYAxisName as string");
-        source.AppendLine($"    var {stageAxisVariable} as axis");
-        source.AppendLine($"    var {scannerXAxisVariable} as axis");
-        source.AppendLine($"    var {scannerYAxisVariable} as axis");
-        source.AppendLine("    var $StartYPos as real");
-        source.AppendLine();
-        source.AppendLine($"    $StageAxisName = \"{stageAxis}\"");
-        source.AppendLine($"    $ScannerXAxisName = \"{axisX}\"");
-        source.AppendLine($"    $ScannerYAxisName = \"{axisY}\"");
-        source.AppendLine($"    {stageAxisVariable} = @$StageAxisName");
-        source.AppendLine($"    {scannerXAxisVariable} = @$ScannerXAxisName");
-        source.AppendLine($"    {scannerYAxisVariable} = @$ScannerYAxisName");
-        source.AppendLine();
-        AppendCommonMotionSetup(source, new[] { scannerXAxisVariable, scannerYAxisVariable }, options);
-
-        if (options.EnableAxes)
-        {
-            source.AppendLine($"    Enable([{stageAxisVariable}, {scannerXAxisVariable}, {scannerYAxisVariable}])");
-            source.AppendLine();
-        }
-
-        source.AppendLine($"    SetupAxisSpeed({scannerXAxisVariable}, {Format(options.ScannerRapidSpeed)})");
-        source.AppendLine($"    SetupAxisSpeed({scannerYAxisVariable}, {Format(options.ScannerRapidSpeed)})");
-        source.AppendLine();
-        source.AppendLine($"    $StartYPos = {Format(options.StartYPosition)}");
-        source.AppendLine($"    MoveAbsolute({stageAxisVariable}, $StartYPos, {Format(options.StageSpeed)})");
-        source.AppendLine(
-            $"    MoveRapid([{scannerXAxisVariable}, {scannerYAxisVariable}], [0, 0], " +
-            $"[{Format(options.ScannerRapidSpeed)}, {Format(options.ScannerRapidSpeed)}])");
-        source.AppendLine();
-        source.AppendLine($"    WaitForInPosition({stageAxisVariable})");
-        source.AppendLine($"    WaitForInPosition({scannerXAxisVariable})");
-        source.AppendLine($"    WaitForInPosition({scannerYAxisVariable})");
-        source.AppendLine();
-        AppendSoftwareLimits(source, new[] { scannerXAxisVariable, scannerYAxisVariable }, options);
-        source.AppendLine(
-            $"    MoveAbsolute({stageAxisVariable}, $StartYPos{FormatSignedExpression(options.StageTravelDistance)}, {Format(options.StageSpeed)})");
-        source.AppendLine(
-            $"    MoveRapid([{scannerXAxisVariable}, {scannerYAxisVariable}], [0, 0], " +
-            $"[{Format(options.ScannerRapidSpeed)}, {Format(options.ScannerRapidSpeed)}])");
-        source.AppendLine($"    WaitForMotionDone([{scannerXAxisVariable}, {scannerYAxisVariable}])");
-        source.AppendLine();
-
-        var directionOperator = options.StageTravelDistance >= 0 ? ">" : "<";
-        var directionSign = options.StageTravelDistance >= 0 ? 1.0 : -1.0;
-        for (var groupIndex = 0; groupIndex < gxGroups.Length; groupIndex++)
-        {
-            var group = gxGroups[groupIndex];
-            source.AppendLine($"    // REPEAT {groupIndex + 1}: GX band {Format(group.Key)}");
-            foreach (var command in group.OrderBy(command => command.Gy))
-            {
-                source.AppendLine(
-                    $"    MoveRapid([{scannerXAxisVariable}, {scannerYAxisVariable}], " +
-                    $"[{Format(command.Gx)}, {Format(command.Gy)}], " +
-                    $"[{Format(options.ScannerRapidSpeed)}, {Format(options.ScannerRapidSpeed)}]) " +
-                    $"// {command.CellIndex}, MOF #{command.MofSequence}, " +
-                    $"Process Gx/Gy=({Format(command.Gx)}, {Format(command.Gy)}), " +
-                    $"Review=({Format(command.ReviewCoordinateX)}, {Format(command.ReviewCoordinateY)})");
-                source.AppendLine($"    MoveDelay({scannerXAxisVariable}, {Format(options.MoveDelayMilliseconds)})");
-            }
-
-            if (groupIndex < waitCount)
-            {
-                var threshold = directionSign * options.WaitStepY * (groupIndex + 1);
-                source.AppendLine(
-                    $"    wait(StatusGetAxisItem({stageAxisVariable}, AxisStatusItem.PositionFeedback) " +
-                    $"{directionOperator} $StartYPos{FormatSignedExpression(threshold)})");
-            }
-
-            source.AppendLine();
-        }
-
-        source.AppendLine($"    WaitForMotionDone({stageAxisVariable})");
-        source.AppendLine($"    WaitForInPosition({stageAxisVariable})");
-        source.AppendLine("    VelocityBlendingOff()");
-        if (options.DisableAxesAtEnd)
-        {
-            source.AppendLine($"    Disable([{stageAxisVariable}, {scannerXAxisVariable}, {scannerYAxisVariable}])");
-        }
-
-        source.AppendLine("end");
-        return source.ToString();
     }
 
     private static string GenerateExternalStageAuxMofProgram(
@@ -215,12 +92,16 @@ public sealed partial class AeroScriptGenerator
             .SelectMany(pair => new[] { pair.X, pair.Y })
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
-        var gxGroups = commands
-            .GroupBy(command => Math.Round(command.Gx, 6))
-            .OrderBy(group => group.Key)
+        var orderedCommands = commands.OrderBy(command => command.MofSequence).ToArray();
+        var monitorSequenceByMof = orderedCommands
+            .Select((command, index) => (command.MofSequence, MonitorSequence: index + 1))
+            .ToDictionary(item => item.MofSequence, item => item.MonitorSequence);
+        var firstLocalY = orderedCommands[0].LocalY;
+        var localYGroups = orderedCommands
+            .GroupBy(command => Math.Round(command.LocalY, 6))
             .ToArray();
         var requiredTravel = options.AuxiliaryInitialWaitDistance +
-                             Math.Max(0, gxGroups.Length - 1) * options.WaitStepY;
+                             Math.Max(0, orderedCommands[^1].LocalY - firstLocalY);
         if (Math.Abs(options.StageTravelDistance) + 1e-9 < requiredTravel)
         {
             throw new InvalidOperationException(
@@ -242,6 +123,11 @@ public sealed partial class AeroScriptGenerator
 
         source.AppendLine();
         source.AppendLine($"    $StageEncoderCountsPerUnit = {Format(options.ExternalEncoderCountsPerUnit)}");
+        source.AppendLine($"    $rglobal[{MonitorStagePositionGlobalRealIndex}] = 0");
+        source.AppendLine($"    $rglobal[{MonitorStageSpeedGlobalRealIndex}] = 0");
+        source.AppendLine($"    $rglobal[{MonitorStageTargetGlobalRealIndex}] = 0");
+        source.AppendLine($"    $iglobal[{MonitorCurrentSequenceGlobalIntegerIndex}] = 0");
+        source.AppendLine($"    $iglobal[{MonitorTotalTargetsGlobalIntegerIndex}] = {orderedCommands.Length}");
         source.AppendLine();
         AppendCommonMotionSetup(source, allAxes, options);
         if (options.EnableAxes)
@@ -274,11 +160,11 @@ public sealed partial class AeroScriptGenerator
 
         source.AppendLine();
         AppendSoftwareLimits(source, allAxes, options);
-        for (var groupIndex = 0; groupIndex < gxGroups.Length; groupIndex++)
+        for (var groupIndex = 0; groupIndex < localYGroups.Length; groupIndex++)
         {
-            var group = gxGroups[groupIndex];
-            var threshold = options.AuxiliaryInitialWaitDistance + groupIndex * options.WaitStepY;
-            source.AppendLine($"    // AUX gate {groupIndex + 1}: external Stage travel > {Format(threshold)} mm");
+            var group = localYGroups[groupIndex];
+            var threshold = options.AuxiliaryInitialWaitDistance + Math.Max(0, group.Key - firstLocalY);
+            source.AppendLine($"    // AK1 -> AK2 AUX gate {groupIndex + 1}: external Stage travel > {Format(threshold)} mm");
             foreach (var head in group.Select(command => command.ScannerIndex).Distinct().OrderBy(index => index))
             {
                 source.AppendLine(
@@ -286,9 +172,13 @@ public sealed partial class AeroScriptGenerator
                     $"> $StageEncoderCountsPerUnit * {Format(threshold)})");
             }
 
-            foreach (var command in group.OrderBy(command => command.MofSequence))
+            foreach (var command in group)
             {
                 var axes = axesByHead[command.ScannerIndex];
+                source.AppendLine($"    $rglobal[{MonitorStagePositionGlobalRealIndex}] = {Format(threshold)}");
+                var monitorSequence = monitorSequenceByMof[command.MofSequence];
+                source.AppendLine($"    $iglobal[{MonitorCurrentSequenceGlobalIntegerIndex}] = {monitorSequence}");
+                source.AppendLine($"    $iglobal[{MonitorTotalTargetsGlobalIntegerIndex}] = {orderedCommands.Length}");
                 source.AppendLine(
                     $"    MoveRapid([{axes.X}, {axes.Y}], [{Format(command.Gx)}, {Format(command.Gy)}], " +
                     $"[{Format(options.ScannerRapidSpeed)}, {Format(options.ScannerRapidSpeed)}]) " +
@@ -364,10 +254,15 @@ public sealed partial class AeroScriptGenerator
 
         AppendSoftwareLimits(source, allAxes, options);
         source.AppendLine($"    SetupCoordinatedSpeed({Format(options.CoordinatedSpeed)})");
+        source.AppendLine($"    $iglobal[{MonitorCurrentSequenceGlobalIntegerIndex}] = 0");
+        source.AppendLine($"    $iglobal[{MonitorTotalTargetsGlobalIntegerIndex}] = {commands.Count}");
         source.AppendLine();
 
-        foreach (var command in commands.OrderBy(command => command.MofSequence))
+        var orderedHardwareCommands = commands.OrderBy(command => command.MofSequence).ToArray();
+        for (var commandIndex = 0; commandIndex < orderedHardwareCommands.Length; commandIndex++)
         {
+            var command = orderedHardwareCommands[commandIndex];
+            source.AppendLine($"    $iglobal[{MonitorCurrentSequenceGlobalIntegerIndex}] = {commandIndex + 1}");
             source.AppendLine(
                 $"    // MOF #{command.MofSequence}: {command.CellIndex}, H{command.ScannerIndex}, " +
                 $"Stage=({Format(command.ProcessStageX)}, {Format(command.ProcessStageY)}), " +
@@ -469,8 +364,8 @@ public sealed partial class AeroScriptGenerator
             ["Ramp rate"] = options.RampRate,
             ["Motion update rate"] = options.MotionUpdateRateKhz,
             ["Stage speed"] = options.StageSpeed,
-            ["Wait step Y"] = options.WaitStepY,
-            ["External encoder counts per unit"] = options.ExternalEncoderCountsPerUnit
+            ["External encoder counts per unit"] = options.ExternalEncoderCountsPerUnit,
+            ["Virtual Stage tick"] = options.VirtualStageTickSeconds
         };
 
         foreach (var (name, value) in positiveValues)
@@ -574,9 +469,6 @@ public sealed partial class AeroScriptGenerator
     }
 
     private static string Format(double value) => value.ToString("0.######", CultureInfo.InvariantCulture);
-
-    private static string FormatSignedExpression(double value) =>
-        value >= 0 ? $" + {Format(value)}" : $" - {Format(Math.Abs(value))}";
 
     [GeneratedRegex("^[A-Za-z_][A-Za-z0-9_]*$", RegexOptions.CultureInvariant)]
     private static partial Regex AxisIdentifierRegex();

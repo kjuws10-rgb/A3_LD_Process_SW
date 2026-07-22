@@ -1,5 +1,14 @@
 # A3 LD Process SW Class Inventory
 
+## Virtual Counter Monitor V6 (2026-07-22)
+
+- `AeroScriptGenerator.GenerateVirtualCounterSimulation`: generates software Stage counting without a Stage axis.
+- `AeroScriptGenerationOptions.VirtualStageTickSeconds`: counter update interval in seconds.
+- `Automation1DirectStatus`: carries simulated Stage position and current/total MOF sequence.
+- `Automation1DirectClient.ReadProcessMonitor`: reads Controller global variables used by the running script.
+- `MainWindow.UpdateProcessMonitor`: updates progress controls and the active board cell without rebuilding all canvases.
+- `MainWindow.BuildActiveMatrixCanvas`: creates only the currently selected coordinate matrix.
+
 ## External Stage AUX MOF V5 (2026-07-22)
 
 - `AeroScriptGenerationMode.ExternalStageAuxMofProgram`: equipment mode for a third-party Stage encoder wired to scanner GY AUX feedback.
@@ -14,7 +23,7 @@ Generated from Debug build assemblies. Compiler generated backing fields are hid
 
 - `AeroScriptGenerator.Generate`: generates the selected mode, adds the current generator revision, and validates the final source before packaging.
 - `AeroScriptGenerator.GenerateVirtualWaitSimulation`: declares axis-name strings and `axis` variables, converts names with `@`, and uses the variables for motion/status commands.
-- `Automation1DirectClient.ValidateExecutionEnvironment`: verifies required scanner axes and, for Virtual Wait only, the configured Stage axis against `controller.Runtime.Axes`.
+- `Automation1DirectClient.ValidateExecutionEnvironment`: verifies required scanner axes; Virtual Counter mode does not require a Stage axis.
 - `AeroScriptGenerator.GenerateHardwareCoordinateProgram`: emits direct hardware-axis literals because the equipment MCD must contain those axes.
 - `AeroScriptGenerator.ValidateGeneratedSource`: blocks missing program/end blocks and invalid spaced G-code variable operands.
 - `MainWindow.DeploymentLogBox_MouseDoubleClick`: clears the visible WPF deployment log on double-click.
@@ -5058,8 +5067,8 @@ Type count: 78
 - `Automation1ConnectionOptions`: Host, Port, 인증 모드, 사용자, Password, 인증서, Controller 자동 시작 옵션을 전달한다. 현재 UI 기본은 `NoAuthentication`이다.
 - `Automation1ConnectionInfo`: 직접 연결 결과와 Runtime 준비 상태를 UI에 전달한다.
 - `Automation1DirectStatus`: Job별 상태, TaskState, 오류, Script와 Audit Controller 파일명을 전달한다.
-- `AeroScriptGenerator`: Client PC에서 `VirtualWaitSimulation` 또는 `HardwareCoordinateProgram`을 생성한다. Virtual 모드는 Stage PositionFeedback wait와 GX/GY 이동 순서를 검증한다.
-- `AeroScriptGenerationOptions`: Stage Y, GX/GY, speed, ramp, FIR, MotionUpdateRate, ExecuteNumLines, MoveDelay, wait step과 software limit을 전달한다.
+- `AeroScriptGenerator`: Virtual Counter, External AUX MOF 또는 Hardware Coordinate Program을 생성한다.
+- `AeroScriptGenerationOptions`: GX/GY, Virtual Stage speed/tick, external encoder, ramp, FIR, MotionUpdateRate, MoveDelay와 software limit을 전달한다.
 - `AeroScriptPackage`: Job ID, Controller file, UTF-8 source, SHA-256, Task index, 대상 좌표 수, 생성 모드, 실행 환경, 필수 축 이름을 보관한다.
 - `Automation1ExecutionEnvironment`: `Simulation`, `Equipment` 실행 환경을 구분한다.
 - `Automation1HardwareReadiness`: 실제 설비 실행 전 축, Safety Interlock, Laser/Beam Path, 작업자 최종 승인 상태를 보관한다.

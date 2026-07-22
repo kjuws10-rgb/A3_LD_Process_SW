@@ -79,7 +79,10 @@ public sealed record Automation1DirectStatus(
     string ControllerFileName,
     string ControllerAuditFileName,
     int TaskIndex,
-    DateTimeOffset UpdatedAtUtc);
+    DateTimeOffset UpdatedAtUtc,
+    double VirtualStagePosition,
+    long CurrentMofSequence,
+    long TotalMofTargets);
 
 public sealed record AeroScriptPackage(
     string JobId,
@@ -145,7 +148,6 @@ public sealed record AeroScriptPackage(
 public sealed record AeroScriptGenerationOptions
 {
     public AeroScriptGenerationMode Mode { get; init; } = AeroScriptGenerationMode.VirtualWaitSimulation;
-    public string StageAxisName { get; init; } = "Y";
     public string AxisXTemplate { get; init; } = "GX";
     public string AxisYTemplate { get; init; } = "GY";
     public double StartYPosition { get; init; } = 500;
@@ -159,10 +161,10 @@ public sealed record AeroScriptGenerationOptions
     public int ExecuteNumLines { get; init; } = 110;
     public double SetupDwellSeconds { get; init; } = 0.2;
     public double MoveDelayMilliseconds { get; init; } = 0.1;
-    public double WaitStepY { get; init; } = 10;
     public double ExternalEncoderCountsPerUnit { get; init; } = 2000;
     public double ExternalEncoderDirectionSign { get; init; } = -1;
     public double AuxiliaryInitialWaitDistance { get; init; } = 0.1;
+    public double VirtualStageTickSeconds { get; init; } = 0.02;
     public double SoftwareLimitLow { get; init; } = -10_000;
     public double SoftwareLimitHigh { get; init; } = 10_000;
     public bool EnableAxes { get; init; }
