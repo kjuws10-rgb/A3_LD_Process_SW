@@ -56,6 +56,33 @@
       <Setter Property="Foreground" Value="#E5E7EB"/>
       <Setter Property="Padding" Value="6,4"/>
     </Style>
+    <Style TargetType="DataGrid">
+      <Setter Property="Background" Value="#0F172A"/>
+      <Setter Property="Foreground" Value="#E5E7EB"/>
+      <Setter Property="BorderBrush" Value="#334155"/>
+      <Setter Property="GridLinesVisibility" Value="All"/>
+      <Setter Property="HorizontalGridLinesBrush" Value="#334155"/>
+      <Setter Property="VerticalGridLinesBrush" Value="#334155"/>
+      <Setter Property="RowBackground" Value="#111827"/>
+      <Setter Property="AlternatingRowBackground" Value="#0B1220"/>
+      <Setter Property="HeadersVisibility" Value="Column"/>
+      <Setter Property="CanUserAddRows" Value="False"/>
+      <Setter Property="CanUserDeleteRows" Value="False"/>
+      <Setter Property="AutoGenerateColumns" Value="False"/>
+    </Style>
+    <Style TargetType="DataGridColumnHeader">
+      <Setter Property="Background" Value="#1E293B"/>
+      <Setter Property="Foreground" Value="#E2E8F0"/>
+      <Setter Property="BorderBrush" Value="#334155"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="Padding" Value="6,4"/>
+    </Style>
+    <Style TargetType="DataGridCell">
+      <Setter Property="Background" Value="Transparent"/>
+      <Setter Property="Foreground" Value="#E5E7EB"/>
+      <Setter Property="BorderBrush" Value="#334155"/>
+      <Setter Property="Padding" Value="4,2"/>
+    </Style>
     <Style TargetType="Expander">
       <Setter Property="Foreground" Value="#93C5FD"/>
       <Setter Property="Background" Value="#111827"/>

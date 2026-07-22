@@ -39,7 +39,7 @@
   <text class="code" x="82" y="604">...</text>
   <text class="code" x="82" y="632">CELL50_ALIGN_TO_1ST_PIXEL_X/Y</text>
   <text class="code" x="82" y="660">CELLn_ROTATION</text>
-  <text class="s" x="82" y="692">Only Cell 1 through MAX_CELL_NUMBER are used.</text>
+  <text class="s" x="82" y="692">WPF Cell PP Table creates one editable row per Cell.</text>
 
   <rect class="accent" x="620" y="140" width="470" height="270"/>
   <text class="h" x="650" y="180">3. Pixel matrix inside each Cell</text>
@@ -86,5 +86,5 @@
   <rect class="card" x="54" y="800" width="1568" height="118"/>
   <text class="h" x="82" y="838">Summary</text>
   <text class="t" x="82" y="872">PPID tells the program what to process, under which process conditions, and where each Cell starts from AK1.</text>
-  <text class="t" x="82" y="902">The WPF reads PPID CSV, creates Cell pixel coordinates, applies review AK1 alignment, maps them to scanner Gx/Gy, and records PP values in the generated script.</text>
+  <text class="t" x="82" y="902">The WPF creates an Excel-like Cell table from MAX_CELL_NUMBER, saves it as CELLn PP values, maps targets to scanner Gx/Gy, and records PP values in script.</text>
 </svg>

@@ -4,6 +4,10 @@
 
 이번 버전은 기존 `CellBlockColumns / CellBlockRows / CellBlockPitch` 중심의 배치 개념을 PPID 기반 PP 정보로 대체한다.
 
+- PPID 입력 영역에 `Cell PP Table`을 추가했다. `MAX_CELL_NUMBER`를 입력하고 `Cell PP Table 생성`을 누르면 Cell# 1부터 입력한 개수까지 Excel 표처럼 행이 생성된다.
+- 각 행에서 `1st Pixel X`, `1st Pixel Y`, `Rotation`을 직접 수정하면 `CELLn_ALIGN_TO_1ST_PIXEL_X/Y`, `CELLn_ROTATION` 값으로 반영된다.
+- `Cell 좌표 자동배치`는 Cell1 기준 위치와 현재 pitch를 사용해 초안 좌표를 자동으로 채운다. 이후 필요한 Cell 좌표만 사용자가 직접 수정하면 된다.
+- 표에서 수정한 값은 `Generate / Refresh`, `Save Current CSV`, `Script 생성` 시 자동으로 PP정보에 반영된다.
 - `PPID_PROCESS_PROGRAM_TEMPLATE.csv`를 추가했다. 사용자는 이 CSV에서 `ONLINE_PPID_NAME`, `STAGE_SPEED`, `LASER_POWER`, `NUM_OF_PIXEL_X/Y`, `PITCH`, `CELL1~CELL50_ALIGN_TO_1ST_PIXEL_X/Y`, `HEAD1~HEAD8_*` 항목을 작성할 수 있다.
 - `MAX_CELL_NUMBER` 이하의 `CELLn_ALIGN_TO_1ST_PIXEL_X/Y`만 실제 Cell 좌표 생성에 사용한다.
 - `NUM_OF_PIXEL_X`, `NUM_OF_PIXEL_Y`, `PITCH`는 Cell 내부 가공 pixel matrix의 열/행/pitch로 연결된다.

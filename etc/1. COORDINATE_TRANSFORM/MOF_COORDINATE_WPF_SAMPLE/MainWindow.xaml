@@ -45,6 +45,41 @@
             <StackPanel Margin="0,0,8,8"><TextBlock Text="SPLITED_BEAM_COUNT"/><TextBox x:Name="SplitedBeamCountBox"/></StackPanel>
             <StackPanel Margin="0,0,0,8"><TextBlock Text="ZERO_DEFENCE_REVIEW_POINT"/><TextBox x:Name="ZeroDefenceReviewPointBox"/></StackPanel>
           </UniformGrid>
+          <UniformGrid Columns="2" Margin="0,0,0,8">
+            <Button x:Name="BuildCellPpTableButton"
+                    Height="34"
+                    Margin="0,0,5,0"
+                    Content="Cell PP Table 생성"
+                    Click="BuildCellPpTableButton_Click"/>
+            <Button x:Name="AutoArrangeCellPpTableButton"
+                    Height="34"
+                    Margin="5,0,0,0"
+                    Content="Cell 좌표 자동배치"
+                    Click="AutoArrangeCellPpTableButton_Click"/>
+          </UniformGrid>
+          <TextBlock Text="Cell PP Table"
+                     Style="{StaticResource SectionTitleStyle}"
+                     Margin="0,6,0,4"/>
+          <Border Background="#0F172A"
+                  BorderBrush="#334155"
+                  BorderThickness="1"
+                  CornerRadius="6"
+                  Padding="4"
+                  Margin="0,0,0,10">
+            <DataGrid x:Name="CellPpDataGrid"
+                      Height="220"
+                      RowHeight="28"
+                      FontSize="12"
+                      CellEditEnding="CellPpDataGrid_CellEditEnding"
+                      CurrentCellChanged="CellPpDataGrid_CurrentCellChanged">
+              <DataGrid.Columns>
+                <DataGridTextColumn Header="Cell#" Binding="{Binding CellNumber}" IsReadOnly="True" Width="54"/>
+                <DataGridTextColumn Header="1st Pixel X" Binding="{Binding AlignToFirstPixelX, StringFormat=0.###}" Width="88"/>
+                <DataGridTextColumn Header="1st Pixel Y" Binding="{Binding AlignToFirstPixelY, StringFormat=0.###}" Width="88"/>
+                <DataGridTextColumn Header="Rotation" Binding="{Binding RotationDeg, StringFormat=0.###}" Width="74"/>
+              </DataGrid.Columns>
+            </DataGrid>
+          </Border>
 
           <TextBlock Text="Board / Align" Style="{StaticResource SectionTitleStyle}"/>
           <UniformGrid Columns="2" Margin="0,4,0,10">

@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Diagnostics;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Text.Json;
 using System.Windows;
@@ -19,6 +20,7 @@ public partial class MainWindow : Window
 {
     private readonly CoordinateTransformService _service = new();
     private readonly AeroScriptGenerator _aeroScriptGenerator = new();
+    private readonly ObservableCollection<CellRecipeRow> _cellRecipeRows = new();
     private CoordinateInput _input = new();
     private CoordinateResult? _lastResult;
     private AeroScriptPackage? _currentScriptPackage;
@@ -96,6 +98,7 @@ public partial class MainWindow : Window
 
     private void GenerateButton_Click(object sender, RoutedEventArgs e)
     {
+        CommitCellPpGrid();
         _input = ReadInputFromScreen();
         GenerateAndRender();
     }
@@ -151,6 +154,7 @@ public partial class MainWindow : Window
 
     private void SaveConfigButton_Click(object sender, RoutedEventArgs e)
     {
+        CommitCellPpGrid();
         _input = ReadInputFromScreen();
 
         if (string.IsNullOrWhiteSpace(_lastConfigPath))
@@ -348,6 +352,7 @@ public partial class MainWindow : Window
 
     private AeroScriptPackage GenerateCurrentAeroScriptPackage()
     {
+        CommitCellPpGrid();
         _input = ReadInputFromScreen();
         GenerateAndRender();
         var result = _lastResult ?? throw new InvalidOperationException("좌표 결과가 생성되지 않았습니다.");
@@ -731,6 +736,61 @@ public partial class MainWindow : Window
         _selectionAnchor = null;
         LoadInputToScreen(_input);
         GenerateAndRender(keepEmptySelection: true);
+    }
+
+    private void BuildCellPpTableButton_Click(object sender, RoutedEventArgs e)
+    {
+        CommitCellPpGrid();
+        var maxCellNumber = Math.Clamp(ReadInt(MaxCellNumberBox, _input.Pp.MaxCellNumber), 1, 50);
+        _input.Pp.MaxCellNumber = maxCellNumber;
+        RebuildCellRecipeRows(maxCellNumber, preserveExisting: true);
+        SyncCellRecipeRowsToInput();
+        LoadInputToScreen(_input);
+        GenerateAndRender();
+    }
+
+    private void AutoArrangeCellPpTableButton_Click(object sender, RoutedEventArgs e)
+    {
+        var maxCellNumber = Math.Clamp(ReadInt(MaxCellNumberBox, _input.Pp.MaxCellNumber), 1, 50);
+        var columns = Math.Max(1, (int)Math.Ceiling(Math.Sqrt(maxCellNumber)));
+        var firstX = ReadDouble(CellFirstXBox, _input.CellFirstX);
+        var firstY = ReadDouble(CellFirstYBox, _input.CellFirstY);
+        var pixelPitch = Math.Max(1, ReadInt(PpPitchBox, _input.Pp.Pitch));
+        var cellPitchX = Math.Max(pixelPitch, EffectiveBlockPitchX(_input));
+        var cellPitchY = Math.Max(pixelPitch, EffectiveBlockPitchY(_input));
+
+        _cellRecipeRows.Clear();
+        for (var cellNo = 1; cellNo <= maxCellNumber; cellNo++)
+        {
+            var zeroBased = cellNo - 1;
+            _cellRecipeRows.Add(new CellRecipeRow
+            {
+                CellNumber = cellNo,
+                AlignToFirstPixelX = firstX + zeroBased % columns * cellPitchX,
+                AlignToFirstPixelY = firstY + zeroBased / columns * cellPitchY,
+                RotationDeg = 0
+            });
+        }
+
+        _input.Pp.MaxCellNumber = maxCellNumber;
+        SyncCellRecipeRowsToInput();
+        LoadInputToScreen(_input);
+        GenerateAndRender();
+    }
+
+    private void CellPpDataGrid_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
+    {
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            CommitCellPpGrid();
+            _input = ReadInputFromScreen();
+            GenerateAndRender();
+        }), DispatcherPriority.Background);
+    }
+
+    private void CellPpDataGrid_CurrentCellChanged(object sender, EventArgs e)
+    {
+        CommitCellPpGrid();
     }
 
     private void GenerateAndRender(bool selectHighlightedScannerPoints = false, bool keepEmptySelection = false)
@@ -2067,6 +2127,89 @@ public partial class MainWindow : Window
         {
             StageSpeedBox.Text = input.Pp.StageSpeed.ToString(CultureInfo.InvariantCulture);
         }
+
+        if (CellPpDataGrid.ItemsSource is null)
+        {
+            CellPpDataGrid.ItemsSource = _cellRecipeRows;
+        }
+
+        RebuildCellRecipeRows(input.Pp.MaxCellNumber, preserveExisting: false);
+    }
+
+    private void RebuildCellRecipeRows(int maxCellNumber, bool preserveExisting)
+    {
+        maxCellNumber = Math.Clamp(maxCellNumber, 1, 50);
+        var existingRows = preserveExisting
+            ? _cellRecipeRows.ToDictionary(row => row.CellNumber)
+            : new Dictionary<int, CellRecipeRow>();
+        var inputCells = _input.Pp.Cells.ToDictionary(cell => cell.CellNumber);
+        var firstX = ReadDoubleOrFallback(CellFirstXBox, _input.CellFirstX);
+        var firstY = ReadDoubleOrFallback(CellFirstYBox, _input.CellFirstY);
+        var cellPitchX = Math.Max(1, EffectiveBlockPitchX(_input));
+        var cellPitchY = Math.Max(1, EffectiveBlockPitchY(_input));
+        var autoColumns = Math.Max(1, (int)Math.Ceiling(Math.Sqrt(maxCellNumber)));
+
+        _cellRecipeRows.Clear();
+        for (var cellNo = 1; cellNo <= maxCellNumber; cellNo++)
+        {
+            if (existingRows.TryGetValue(cellNo, out var existing))
+            {
+                _cellRecipeRows.Add(existing);
+                continue;
+            }
+
+            if (inputCells.TryGetValue(cellNo, out var configured))
+            {
+                _cellRecipeRows.Add(new CellRecipeRow
+                {
+                    CellNumber = cellNo,
+                    AlignToFirstPixelX = configured.AlignToFirstPixelX,
+                    AlignToFirstPixelY = configured.AlignToFirstPixelY,
+                    RotationDeg = configured.RotationDeg
+                });
+                continue;
+            }
+
+            var zeroBased = cellNo - 1;
+            _cellRecipeRows.Add(new CellRecipeRow
+            {
+                CellNumber = cellNo,
+                AlignToFirstPixelX = firstX + zeroBased % autoColumns * cellPitchX,
+                AlignToFirstPixelY = firstY + zeroBased / autoColumns * cellPitchY,
+                RotationDeg = 0
+            });
+        }
+    }
+
+    private void CommitCellPpGrid()
+    {
+        CellPpDataGrid.CommitEdit(DataGridEditingUnit.Cell, true);
+        CellPpDataGrid.CommitEdit(DataGridEditingUnit.Row, true);
+        var maxCellNumber = Math.Clamp(ReadInt(MaxCellNumberBox, _input.Pp.MaxCellNumber), 1, 50);
+        if (_cellRecipeRows.Count != maxCellNumber ||
+            _cellRecipeRows.Any(row => row.CellNumber < 1 || row.CellNumber > maxCellNumber))
+        {
+            RebuildCellRecipeRows(maxCellNumber, preserveExisting: true);
+        }
+
+        SyncCellRecipeRowsToInput();
+    }
+
+    private void SyncCellRecipeRowsToInput()
+    {
+        var maxCellNumber = Math.Clamp(ReadInt(MaxCellNumberBox, _input.Pp.MaxCellNumber), 1, 50);
+        _input.Pp.MaxCellNumber = maxCellNumber;
+        _input.Pp.Cells = _cellRecipeRows
+            .Where(row => row.CellNumber >= 1 && row.CellNumber <= maxCellNumber)
+            .OrderBy(row => row.CellNumber)
+            .Select(row => new CellRecipeDefinition
+            {
+                CellNumber = row.CellNumber,
+                AlignToFirstPixelX = row.AlignToFirstPixelX,
+                AlignToFirstPixelY = row.AlignToFirstPixelY,
+                RotationDeg = row.RotationDeg
+            })
+            .ToList();
     }
 
     private void LoadViewState()
@@ -2793,6 +2936,13 @@ public partial class MainWindow : Window
         return fallback;
     }
 
+    private static double ReadDoubleOrFallback(TextBox textBox, double fallback)
+    {
+        return double.TryParse(textBox.Text, NumberStyles.Float, CultureInfo.InvariantCulture, out var value)
+            ? value
+            : fallback;
+    }
+
     private static int ReadInt(TextBox textBox, int fallback)
     {
         if (int.TryParse(textBox.Text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var value))
@@ -2830,5 +2980,13 @@ public partial class MainWindow : Window
     {
         public double BoardZoom { get; set; } = 1.0;
         public double MatrixCellSize { get; set; } = 86;
+    }
+
+    public sealed class CellRecipeRow
+    {
+        public int CellNumber { get; set; }
+        public double AlignToFirstPixelX { get; set; }
+        public double AlignToFirstPixelY { get; set; }
+        public double RotationDeg { get; set; }
     }
 }
