@@ -565,6 +565,12 @@ public partial class MainWindow : Window
         DeploymentLogBox.ScrollToEnd();
     }
 
+    private void DeploymentLogBox_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+    {
+        DeploymentLogBox.Clear();
+        e.Handled = true;
+    }
+
     private void SetScriptButtonsEnabled(bool isEnabled)
     {
         GenerateAeroScriptButton.IsEnabled = isEnabled;

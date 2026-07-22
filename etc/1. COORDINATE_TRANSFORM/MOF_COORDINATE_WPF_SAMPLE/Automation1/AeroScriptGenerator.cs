@@ -54,12 +54,14 @@ public sealed partial class AeroScriptGenerator
 
         ValidateCommonOptions(options);
         ValidateTargetsWithinLimits(commands, options);
-        return options.Mode switch
+        var source = options.Mode switch
         {
             AeroScriptGenerationMode.VirtualWaitSimulation => GenerateVirtualWaitSimulation(input, commands, options),
             AeroScriptGenerationMode.HardwareCoordinateProgram => GenerateHardwareCoordinateProgram(input, commands, options),
             _ => throw new ArgumentOutOfRangeException(nameof(options.Mode))
         };
+        ValidateGeneratedSource(source);
+        return source;
     }
 
     private static string GenerateVirtualWaitSimulation(
@@ -97,9 +99,9 @@ public sealed partial class AeroScriptGenerator
         source.AppendLine("// Purpose: verify that each wait condition releases as Stage position feedback crosses its threshold.");
         source.AppendLine("// import \"LaserOnLibrary.a1lib\" as static  // Virtual mode: disabled");
         source.AppendLine();
-        source.AppendLine("var $StartYPos as real");
-        source.AppendLine();
         source.AppendLine("program");
+        source.AppendLine("    var $StartYPos as real");
+        source.AppendLine();
         AppendCommonMotionSetup(source, new[] { axisX, axisY }, options);
 
         if (options.EnableAxes)
@@ -112,7 +114,7 @@ public sealed partial class AeroScriptGenerator
         source.AppendLine($"    SetupAxisSpeed({axisY}, {Format(options.ScannerRapidSpeed)})");
         source.AppendLine();
         source.AppendLine($"    $StartYPos = {Format(options.StartYPosition)}");
-        source.AppendLine($"    G90 G0 {stageAxis} $StartYPos");
+        source.AppendLine($"    MoveAbsolute({stageAxis}, $StartYPos, {Format(options.StageSpeed)})");
         source.AppendLine($"    G90 G0 {axisX} 0 {axisY} 0");
         source.AppendLine();
         source.AppendLine($"    WaitForInPosition({stageAxis})");
@@ -196,19 +198,13 @@ public sealed partial class AeroScriptGenerator
         source.AppendLine("// MODE: Hardware Coordinate Program");
         source.AppendLine("// Laser/PSO function calls remain equipment-specific and require validated interlocks.");
         source.AppendLine("program");
-        foreach (var head in headNumbers)
-        {
-            var axes = axesByHead[head];
-            source.AppendLine($"    var $scannerAxesH{head}[] as axis = [{axes.X}, {axes.Y}]");
-        }
-
-        source.AppendLine();
         AppendCommonMotionSetup(source, allAxes, options);
         if (options.EnableAxes)
         {
             foreach (var head in headNumbers)
             {
-                source.AppendLine($"    Enable($scannerAxesH{head})");
+                var axes = axesByHead[head];
+                source.AppendLine($"    Enable([{axes.X}, {axes.Y}])");
             }
 
             source.AppendLine();
@@ -226,7 +222,7 @@ public sealed partial class AeroScriptGenerator
                 $"Process Gx/Gy=({Format(command.Gx)}, {Format(command.Gy)}), " +
                 $"Review=({Format(command.ReviewCoordinateX)}, {Format(command.ReviewCoordinateY)})");
             source.AppendLine(
-                $"    MoveLinear($scannerAxesH{command.ScannerIndex}, " +
+                $"    MoveLinear([{axesByHead[command.ScannerIndex].X}, {axesByHead[command.ScannerIndex].Y}], " +
                 $"[{Format(command.Gx)}, {Format(command.Gy)}], {Format(options.CoordinatedSpeed)})");
         }
 
@@ -235,7 +231,8 @@ public sealed partial class AeroScriptGenerator
         {
             foreach (var head in headNumbers)
             {
-                source.AppendLine($"    Disable($scannerAxesH{head})");
+                var axes = axesByHead[head];
+                source.AppendLine($"    Disable([{axes.X}, {axes.Y}])");
             }
         }
 
@@ -387,6 +384,22 @@ public sealed partial class AeroScriptGenerator
         return fileName;
     }
 
+    private static void ValidateGeneratedSource(string source)
+    {
+        if (!source.Contains("program", StringComparison.Ordinal) ||
+            !source.TrimEnd().EndsWith("end", StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException("Generated AeroScript must contain a program/end block.");
+        }
+
+        if (GCodeVariableWhitespaceRegex().IsMatch(source))
+        {
+            throw new InvalidOperationException(
+                "Generated AeroScript contains an invalid G-code variable operand. " +
+                "Use X$variable syntax or an AeroScript motion function such as MoveAbsolute().");
+        }
+    }
+
     private static string ResolveAxisName(string template, int head)
     {
         var axisName = (template ?? "").Replace("{0}", head.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal);
@@ -405,4 +418,7 @@ public sealed partial class AeroScriptGenerator
 
     [GeneratedRegex("^[A-Za-z_][A-Za-z0-9_]*$", RegexOptions.CultureInvariant)]
     private static partial Regex AxisIdentifierRegex();
+
+    [GeneratedRegex(@"(?m)^\s*G\d+[^\r\n]*\b[A-Za-z_][A-Za-z0-9_]*\s+\$[A-Za-z_]", RegexOptions.CultureInvariant | RegexOptions.IgnoreCase)]
+    private static partial Regex GCodeVariableWhitespaceRegex();
 }

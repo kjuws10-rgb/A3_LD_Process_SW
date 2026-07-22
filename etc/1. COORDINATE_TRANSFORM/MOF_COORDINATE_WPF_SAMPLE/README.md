@@ -1,5 +1,13 @@
 # MOF Coordinate WPF Sample
 
+## 2026-07-22 AeroScript Task 실행 문법 수정
+
+- `$StartYPos`를 `program` 블록 안에서 선언합니다.
+- 잘못된 `G90 G0 Y $StartYPos` 대신 `MoveAbsolute(Y, $StartYPos, StageSpeed)`를 생성합니다.
+- Equipment 모드는 `MoveLinear([GX, GY], [Gx, Gy], speed)` 형태의 축 배열 리터럴을 사용합니다.
+- 배포 로그 화면을 더블클릭하면 표시 로그가 초기화됩니다.
+- 상세 내용은 `AEROSCRIPT_TASK_RUN_SYNTAX_FIX_20260722.md`를 참고합니다.
+
 이 샘플은 Review Camera에서 측정한 AK1 Pixel 좌표를 기반으로 기판 내부 Cell 좌표를 Stage Global 좌표로 변환하고, Multi Scanner의 Zigzag Odd/Even 배치에 따라 MOF 가공 명령 `Gx`, `Gy`를 생성하는 예제이다.
 
 2026-07-22 업데이트에서는 Automation1 실행을 `Simulation - Virtual Wait`와 `Equipment - Hardware Coordinate`로 분리했다. Controller 기록 후 `Controller.Compiler.CompileControllerFile`로 사전 컴파일하고, 파일/행/열별 오류가 없을 때만 `CompiledAeroScript`를 Task에 실행한다. Simulation은 MCD의 Virtual 축만 허용하며, Equipment 실행은 축 상태·Safety Interlock·Laser/Beam Path·작업자 최종 승인 확인을 모두 요구한다.

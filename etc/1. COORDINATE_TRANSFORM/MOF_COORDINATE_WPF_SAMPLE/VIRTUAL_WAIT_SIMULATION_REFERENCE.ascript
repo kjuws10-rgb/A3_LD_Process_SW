@@ -2,9 +2,9 @@
 // No Laser, PSO, Hardware Aux or Galvo calibration command is included.
 // Assumption: GX and Y are configured as an MOF pair in the test MCD.
 
-var $StartYPos as real
-
 program
+    var $StartYPos as real
+
     SetupTaskTimeUnits(TimeUnits.Seconds)
     SetupTaskTargetMode(TargetMode.Absolute)
     VelocityBlendingOn()
@@ -28,7 +28,7 @@ program
     SetupAxisSpeed(GY, 1000)
 
     $StartYPos = 500
-    G90 G0 Y $StartYPos
+    MoveAbsolute(Y, $StartYPos, 20)
     G90 G0 GX 0 GY 0
 
     WaitForInPosition(Y)

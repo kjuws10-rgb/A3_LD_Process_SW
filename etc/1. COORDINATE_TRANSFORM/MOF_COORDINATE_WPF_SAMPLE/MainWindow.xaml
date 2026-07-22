@@ -298,7 +298,7 @@
                 <Grid Height="250">
                   <Grid.ColumnDefinitions><ColumnDefinition Width="1.45*"/><ColumnDefinition Width="10"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
                   <TextBox x:Name="ScriptPreviewBox" FontFamily="Consolas" FontSize="11" IsReadOnly="True" AcceptsReturn="True" TextWrapping="NoWrap" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"/>
-                  <TextBox x:Name="DeploymentLogBox" Grid.Column="2" FontFamily="Consolas" FontSize="11" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"/>
+                  <TextBox x:Name="DeploymentLogBox" Grid.Column="2" FontFamily="Consolas" FontSize="11" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" MouseDoubleClick="DeploymentLogBox_MouseDoubleClick" ToolTip="Double-click to clear the deployment log."/>
                 </Grid>
 
                 <TextBlock x:Name="ScriptJobText" Margin="0,8,0,0" Foreground="#67E8F9" TextWrapping="Wrap" Text="대기: 좌표 Script 생성 → Controller File System 기록 → Task 실행 → 상태 확인 순서로 진행하십시오."/>

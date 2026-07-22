@@ -2,6 +2,14 @@
 
 Generated from Debug build assemblies. Compiler generated backing fields are hidden; explicit private fields, properties, constructors, events, enum values, and declared methods are listed.
 
+## AeroScript Task Run Update (2026-07-22)
+
+- `AeroScriptGenerator.Generate`: generates the selected mode and validates the final source before packaging.
+- `AeroScriptGenerator.GenerateVirtualWaitSimulation`: declares `$StartYPos` in `program` and uses `MoveAbsolute` for the initial Stage position.
+- `AeroScriptGenerator.GenerateHardwareCoordinateProgram`: emits direct axis array literals for Enable, MoveLinear and Disable.
+- `AeroScriptGenerator.ValidateGeneratedSource`: blocks missing program/end blocks and invalid spaced G-code variable operands.
+- `MainWindow.DeploymentLogBox_MouseDoubleClick`: clears the visible WPF deployment log on double-click.
+
 ## Drilling.Common
 
 Type count: 154
