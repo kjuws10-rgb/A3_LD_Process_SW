@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000">
+  <defs>
+    <style>
+      .bg{fill:#0b1220}.panel{fill:#111827;stroke:#334155;stroke-width:2}.client{fill:#0f2942;stroke:#38bdf8;stroke-width:2}.controller{fill:#172554;stroke:#60a5fa;stroke-width:2}.ok{fill:#123524;stroke:#34d399;stroke-width:2}.warn{fill:#3b2b0b;stroke:#fbbf24;stroke-width:2}.error{fill:#3f1515;stroke:#f87171;stroke-width:2}.title{fill:#f8fafc;font:700 30px 'Malgun Gothic',sans-serif}.h{fill:#f8fafc;font:700 20px 'Malgun Gothic',sans-serif}.t{fill:#cbd5e1;font:16px 'Malgun Gothic',sans-serif}.s{fill:#94a3b8;font:14px 'Malgun Gothic',sans-serif}.code{fill:#bae6fd;font:15px Consolas,monospace}.arrow{stroke:#7dd3fc;stroke-width:3;fill:none;marker-end:url(#head)}
+    </style>
+    <marker id="head" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#7dd3fc"/></marker>
+  </defs>
+  <rect class="bg" width="1600" height="1000"/>
+  <text x="60" y="58" class="title">MOF Coordinate WPF - Automation1 공식 API 직접 연결 흐름</text>
+  <text x="60" y="88" class="t">별도 Automation1Server / JSON Gateway / TCP 46100 없음</text>
+
+  <rect x="55" y="120" width="690" height="810" rx="6" class="panel"/>
+  <text x="85" y="160" class="h">Client PC 192.168.10.200</text>
+
+  <rect x="90" y="195" width="620" height="100" rx="5" class="client"/>
+  <text x="115" y="228" class="h">1. 가공 대상 선택</text>
+  <text x="115" y="258" class="t">Scanner 복수 선택 → 해당 Head의 InField 좌표 전체 선택</text>
+  <text x="115" y="283" class="s">Matrix 단일/복수 선택으로 대상 좌표를 추가 필터링</text>
+
+  <rect x="90" y="325" width="620" height="115" rx="5" class="client"/>
+  <text x="115" y="358" class="h">2. 좌표 계산과 AeroScript 생성</text>
+  <text x="115" y="388" class="t">CellCommand.Gx/Gy → GX/GY 이동 명령</text>
+  <text x="115" y="416" class="code">AeroScriptGenerator.Generate(commands, options)</text>
+
+  <rect x="90" y="470" width="620" height="115" rx="5" class="client"/>
+  <text x="115" y="503" class="h">3. Local 파일과 Job Package</text>
+  <text x="115" y="533" class="t">mof_generated.ascript + SHA-256 + Task + 좌표 수</text>
+  <text x="115" y="561" class="s">Job별 보존 시 UTC 시각과 Job ID를 파일명에 추가</text>
+
+  <rect x="90" y="615" width="620" height="125" rx="5" class="client"/>
+  <text x="115" y="648" class="h">4. 공식 API 직접 접속</text>
+  <text x="115" y="680" class="code">Controller.Connect("192.168.10.10", 12200)</text>
+  <text x="115" y="708" class="t">IsRunning / Host / Port / Encryption / Task Count 확인</text>
+
+  <rect x="90" y="770" width="620" height="125" rx="5" class="client"/>
+  <text x="115" y="803" class="h">5. 완료 대기와 UI 표시</text>
+  <text x="115" y="833" class="t">250 ms 상태 조회, 상태 변화만 로그 기록</text>
+  <text x="115" y="862" class="s">ProgramComplete=정상, Error/비정상 이탈=실패</text>
+
+  <rect x="855" y="120" width="690" height="810" rx="6" class="panel"/>
+  <text x="885" y="160" class="h">Server PC / Automation1 Controller 192.168.10.10:12200</text>
+
+  <rect x="890" y="205" width="620" height="105" rx="5" class="controller"/>
+  <text x="915" y="238" class="h">A. Controller File System 기록</text>
+  <text x="915" y="270" class="code">Files.WriteText("programs/...ascript", source)</text>
+  <text x="915" y="296" class="s">Windows D:\ 경로가 아니라 A1 Studio에서 보는 Controller 파일</text>
+
+  <rect x="890" y="350" width="620" height="105" rx="5" class="controller"/>
+  <text x="915" y="383" class="h">B. 지정 Task 실행</text>
+  <text x="915" y="415" class="code">Runtime.Tasks[n].Program.Run(controllerFile)</text>
+  <text x="915" y="441" class="s">Task가 Running/Paused/Queue 상태이면 실행 거부</text>
+
+  <rect x="890" y="495" width="620" height="115" rx="5" class="controller"/>
+  <text x="915" y="528" class="h">C. Task 상태 Snapshot</text>
+  <text x="915" y="560" class="code">Runtime.Tasks[n].Status.TaskState</text>
+  <text x="915" y="588" class="s">ProgramRunning / Feedhold / Paused / Complete / Error</text>
+
+  <rect x="890" y="650" width="620" height="120" rx="5" class="ok"/>
+  <text x="915" y="683" class="h">D. Server 측 실행 이력 보존</text>
+  <text x="915" y="715" class="code">Files.WriteText("mof_job_*.json", audit)</text>
+  <text x="915" y="743" class="s">Job, Script, SHA-256, 좌표 수, Task, 상태 이벤트, 오류</text>
+
+  <rect x="890" y="810" width="290" height="80" rx="5" class="ok"/>
+  <text x="915" y="844" class="h">정상 완료</text><text x="915" y="872" class="t">ProgramComplete</text>
+  <rect x="1220" y="810" width="290" height="80" rx="5" class="error"/>
+  <text x="1245" y="844" class="h">실패 / 중지</text><text x="1245" y="872" class="t">Error 또는 Program.Stop</text>
+
+  <path d="M710 677 H890" class="arrow"/><text x="752" y="657" class="s">Automation1 native protocol</text>
+  <path d="M890 552 H745" class="arrow"/><text x="758" y="532" class="s">TaskState</text>
+  <path d="M1200 310 V350" class="arrow"/>
+  <path d="M1200 455 V495" class="arrow"/>
+  <path d="M1200 610 V650" class="arrow"/>
+
+  <rect x="480" y="940" width="640" height="42" rx="5" class="warn"/>
+  <text x="505" y="968" class="t">12200에는 일반 Socket/JSON을 전송하지 않고 반드시 공식 Controller.Connect API를 사용한다.</text>
+</svg>

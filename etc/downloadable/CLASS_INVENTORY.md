@@ -5028,38 +5028,27 @@ Type count: 78
   - public Void InitializeComponent()
   - private Void System.Windows.Markup.IComponentConnector.Connect(Int32 connectionId, Object target)
 
-## Automation1 Script I/F Update (2026-07-20)
+## MOF Coordinate Sample - Automation1 Direct API Classes (2026-07-22)
 
-- `AeroScriptClient.HealthCheckAsync`: Server TCP 수신과 API Key/ModePolicy 준비 상태를 Job 생성 전에 확인한다.
-- `ScriptRequestType.HealthCheck`: protocol v3 준비 상태 요청이다.
-- `AeroScriptServer.DispatchAsync`: HealthCheck에 bind 주소, port, mode policy, 최대 Script 크기를 응답한다.
-- `AeroScriptLocalFileStore`: Local Script 경로 정규화, 폴더 생성, UTF-8(no BOM) 실제 파일 저장을 담당한다.
-- `MainWindow.GenerateCurrentAeroScriptPackage`: Process/Review 좌표 로그를 남기고 Client의 Local Script File에 UTF-8(no BOM) 파일을 실제 저장한다.
-- `MainWindow.SelectAllProcessablePointsForHighlightedScanners`: 선택 Head의 `InField` 좌표 전체를 Matrix 선택 집합으로 만든다.
-- `AeroScriptEndpointRules`: Gateway 기본 포트 `46100`과 Automation1 native 포트 `12200`을 구분하고, WPF에 잘못 입력된 `12200`을 `46100`으로 교정한다.
-- `IAutomation1Runtime.CheckHealthAsync`: Gateway Health 요청 시 실제 Runtime 준비 상태를 점검한다.
-- `Automation1ReflectionRuntime.CheckHealthAsync`: 공식 DLL 로드, Controller 연결, Host/Port, IsRunning, Task Count를 확인한다.
-- `Automation1ReflectionRuntime.ExecuteAsync`: TaskState 변경을 Job Message로 보고하고 `ProgramComplete` 이외 비정상 종료를 실패 처리한다.
-- `AeroScriptServer.ExecuteJobAsync`: 실행 Semaphore 대기 취소까지 `Failed`로 기록하며 획득한 경우에만 Gate를 반환한다.
-- `AeroScriptServer.HandleClientAsync`: 요청별 Remote endpoint, Request type, Job, State, Error를 Server Console에 기록한다.
-- `AeroScriptServer.ShouldLogResponse`: 반복 GetStatus 응답은 State/Message가 변경된 경우에만 Console에 남긴다.
-- `MainWindow.ExecuteAeroScriptWorkflowButton_Click`: 250 ms Polling은 유지하고 State/Message 변경 시에만 로그를 추가한다.
-
-## MOF Coordinate Sample - Automation1 Client/Server Classes (2026-07-20)
-
-- `AeroScriptGenerator`: Client PC에서 `VirtualWaitSimulation` 또는 `HardwareCoordinateProgram`을 생성한다. Virtual 모드는 단일 Head, Stage PositionFeedback wait, GX band/GY point 반복을 강제한다.
+- `Automation1DirectClient`: 공식 `Aerotech.Automation1.DotNet.Controller`를 강타입으로 사용해 원격 Controller 연결, Script 기록, Task 실행, 상태 조회, 중지, 감사 기록을 담당한다.
+- `Automation1DirectClient.ConnectAsync`: `Controller.Connect(host, port)`를 호출하고 Host, Port, IsRunning, 암호화 여부, Task Count, API 버전을 반환한다.
+- `Automation1DirectClient.UploadAsync`: Task 번호를 검증하고 `Controller.Files.WriteText`로 AeroScript와 최초 Job Audit를 Controller File System에 기록한다.
+- `Automation1DirectClient.RunAsync`: Task busy 상태를 방어한 뒤 `Runtime.Tasks[n].Program.Run(controllerFile)`을 호출한다.
+- `Automation1DirectClient.GetStatusAsync`: TaskState를 `Running`, `Completed`, `Failed`로 변환하고 변경 이벤트를 Audit JSON에 추가한다.
+- `Automation1DirectClient.StopAsync`: 실행 중 Task에 `Program.Stop(5000)`을 요청하고 중지 이력을 기록한다.
+- `Automation1JobAudit`: Job ID, Controller endpoint, Script, Task, 좌표 수, 생성 모드, SHA-256, 최종 상태와 이벤트 목록을 보관한다.
+- `Automation1ConnectionOptions`: Host, Port, 인증 모드, 사용자, Password, 인증서, Controller 자동 시작 옵션을 전달한다. 현재 UI 기본은 `NoAuthentication`이다.
+- `Automation1ConnectionInfo`: 직접 연결 결과와 Runtime 준비 상태를 UI에 전달한다.
+- `Automation1DirectStatus`: Job별 상태, TaskState, 오류, Script와 Audit Controller 파일명을 전달한다.
+- `AeroScriptGenerator`: Client PC에서 `VirtualWaitSimulation` 또는 `HardwareCoordinateProgram`을 생성한다. Virtual 모드는 Stage PositionFeedback wait와 GX/GY 이동 순서를 검증한다.
 - `AeroScriptGenerationOptions`: Stage Y, GX/GY, speed, ramp, FIR, MotionUpdateRate, ExecuteNumLines, MoveDelay, wait step과 software limit을 전달한다.
-- `AeroScriptPackage`: Job ID, controller file, UTF-8 source, SHA-256, Task index와 생성 모드를 전달한다.
-- `ScriptServerRequest` / `ScriptServerResponse`: Upload, Run, Status protocol 계약이다.
-- `AeroScriptProtocol`: 4-byte big-endian 길이와 UTF-8 JSON frame을 읽고 쓴다.
-- `AeroScriptClient`: WPF Client에서 Scanner Server로 명령을 보낸다.
-- `AeroScriptServer`: Server PC의 검증, spool 저장, 단일 Task 실행 queue, 상태 snapshot을 관리한다.
-- `AeroScriptModePolicy`: `Any`, `VirtualOnly`, `HardwareOnly` 정책으로 잘못된 생성 모드 Job을 Upload 단계에서 차단한다.
-- `IAutomation1Runtime`: Server와 Automation1 실행 구현 사이의 경계이다.
-- `SimulationAutomation1Runtime`: SDK 없는 PC에서 TCP/Job 상태만 검증한다. AeroScript와 Wait 구문은 실행하지 않는다.
-- `Automation1ReflectionRuntime`: 공식 Automation1 .NET API DLL을 런타임에 로드해 `Files.WriteText`, `Task.Program.Run`, `TaskState` 폴링을 수행한다.
-- `Automation1Server/Program`: Server PC용 독립 실행 진입점과 TCP 통합 self-test를 제공한다.
-- `RUN_AUTOMATION1_VIRTUAL_WAIT_SERVER.bat`: Automation1 Virtual Controller에 접속해 Laser/PSO 없이 wait 기반 1D MOF 순서를 검증한다.
+- `AeroScriptPackage`: Job ID, Controller file, UTF-8 source, SHA-256, Task index, 대상 좌표 수와 생성 모드를 보관한다.
+- `AeroScriptLocalFileStore`: Local Script 경로 정규화, 폴더 생성, UTF-8(no BOM) 실제 파일 저장을 담당한다.
+- `MainWindow.GenerateCurrentAeroScriptPackage`: 선택 Scanner의 `InField` 좌표를 Script로 만들고 Local 파일과 Job Package를 생성한다.
+- `MainWindow.SelectAllProcessablePointsForHighlightedScanners`: 선택 Head의 `InField` 좌표 전체를 Matrix 선택 집합으로 만든다.
+- `MainWindow.ExecuteAeroScriptWorkflowButton_Click`: 직접 연결 Client를 통해 기록, 실행, 250 ms 상태 Polling, `ProgramComplete` 완료 판정을 수행한다.
+
+삭제된 구성: `Automation1Server`, `AeroScriptClient` Socket 구현, `AeroScriptProtocol`, `AeroScriptServer`, `IAutomation1Runtime`, Reflection/Simulation Runtime, TCP 46100 Gateway 배치와 문서는 더 이상 프로젝트에 존재하지 않는다.
 
 ## Local Update: Shell UI / Review Offset Base
 

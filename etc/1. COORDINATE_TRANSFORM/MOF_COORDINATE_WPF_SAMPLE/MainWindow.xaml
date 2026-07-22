@@ -221,12 +221,12 @@
                       <ComboBoxItem Content="Hardware Coordinate Program" Tag="HardwareCoordinateProgram"/>
                     </ComboBox>
                   </StackPanel>
-                  <StackPanel Margin="0,0,8,8"><TextBlock Text="Server PC Host"/><TextBox x:Name="ServerHostBox" Text="192.168.10.10" ToolTip="AeroScript를 수신하는 별도 Automation1Server 프로그램이 실행되는 Scanner Server PC 주소입니다. MDK 설치만으로 Server가 자동 실행되지는 않습니다."/></StackPanel>
-                  <StackPanel Margin="0,0,8,8"><TextBlock Text="Script Gateway Port"/><TextBox x:Name="ServerPortBox" Text="46100" ToolTip="이 예제의 Automation1Server가 수신하는 JSON protocol 포트입니다. Automation1 Controller native endpoint 12200을 입력하면 안 됩니다."/></StackPanel>
-                  <StackPanel Margin="0,0,8,8"><TextBlock Text="API Key"/><TextBox x:Name="ServerApiKeyBox" Text="change-this-key" ToolTip="Server 요청 인증값입니다. 운영에서는 기본값을 사용하지 말고 장비망 정책에 맞는 비밀값을 설정해야 합니다."/></StackPanel>
+                  <StackPanel Margin="0,0,8,8"><TextBlock Text="Controller Host"/><TextBox x:Name="ControllerHostBox" Text="192.168.10.10" ToolTip="Client PC에서 Automation1 Studio와 같은 방식으로 직접 접속할 원격 Controller 또는 Server PC 주소입니다."/></StackPanel>
+                  <StackPanel Margin="0,0,8,8"><TextBlock Text="Controller Port"/><TextBox x:Name="ControllerPortBox" Text="12200" ToolTip="Automation1 공식 .NET API가 접속할 Controller endpoint입니다. 기본값은 12200이며 별도 JSON Gateway를 사용하지 않습니다."/></StackPanel>
+                  <StackPanel Margin="0,0,8,8"><TextBlock Text="Controller Start"/><CheckBox x:Name="StartControllerIfStoppedCheckBox" Content="정지 시 시작" Foreground="#E2E8F0" ToolTip="연결된 Automation1 Controller가 정지 상태이면 Controller.Start를 요청합니다. 장비 운전 정책 확인 후 사용하십시오."/></StackPanel>
                   <StackPanel Margin="0,0,0,8"><TextBlock Text="Automation1 Task"/><TextBox x:Name="Automation1TaskIndexBox" Text="1" ToolTip="Controller.Runtime.Tasks[index]에서 AeroScript를 실행할 User Task 번호입니다. Task index는 1부터 시작합니다."/></StackPanel>
 
-                  <StackPanel Margin="0,0,8,8"><TextBlock Text="Controller File"/><TextBox x:Name="ControllerFileNameBox" Text="programs/mof_generated.ascript" ToolTip="Server가 Controller.Files.WriteText로 저장하고 Task.Program.Run에 전달하는 Controller 내부 경로입니다. Client PC의 D:\ 경로를 입력하는 항목이 아닙니다."/></StackPanel>
+                  <StackPanel Margin="0,0,8,8"><TextBlock Text="Controller File"/><TextBox x:Name="ControllerFileNameBox" Text="programs/mof_generated.ascript" ToolTip="Controller.Files.WriteText로 기록하고 Task.Program.Run에 전달하는 Automation1 Controller File System 내부 경로입니다."/></StackPanel>
                   <StackPanel Margin="0,0,8,8"><TextBlock Text="Local Script File"/><TextBox x:Name="LocalScriptPathBox" Text="mof_generated.ascript" ToolTip="Script 생성 버튼을 누를 때 Client PC에 실제로 저장할 파일입니다. 상대 경로는 실행 파일 폴더를 기준으로 계산합니다."/></StackPanel>
                   <StackPanel Margin="0,0,8,8"><TextBlock Text="Stage Axis"/><TextBox x:Name="StageAxisNameBox" Text="Y" ToolTip="기판을 이송하는 Stage 축 이름입니다. Virtual Wait 조건은 이 축의 PositionFeedback을 읽습니다."/></StackPanel>
                   <StackPanel Margin="0,0,8,8"><TextBlock Text="GX Axis Template"/><TextBox x:Name="AxisXTemplateBox" Text="GX" ToolTip="Scanner X축 이름입니다. {0}을 넣으면 선택 Head 번호로 치환됩니다."/></StackPanel>
@@ -236,7 +236,7 @@
 
                 <Border Background="#172554" BorderBrush="#3B82F6" BorderThickness="1" CornerRadius="4" Padding="10" Margin="0,0,0,8">
                   <TextBlock Foreground="#BFDBFE" TextWrapping="Wrap"
-                             Text="통신 경로: Client WPF → 192.168.10.10:46100 Script Gateway → Automation1 .NET API → Controller native endpoint 12200. 이 화면에는 46100을 입력합니다."/>
+                             Text="직접 연결 경로: Client WPF → Aerotech Automation1 .NET API → 192.168.10.10:12200 Controller. 별도 Automation1Server, JSON Gateway, TCP 46100은 사용하지 않습니다."/>
                 </Border>
 
                 <Expander Header="MOF Script 생성 조건" IsExpanded="False" Foreground="#93C5FD" Margin="0,0,0,8">
@@ -265,6 +265,7 @@
                   <CheckBox x:Name="EnableAxesCheckBox" Content="Script에서 축 Enable" Foreground="#E2E8F0" Margin="0,0,14,0" ToolTip="장비 초기화 계층이 축 Enable을 담당한다면 체크하지 않습니다."/>
                   <CheckBox x:Name="DisableAxesAtEndCheckBox" Content="완료 후 축 Disable" Foreground="#E2E8F0" Margin="0,0,14,0"/>
                   <CheckBox x:Name="IncludeLaserLibraryCheckBox" Content="Hardware 모드 Library import" Foreground="#FBBF24" ToolTip="Import 문만 추가합니다. Laser/PSO 함수와 Interlock은 자동 생성하지 않습니다."/>
+                  <CheckBox x:Name="PreserveControllerJobFileCheckBox" Content="Job별 Controller Script 보존" IsChecked="True" Foreground="#E2E8F0" Margin="14,0,0,0" ToolTip="파일명에 생성시각과 Job ID를 붙여 Controller File System에 실행 Script를 보존합니다."/>
                 </WrapPanel>
 
                 <TextBlock Text="Virtual Mode는 Laser/PSO/HW Aux 출력이 아니라 Y PositionFeedback wait 해제 순서만 검증합니다. 한 번에 Scanner Head 한 개만 선택하십시오."
@@ -273,10 +274,11 @@
                 <WrapPanel Margin="0,0,0,8">
                   <Button x:Name="GenerateAeroScriptButton" Content="1. Script 생성" Margin="0,0,6,0" Click="GenerateAeroScriptButton_Click"/>
                   <Button x:Name="OpenLocalScriptFolderButton" Content="저장 위치 열기" Margin="0,0,6,0" Click="OpenLocalScriptFolderButton_Click"/>
-                  <Button x:Name="ServerHealthCheckButton" Content="Server 연결 확인" Margin="0,0,6,0" Background="#075985" BorderBrush="#38BDF8" Click="ServerHealthCheckButton_Click"/>
-                  <Button x:Name="UploadAeroScriptButton" Content="2. Server 전송" Margin="0,0,6,0" Click="UploadAeroScriptButton_Click"/>
-                  <Button x:Name="RunAeroScriptButton" Content="3. Server 실행" Margin="0,0,6,0" Click="RunAeroScriptButton_Click"/>
+                  <Button x:Name="ControllerConnectionButton" Content="Automation1 직접 연결" Margin="0,0,6,0" Background="#075985" BorderBrush="#38BDF8" Click="ControllerConnectionButton_Click"/>
+                  <Button x:Name="UploadAeroScriptButton" Content="2. Controller 기록" Margin="0,0,6,0" Click="UploadAeroScriptButton_Click"/>
+                  <Button x:Name="RunAeroScriptButton" Content="3. Task 실행" Margin="0,0,6,0" Click="RunAeroScriptButton_Click"/>
                   <Button x:Name="QueryAeroScriptStatusButton" Content="상태 조회" Margin="0,0,6,0" Click="QueryAeroScriptStatusButton_Click"/>
+                  <Button x:Name="StopAeroScriptButton" Content="실행 중지" Margin="0,0,6,0" Background="#7F1D1D" BorderBrush="#F87171" Click="StopAeroScriptButton_Click"/>
                   <Button x:Name="ExecuteAeroScriptWorkflowButton" Content="전체 실행 및 완료 대기" Background="#047857" BorderBrush="#10B981" Click="ExecuteAeroScriptWorkflowButton_Click"/>
                 </WrapPanel>
 
@@ -286,7 +288,7 @@
                   <TextBox x:Name="DeploymentLogBox" Grid.Column="2" FontFamily="Consolas" FontSize="11" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"/>
                 </Grid>
 
-                <TextBlock x:Name="ScriptJobText" Margin="0,8,0,0" Foreground="#67E8F9" TextWrapping="Wrap" Text="대기: Client PC에서 Script를 생성한 뒤 Server PC로 전송하십시오."/>
+                <TextBlock x:Name="ScriptJobText" Margin="0,8,0,0" Foreground="#67E8F9" TextWrapping="Wrap" Text="대기: 좌표 Script 생성 → Controller File System 기록 → Task 실행 → 상태 확인 순서로 진행하십시오."/>
               </StackPanel>
             </ScrollViewer>
           </TabItem>

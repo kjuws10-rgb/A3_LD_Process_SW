@@ -177,8 +177,10 @@ Transform Consistency Error = (0, 0)
 - Scanner 아이콘을 선택하면 선택된 모든 Head에 대해 `InField=true`인 가공 가능 좌표 전체가 Matrix 선택 집합에 들어간다.
 - 여러 Head 선택은 각 Head의 가공 가능 좌표 합집합이며, Scanner 선택 해제 시 해당 합집합을 다시 계산한다.
 - `Local Script File`은 Client PC 실제 파일 경로이고 Script 생성 즉시 저장된다.
-- `Controller File`은 Server 전송 뒤 Automation1 Controller 내부에서 사용할 경로이다.
-- `Server 연결 확인`은 protocol v3 `HealthCheck`로 TCP 수신, API Key, Server ModePolicy를 먼저 검증한다.
-- Server PC 배포와 방화벽 설정은 `SERVER_PC_CONNECTION_GUIDE.md`를 따른다.
-- `12200`은 Automation1 Controller native endpoint, `46100`은 이 예제의 Script Gateway이다. Client WPF는 `46100`을 사용한다.
-- Client 생성 Script의 Server 전송, Controller 실행, TaskState 완료 확인 절차는 `CLIENT_SERVER_ASCRIPT_OPERATION_PROCEDURE.md`와 `CLIENT_SERVER_ASCRIPT_OPERATION_FLOW.svg`를 참조한다.
+- `Controller File`은 `Controller.Files.WriteText`로 기록할 Automation1 Controller File System 경로이다.
+- WPF는 제공된 Aerotech Automation1 .NET API 2.13.1을 직접 참조하며 `Controller.Connect(host, 12200)`로 접속한다.
+- 별도 `Automation1Server`, JSON Gateway, API Key, TCP 46100은 사용하지 않는다.
+- `Task.Program.Run(controllerFile)` 실행 후 250 ms 주기로 `Task.Status.TaskState`를 확인한다.
+- `ProgramComplete`만 정상 완료이며 `Error` 또는 완료 전 비정상 상태 전환은 실패로 처리한다.
+- 실행 Script와 `mof_job_*.json` 감사 이력은 Controller File System에 남는다.
+- 설치·운영·장애 점검은 `AUTOMATION1_DIRECT_OPERATION_PROCEDURE.md`와 `AUTOMATION1_DIRECT_CLIENT_FLOW.svg`를 참조한다.
