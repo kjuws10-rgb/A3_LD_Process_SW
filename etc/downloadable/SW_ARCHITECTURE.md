@@ -501,3 +501,15 @@ Client WPF는 `192.168.10.10:12200`에 공식 Automation1 .NET API로 직접 연
 Client의 250 ms 상태 Polling은 유지하되 동일 State/Message를 반복 기록하지 않는다. Script 기록, 실행, 상태 변경, 완료, 오류, 중지 이벤트는 `mof_job_yyyyMMdd_HHmmss_jobid.json`으로 Controller File System에 갱신된다. 이 파일은 Server PC 일반 Windows 경로가 아니라 A1 Studio에서 확인하는 Controller 파일이다.
 
 상세 실행·검증 절차와 판정표는 `AUTOMATION1_DIRECT_OPERATION_PROCEDURE.md`, 한눈에 보는 흐름은 `AUTOMATION1_DIRECT_CLIENT_FLOW.svg`를 참조한다.
+
+## Layout Rendering Guard (2026-07-22)
+
+Board Zoom 저장값은 `0.35~4.0` 범위이지만 기존 `DrawMotionSequence`가 `LayoutCanvas.Width - 640`을 Badge Width로 직접 사용해 저배율에서 음수가 될 수 있었다. 예를 들어 Canvas Width가 약 `512`이면 `-128`이 WPF `Border.Width`에 전달되어 `ArgumentException`이 발생한다.
+
+수정 구조:
+
+- `ResizeLayoutCanvas`: Zoom 적용 뒤에도 Canvas 최소 크기를 `640 x 560`으로 제한한다.
+- `DrawLayout`: Width가 1000 미만이면 Legend를 두 번째 Header 행으로 이동하고 Board 시작 위치를 조정한다.
+- `DrawMotionSequence`: Wide/Compact Header별 예약 폭을 분리하고 Badge Width를 `120~940`으로 제한한다.
+- `DrawBadge`: 좌표와 크기의 유한성, 양수 여부, 남은 Canvas 폭을 최종 검증한다.
+- `MofCoordinateDemo.csproj`: Assembly 특성 중복 방지를 위해 `GenerateAssemblyInfo`와 `GenerateTargetFrameworkAttribute`를 비활성화한다.

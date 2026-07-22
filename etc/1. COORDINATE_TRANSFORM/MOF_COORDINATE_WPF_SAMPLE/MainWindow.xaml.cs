@@ -34,6 +34,8 @@ public partial class MainWindow : Window
     private CellCommand? _selectionAnchor;
     private readonly HashSet<string> _dragVisitedPointKeys = new();
     private readonly HashSet<string> _selectedPointKeys = new();
+    private const double MinimumLayoutCanvasWidth = 640.0;
+    private const double MinimumLayoutCanvasHeight = 560.0;
     private static readonly string ViewStatePath = System.IO.Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
         "MofCoordinateDemo",
@@ -600,8 +602,9 @@ public partial class MainWindow : Window
         DrawTitle("기판 셀 선택 및 지그재그 스캐너 배치", 20, 8, 21, FontWeights.Bold);
         DrawMotionSequence();
 
+        var compactHeader = LayoutCanvas.Width < 1000.0;
         var boardLeft = 24.0;
-        var boardTop = 104.0;
+        var boardTop = compactHeader ? 112.0 : 104.0;
         var boardWidth = LayoutCanvas.Width - 48.0;
         var boardHeight = Math.Max(220.0, LayoutCanvas.Height - 390.0);
 
@@ -609,7 +612,14 @@ public partial class MainWindow : Window
         DrawCellBlocks(boardLeft, boardTop, boardWidth, boardHeight);
         DrawScannerBandLabels(boardLeft, boardTop + boardHeight + 10.0, boardWidth, boardHeight);
         DrawScannerHeads(boardLeft, boardTop + boardHeight + 76.0, boardWidth);
-        DrawLegend(Math.Max(20, LayoutCanvas.Width - 610), LayoutCanvas.Width >= 880 ? 14 : 38);
+        if (compactHeader)
+        {
+            DrawLegend(20.0, 82.0);
+        }
+        else
+        {
+            DrawLegend(Math.Max(20.0, LayoutCanvas.Width - 610.0), 14.0);
+        }
     }
 
     private void DrawMotionSequence()
@@ -622,7 +632,9 @@ public partial class MainWindow : Window
         var forward = _input.ForwardTransportSignY >= 0 ? "+Y" : "-Y";
         var reverse = _input.ForwardTransportSignY >= 0 ? "-Y" : "+Y";
         var text = $"① Home  →  ② Review Camera 통과  →  ③ Scanner 뒤쪽/반전 ({forward})  →  ④ 역방향 MOF ({reverse})  →  ⑤ Review 후측정  →  ⑥ Home";
-        DrawBadge(text, 20, 43, Math.Min(940, LayoutCanvas.Width - 640), 34,
+        var reservedWidth = LayoutCanvas.Width >= 1000.0 ? 640.0 : 40.0;
+        var badgeWidth = Math.Clamp(LayoutCanvas.Width - reservedWidth, 120.0, 940.0);
+        DrawBadge(text, 20, 43, badgeWidth, 34,
             new SolidColorBrush(Color.FromRgb(12, 38, 58)),
             new SolidColorBrush(Color.FromRgb(34, 211, 238)),
             new SolidColorBrush(Color.FromRgb(207, 250, 254)),
@@ -634,8 +646,10 @@ public partial class MainWindow : Window
     {
         var viewportWidth = Math.Max(980, LayoutScrollViewer.ViewportWidth);
         var viewportHeight = Math.Max(430, LayoutScrollViewer.ViewportHeight);
-        LayoutCanvas.Width = Math.Max(viewportWidth, 1280) * _boardZoom;
-        LayoutCanvas.Height = Math.Max(viewportHeight, 560) * _boardZoom;
+        var scaledWidth = Math.Max(viewportWidth, 1280.0) * _boardZoom;
+        var scaledHeight = Math.Max(viewportHeight, 560.0) * _boardZoom;
+        LayoutCanvas.Width = Math.Max(MinimumLayoutCanvasWidth, scaledWidth);
+        LayoutCanvas.Height = Math.Max(MinimumLayoutCanvasHeight, scaledHeight);
     }
 
     private void DrawBoardFrame(double left, double top, double width, double height)
@@ -1448,10 +1462,18 @@ public partial class MainWindow : Window
 
     private void DrawBadge(string text, double x, double y, double width, double height, Brush background, Brush borderBrush, Brush foreground, double fontSize, FontWeight weight)
     {
+        var safeX = double.IsFinite(x) ? x : 0.0;
+        var safeY = double.IsFinite(y) ? y : 0.0;
+        var safeWidth = NormalizeVisualDimension(width, 1.0);
+        var safeHeight = NormalizeVisualDimension(height, 1.0);
+        var safeFontSize = NormalizeVisualDimension(fontSize, 12.0);
+        var remainingCanvasWidth = Math.Max(1.0, LayoutCanvas.Width - Math.Max(0.0, safeX));
+        safeWidth = Math.Min(safeWidth, remainingCanvasWidth);
+
         var badge = new Border
         {
-            Width = width,
-            Height = height,
+            Width = safeWidth,
+            Height = safeHeight,
             Background = background,
             BorderBrush = borderBrush,
             BorderThickness = new Thickness(1),
@@ -1459,7 +1481,7 @@ public partial class MainWindow : Window
             Child = new TextBlock
             {
                 Text = text,
-                FontSize = fontSize,
+                FontSize = safeFontSize,
                 FontWeight = weight,
                 Foreground = foreground,
                 TextAlignment = TextAlignment.Center,
@@ -1470,10 +1492,13 @@ public partial class MainWindow : Window
                 Margin = new Thickness(5, 0, 5, 0)
             }
         };
-        Canvas.SetLeft(badge, x);
-        Canvas.SetTop(badge, y);
+        Canvas.SetLeft(badge, safeX);
+        Canvas.SetTop(badge, safeY);
         LayoutCanvas.Children.Add(badge);
     }
+
+    private static double NormalizeVisualDimension(double value, double fallback) =>
+        double.IsFinite(value) && value > 0.0 ? value : fallback;
 
     private void DrawText(string text, double x, double y, double size, FontWeight weight, Brush brush)
     {

@@ -5227,3 +5227,12 @@ This section documents the local-only changes made after the original inventory 
   - public Void InitializeComponent()
   - private Void System.Windows.Markup.IComponentConnector.Connect(Int32 connectionId, Object target)
 
+## MOF Coordinate Sample Layout Safety Update (2026-07-22)
+
+- `MainWindow.ResizeLayoutCanvas`: 저장 Zoom을 반영하되 Layout Canvas가 `640 x 560`보다 작아지지 않도록 제한한다.
+- `MainWindow.DrawLayout`: Compact Header 여부를 계산해 Legend와 Board 영역이 겹치지 않도록 배치한다.
+- `MainWindow.DrawMotionSequence`: 음수가 될 수 있던 `LayoutCanvas.Width - 640` 직접 계산을 제거하고 Badge Width를 `120~940`으로 제한한다.
+- `MainWindow.DrawBadge`: `safeX`, `safeY`, `safeWidth`, `safeHeight`, `safeFontSize`를 계산한 뒤 WPF 속성에 적용한다.
+- `MainWindow.NormalizeVisualDimension`: 유효하지 않거나 0 이하인 시각 요소 크기를 지정된 fallback으로 치환한다.
+- `MofCoordinateDemo.csproj`: `GenerateAssemblyInfo=false`, `GenerateTargetFrameworkAttribute=false`를 적용한다.
+

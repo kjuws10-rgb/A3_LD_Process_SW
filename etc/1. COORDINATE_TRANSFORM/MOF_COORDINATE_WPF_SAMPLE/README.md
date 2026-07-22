@@ -184,3 +184,10 @@ Transform Consistency Error = (0, 0)
 - `ProgramComplete`만 정상 완료이며 `Error` 또는 완료 전 비정상 상태 전환은 실패로 처리한다.
 - 실행 Script와 `mof_job_*.json` 감사 이력은 Controller File System에 남는다.
 - 설치·운영·장애 점검은 `AUTOMATION1_DIRECT_OPERATION_PROCEDURE.md`와 `AUTOMATION1_DIRECT_CLIENT_FLOW.svg`를 참조한다.
+
+## 저배율 레이아웃 안전 처리
+
+- 저장된 Board Zoom이 `0.35`까지 내려가도 Layout Canvas는 최소 `640 x 560`을 유지한다.
+- 좁은 Canvas에서는 동작 순서 Badge와 Legend를 두 줄 영역으로 재배치한다.
+- `DrawBadge`는 `NaN`, 무한대, 0 이하 Width/Height/FontSize를 안전한 값으로 정규화한다.
+- 프로젝트는 기존 Assembly 속성 중복을 피하기 위해 `GenerateAssemblyInfo=false`, `GenerateTargetFrameworkAttribute=false`를 사용한다.
