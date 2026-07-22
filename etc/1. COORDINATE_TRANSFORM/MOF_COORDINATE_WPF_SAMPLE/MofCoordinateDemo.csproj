@@ -13,6 +13,7 @@
     <None Update="CELL_LAYOUT_CONFIG_TEMPLATE.csv" CopyToOutputDirectory="PreserveNewest"/>
     <None Update="CELL_LAYOUT_CONFIG_REVIEW_OFFSET_CHECK.csv" CopyToOutputDirectory="PreserveNewest"/>
     <None Update="VIRTUAL_WAIT_SIMULATION_REFERENCE.ascript" CopyToOutputDirectory="PreserveNewest"/>
+    <None Update="mof_generated.ascript" CopyToOutputDirectory="Always"/>
   </ItemGroup>
   <ItemGroup>
     <Reference Include="Aerotech.Automation1.DotNet">

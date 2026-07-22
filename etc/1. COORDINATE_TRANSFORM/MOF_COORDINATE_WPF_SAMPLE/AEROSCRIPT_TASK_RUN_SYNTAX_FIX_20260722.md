@@ -33,6 +33,13 @@ end
 - Generated source is rejected if it contains a G-code operand such as `Y $variable`.
 - Equipment mode emits literal axis arrays such as `MoveLinear([GX, GY], [x, y], speed)`.
 
+## Stale Output Prevention
+
+`mof_generated.ascript` is now included in the project and copied to the output
+directory with `CopyToOutputDirectory=Always`. Every build therefore replaces a
+legacy file left under `bin/Debug/net8.0-windows`. Runtime generation also writes a
+generator revision marker and reads the saved file back to verify exact content.
+
 ## Simulation And Equipment Boundary
 
 Simulation mode excludes Laser, PSO, Hardware Aux and Galvo calibration commands.
@@ -47,4 +54,3 @@ automatically into generated production scripts.
 
 Double-click the deployment log area to clear all displayed log lines. This affects
 only the UI text and does not delete Controller audit files or local AeroScript files.
-

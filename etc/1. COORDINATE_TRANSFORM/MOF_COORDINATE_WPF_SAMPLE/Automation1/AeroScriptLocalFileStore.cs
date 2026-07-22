@@ -28,6 +28,12 @@ public static class AeroScriptLocalFileStore
                         ?? throw new InvalidOperationException("Local Script 저장 폴더를 계산할 수 없습니다.");
         Directory.CreateDirectory(directory);
         File.WriteAllText(fullPath, scriptText, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+        var persistedText = File.ReadAllText(fullPath, Encoding.UTF8);
+        if (!string.Equals(scriptText, persistedText, StringComparison.Ordinal))
+        {
+            throw new IOException($"AeroScript save verification failed: {fullPath}");
+        }
+
         return fullPath;
     }
 }

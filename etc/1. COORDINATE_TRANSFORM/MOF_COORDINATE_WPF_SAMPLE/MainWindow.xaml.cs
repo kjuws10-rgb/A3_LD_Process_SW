@@ -355,6 +355,9 @@ public partial class MainWindow : Window
             PreserveControllerJobFileCheckBox.IsChecked == true);
         LocalScriptPathBox.Text = localScriptPath;
         ScriptPreviewBox.Text = source;
+        AppendDeploymentLog(
+            $"[Generator] Revision={AeroScriptGenerator.GeneratorRevision}, " +
+            $"Local SHA-256={_currentScriptPackage.Sha256}, saved-and-readback verified");
         ScriptJobText.Text =
             $"생성 완료: Job={_currentScriptPackage.JobId}, 좌표={commandList.Length}, " +
             $"Mode={options.Mode}, SHA-256={_currentScriptPackage.Sha256[..16]}..., Task={taskIndex}";

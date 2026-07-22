@@ -1,4 +1,5 @@
 // Reference only: Automation1 Virtual Wait Simulation for 1D MOF timing.
+// Generator revision: 20260722-task-syntax-v3
 // No Laser, PSO, Hardware Aux or Galvo calibration command is included.
 // Assumption: GX and Y are configured as an MOF pair in the test MCD.
 
