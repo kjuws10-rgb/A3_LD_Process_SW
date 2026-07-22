@@ -3,7 +3,7 @@
 ## 2026-07-22 AeroScript Task 실행 문법 수정
 
 - `$StartYPos`를 `program` 블록 안에서 선언합니다.
-- 잘못된 `G90 G0 Y $StartYPos` 대신 `MoveAbsolute(Y, $StartYPos, StageSpeed)`를 생성합니다.
+- 축 이름을 문자열에서 `axis` 값으로 변환하고 `MoveAbsolute($StageAxis, $StartYPos, StageSpeed)`를 생성합니다.
 - Equipment 모드는 `MoveLinear([GX, GY], [Gx, Gy], speed)` 형태의 축 배열 리터럴을 사용합니다.
 - 배포 로그 화면을 더블클릭하면 표시 로그가 초기화됩니다.
 - 상세 내용은 `AEROSCRIPT_TASK_RUN_SYNTAX_FIX_20260722.md`를 참고합니다.

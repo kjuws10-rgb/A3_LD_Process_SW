@@ -2,11 +2,12 @@
 
 Generated from Debug build assemblies. Compiler generated backing fields are hidden; explicit private fields, properties, constructors, events, enum values, and declared methods are listed.
 
-## AeroScript Task Run Update (2026-07-22)
+## AeroScript Dynamic Axis Update V4 (2026-07-22)
 
-- `AeroScriptGenerator.Generate`: generates the selected mode and validates the final source before packaging.
-- `AeroScriptGenerator.GenerateVirtualWaitSimulation`: declares `$StartYPos` in `program` and uses `MoveAbsolute` for the initial Stage position.
-- `AeroScriptGenerator.GenerateHardwareCoordinateProgram`: emits direct axis array literals for Enable, MoveLinear and Disable.
+- `AeroScriptGenerator.Generate`: generates the selected mode, adds revision `20260722-dynamic-axis-v4`, and validates the final source before packaging.
+- `AeroScriptGenerator.GenerateVirtualWaitSimulation`: declares axis-name strings and `axis` variables, converts names with `@`, and uses the variables for motion/status commands.
+- `Automation1DirectClient.ValidateExecutionEnvironment`: verifies exact, case-sensitive Stage/GX/GY names against `controller.Runtime.Axes` and validates Simulation versus Equipment requirements.
+- `AeroScriptGenerator.GenerateHardwareCoordinateProgram`: emits direct hardware-axis literals because the equipment MCD must contain those axes.
 - `AeroScriptGenerator.ValidateGeneratedSource`: blocks missing program/end blocks and invalid spaced G-code variable operands.
 - `MainWindow.DeploymentLogBox_MouseDoubleClick`: clears the visible WPF deployment log on double-click.
 

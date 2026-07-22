@@ -1,11 +1,12 @@
 # A3 LD Process SW Architecture
 
-## AeroScript Task Execution Syntax Update (2026-07-22)
+## AeroScript Dynamic Axis Update V4 (2026-07-22)
 
-- `AeroScriptGenerator` declares `$StartYPos` inside the `program` block.
-- The initial variable-based Stage move uses `MoveAbsolute(Y, $StartYPos, speed)` instead of invalid `G90 G0 Y $StartYPos`.
+- Simulation scripts store the configured Stage/GX/GY names in string variables and convert them to the AeroScript `axis` type with the official `@` operator.
+- Motion and status commands use `$StageAxis`, `$ScannerXAxis`, and `$ScannerYAxis`; the compiler therefore does not have to parse bare identifiers such as `Y` before the controller configuration is checked.
+- The direct Automation1 client compares the configured names with `controller.Runtime.Axes` before compilation and reports missing or non-virtual axes explicitly.
 - A generated-source guard rejects spaced G-code variable operands such as `Y $value` before upload.
-- Equipment mode uses axis array literals such as `MoveLinear([GX, GY], [x, y], speed)`.
+- Equipment mode keeps direct axis literals because its hardware MCD must provide the exact configured axis names and hardware capabilities.
 - `MainWindow.DeploymentLogBox_MouseDoubleClick` clears only the visible deployment log; Controller audit history remains unchanged.
 
 이 문서는 현재 솔루션 구조를 기준으로 작성한 아키텍처/데이터 구조 설명이다. 클래스, 구조체, record, enum, interface의 전체 필드/프로퍼티/메서드 목록은 같은 폴더의 `CLASS_INVENTORY.md`에 빌드 결과 기준으로 전수 추출되어 있다.

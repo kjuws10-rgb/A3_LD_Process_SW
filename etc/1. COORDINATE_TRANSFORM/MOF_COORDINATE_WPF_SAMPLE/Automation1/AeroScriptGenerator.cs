@@ -11,7 +11,7 @@ namespace MofCoordinateDemo.Automation1;
 /// </summary>
 public sealed partial class AeroScriptGenerator
 {
-    public const string GeneratorRevision = "20260722-task-syntax-v3";
+    public const string GeneratorRevision = "20260722-dynamic-axis-v4";
 
     public static IReadOnlyList<string> ResolveRequiredAxisNames(
         IReadOnlyList<CellCommand> commands,
@@ -82,6 +82,9 @@ public sealed partial class AeroScriptGenerator
         var stageAxis = ResolveAxisName(options.StageAxisName, head);
         var axisX = ResolveAxisName(options.AxisXTemplate, head);
         var axisY = ResolveAxisName(options.AxisYTemplate, head);
+        const string stageAxisVariable = "$StageAxis";
+        const string scannerXAxisVariable = "$ScannerXAxis";
+        const string scannerYAxisVariable = "$ScannerYAxis";
         var gxGroups = commands
             .GroupBy(command => Math.Round(command.Gx, 6))
             .OrderBy(group => group.Key)
@@ -102,32 +105,49 @@ public sealed partial class AeroScriptGenerator
         source.AppendLine("// import \"LaserOnLibrary.a1lib\" as static  // Virtual mode: disabled");
         source.AppendLine();
         source.AppendLine("program");
+        source.AppendLine("    var $StageAxisName as string");
+        source.AppendLine("    var $ScannerXAxisName as string");
+        source.AppendLine("    var $ScannerYAxisName as string");
+        source.AppendLine($"    var {stageAxisVariable} as axis");
+        source.AppendLine($"    var {scannerXAxisVariable} as axis");
+        source.AppendLine($"    var {scannerYAxisVariable} as axis");
         source.AppendLine("    var $StartYPos as real");
         source.AppendLine();
-        AppendCommonMotionSetup(source, new[] { axisX, axisY }, options);
+        source.AppendLine($"    $StageAxisName = \"{stageAxis}\"");
+        source.AppendLine($"    $ScannerXAxisName = \"{axisX}\"");
+        source.AppendLine($"    $ScannerYAxisName = \"{axisY}\"");
+        source.AppendLine($"    {stageAxisVariable} = @$StageAxisName");
+        source.AppendLine($"    {scannerXAxisVariable} = @$ScannerXAxisName");
+        source.AppendLine($"    {scannerYAxisVariable} = @$ScannerYAxisName");
+        source.AppendLine();
+        AppendCommonMotionSetup(source, new[] { scannerXAxisVariable, scannerYAxisVariable }, options);
 
         if (options.EnableAxes)
         {
-            source.AppendLine($"    Enable([{stageAxis}, {axisX}, {axisY}])");
+            source.AppendLine($"    Enable([{stageAxisVariable}, {scannerXAxisVariable}, {scannerYAxisVariable}])");
             source.AppendLine();
         }
 
-        source.AppendLine($"    SetupAxisSpeed({axisX}, {Format(options.ScannerRapidSpeed)})");
-        source.AppendLine($"    SetupAxisSpeed({axisY}, {Format(options.ScannerRapidSpeed)})");
+        source.AppendLine($"    SetupAxisSpeed({scannerXAxisVariable}, {Format(options.ScannerRapidSpeed)})");
+        source.AppendLine($"    SetupAxisSpeed({scannerYAxisVariable}, {Format(options.ScannerRapidSpeed)})");
         source.AppendLine();
         source.AppendLine($"    $StartYPos = {Format(options.StartYPosition)}");
-        source.AppendLine($"    MoveAbsolute({stageAxis}, $StartYPos, {Format(options.StageSpeed)})");
-        source.AppendLine($"    G90 G0 {axisX} 0 {axisY} 0");
-        source.AppendLine();
-        source.AppendLine($"    WaitForInPosition({stageAxis})");
-        source.AppendLine($"    WaitForInPosition({axisX})");
-        source.AppendLine($"    WaitForInPosition({axisY})");
-        source.AppendLine();
-        AppendSoftwareLimits(source, new[] { axisX, axisY }, options);
+        source.AppendLine($"    MoveAbsolute({stageAxisVariable}, $StartYPos, {Format(options.StageSpeed)})");
         source.AppendLine(
-            $"    MoveAbsolute({stageAxis}, $StartYPos{FormatSignedExpression(options.StageTravelDistance)}, {Format(options.StageSpeed)})");
-        source.AppendLine($"    G90 G0 {axisX} 0 {axisY} 0");
-        source.AppendLine($"    WaitForMotionDone([{axisX}, {axisY}])");
+            $"    MoveRapid([{scannerXAxisVariable}, {scannerYAxisVariable}], [0, 0], " +
+            $"[{Format(options.ScannerRapidSpeed)}, {Format(options.ScannerRapidSpeed)}])");
+        source.AppendLine();
+        source.AppendLine($"    WaitForInPosition({stageAxisVariable})");
+        source.AppendLine($"    WaitForInPosition({scannerXAxisVariable})");
+        source.AppendLine($"    WaitForInPosition({scannerYAxisVariable})");
+        source.AppendLine();
+        AppendSoftwareLimits(source, new[] { scannerXAxisVariable, scannerYAxisVariable }, options);
+        source.AppendLine(
+            $"    MoveAbsolute({stageAxisVariable}, $StartYPos{FormatSignedExpression(options.StageTravelDistance)}, {Format(options.StageSpeed)})");
+        source.AppendLine(
+            $"    MoveRapid([{scannerXAxisVariable}, {scannerYAxisVariable}], [0, 0], " +
+            $"[{Format(options.ScannerRapidSpeed)}, {Format(options.ScannerRapidSpeed)}])");
+        source.AppendLine($"    WaitForMotionDone([{scannerXAxisVariable}, {scannerYAxisVariable}])");
         source.AppendLine();
 
         var directionOperator = options.StageTravelDistance >= 0 ? ">" : "<";
@@ -139,30 +159,32 @@ public sealed partial class AeroScriptGenerator
             foreach (var command in group.OrderBy(command => command.Gy))
             {
                 source.AppendLine(
-                    $"    G0 {axisX} {Format(command.Gx)} {axisY} {Format(command.Gy)} " +
+                    $"    MoveRapid([{scannerXAxisVariable}, {scannerYAxisVariable}], " +
+                    $"[{Format(command.Gx)}, {Format(command.Gy)}], " +
+                    $"[{Format(options.ScannerRapidSpeed)}, {Format(options.ScannerRapidSpeed)}]) " +
                     $"// {command.CellIndex}, MOF #{command.MofSequence}, " +
                     $"Process Gx/Gy=({Format(command.Gx)}, {Format(command.Gy)}), " +
                     $"Review=({Format(command.ReviewCoordinateX)}, {Format(command.ReviewCoordinateY)})");
-                source.AppendLine($"    MoveDelay({axisX}, {Format(options.MoveDelayMilliseconds)})");
+                source.AppendLine($"    MoveDelay({scannerXAxisVariable}, {Format(options.MoveDelayMilliseconds)})");
             }
 
             if (groupIndex < waitCount)
             {
                 var threshold = directionSign * options.WaitStepY * (groupIndex + 1);
                 source.AppendLine(
-                    $"    wait(StatusGetAxisItem({stageAxis}, AxisStatusItem.PositionFeedback) " +
+                    $"    wait(StatusGetAxisItem({stageAxisVariable}, AxisStatusItem.PositionFeedback) " +
                     $"{directionOperator} $StartYPos{FormatSignedExpression(threshold)})");
             }
 
             source.AppendLine();
         }
 
-        source.AppendLine($"    WaitForMotionDone({stageAxis})");
-        source.AppendLine($"    WaitForInPosition({stageAxis})");
+        source.AppendLine($"    WaitForMotionDone({stageAxisVariable})");
+        source.AppendLine($"    WaitForInPosition({stageAxisVariable})");
         source.AppendLine("    VelocityBlendingOff()");
         if (options.DisableAxesAtEnd)
         {
-            source.AppendLine($"    Disable([{stageAxis}, {axisX}, {axisY}])");
+            source.AppendLine($"    Disable([{stageAxisVariable}, {scannerXAxisVariable}, {scannerYAxisVariable}])");
         }
 
         source.AppendLine("end");

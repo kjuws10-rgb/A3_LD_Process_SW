@@ -18,18 +18,22 @@ The generator now emits an explicit AeroScript motion function:
 
 ```aeroscript
 program
+    var $StageAxisName as string
+    var $StageAxis as axis
     var $StartYPos as real
 
+    $StageAxisName = "Y"
+    $StageAxis = @$StageAxisName
     $StartYPos = 500
-    MoveAbsolute(Y, $StartYPos, 20)
-    G90 G0 GX 0 GY 0
-    WaitForInPosition(Y)
+    MoveAbsolute($StageAxis, $StartYPos, 20)
+    WaitForInPosition($StageAxis)
 end
 ```
 
 - Variables are declared inside the `program` block.
-- `MoveAbsolute(axis, position, speed)` is used for the variable-based Stage move.
-- `MoveAbsolute` is asynchronous, so `WaitForInPosition(Y)` remains required.
+- Axis names are converted from strings with the official `@` operator.
+- `MoveAbsolute(axis, position, speed)` is used with an `axis` variable.
+- `MoveAbsolute` is asynchronous, so `WaitForInPosition($StageAxis)` remains required.
 - Generated source is rejected if it contains a G-code operand such as `Y $variable`.
 - Equipment mode emits literal axis arrays such as `MoveLinear([GX, GY], [x, y], speed)`.
 
@@ -39,6 +43,14 @@ end
 directory with `CopyToOutputDirectory=Always`. Every build therefore replaces a
 legacy file left under `bin/Debug/net8.0-windows`. Runtime generation also writes a
 generator revision marker and reads the saved file back to verify exact content.
+
+## Dynamic Axis Resolution
+
+`unexpected ',', expecting '.' or '('` at `MoveAbsolute(Y, ...)` means the active
+compiler configuration did not resolve `Y` as an axis value. Simulation V4 stores
+`Y`, `GX` and `GY` as strings, converts them with `@$AxisName`, and uses only axis
+variables in motion and status functions. The WPF direct-client preflight still
+checks that those names exist and are virtual before Controller compilation.
 
 ## Simulation And Equipment Boundary
 
