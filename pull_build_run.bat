@@ -42,9 +42,6 @@ echo [3/4] Building solution...
 dotnet build "%SOLUTION%" -c Debug
 if errorlevel 1 goto fail
 
-echo [4/4] Running application...
-dotnet run --project "%RUN_PROJECT%" -c Debug --no-build
-if errorlevel 1 goto fail
 
 popd
 exit /b 0
