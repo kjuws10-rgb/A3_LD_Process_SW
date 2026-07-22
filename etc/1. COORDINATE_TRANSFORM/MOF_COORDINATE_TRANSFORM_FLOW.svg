@@ -1,0 +1,349 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="2180" viewBox="0 0 1800 2180">
+  <defs>
+    <style>
+      .title{font-family:Segoe UI,Arial,sans-serif;font-size:30px;font-weight:700;fill:#e5f0ff}
+      .subtitle{font-family:Segoe UI,Arial,sans-serif;font-size:15px;fill:#a9bdd8}
+      .section{font-family:Segoe UI,Arial,sans-serif;font-size:20px;font-weight:700;fill:#eaf2ff}
+      .h{font-family:Segoe UI,Arial,sans-serif;font-size:17px;font-weight:700;fill:#f8fbff}
+      .t{font-family:Segoe UI,Arial,sans-serif;font-size:13px;fill:#d5e3f5}
+      .small{font-family:Consolas,Menlo,monospace;font-size:12px;fill:#d7e7f8}
+      .tiny{font-family:Segoe UI,Arial,sans-serif;font-size:11px;fill:#b7c7da}
+      .panel{fill:#111827;stroke:#334155;stroke-width:1.5;rx:10}
+      .input{fill:#172554;stroke:#60a5fa;stroke-width:1.6;rx:9}
+      .calc{fill:#0f3b46;stroke:#22d3ee;stroke-width:1.6;rx:9}
+      .stage{fill:#1e293b;stroke:#94a3b8;stroke-width:1.6;rx:9}
+      .scanner{fill:#2d1f10;stroke:#f59e0b;stroke-width:1.6;rx:9}
+      .review{fill:#3b1632;stroke:#f472b6;stroke-width:1.6;rx:9}
+      .feedback{fill:#301a0a;stroke:#fb923c;stroke-width:1.6;rx:9}
+      .board{fill:#08111f;stroke:#64748b;stroke-width:2}
+      .cell{fill:#0e7490;stroke:#67e8f9;stroke-width:1;opacity:.8}
+      .cellSel{fill:#f59e0b;stroke:#fde68a;stroke-width:2}
+      .band{fill:#0891b25c;stroke:#22d3ee;stroke-width:2;stroke-dasharray:7 5}
+      .ak{fill:#facc15;stroke:#854d0e;stroke-width:1.4}
+      .headOdd{fill:#1d4ed8;stroke:#7dd3fc;stroke-width:2}
+      .headEven{fill:#1e40af;stroke:#7dd3fc;stroke-width:2;stroke-dasharray:5 4}
+      .arrow{stroke:#93a4b8;stroke-width:2.2;fill:none;marker-end:url(#arrow)}
+      .arrow2{stroke:#22d3ee;stroke-width:2.4;fill:none;marker-end:url(#arrowC)}
+      .dash{stroke:#f59e0b;stroke-width:2;fill:none;stroke-dasharray:7 5;marker-end:url(#arrowO)}
+      .grid{stroke:#243244;stroke-width:1}
+      .badge{fill:#082f49;stroke:#22d3ee;stroke-width:1.2;rx:5}
+    </style>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 Z" fill="#93a4b8"/>
+    </marker>
+    <marker id="arrowC" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 Z" fill="#22d3ee"/>
+    </marker>
+    <marker id="arrowO" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 Z" fill="#f59e0b"/>
+    </marker>
+  </defs>
+
+  <rect width="1800" height="2180" fill="#07111f"/>
+  <text x="42" y="48" class="title">MOF Coordinate Transform 상세 흐름도</text>
+  <text x="44" y="76" class="subtitle">Review Camera AK1 측정값을 기준으로 Recipe Cell 좌표를 Stage 좌표로 만들고, Zigzag Scanner의 X 가공 가능 Band를 통해 MOF Gx/Gy와 DOE Review 좌표를 생성하는 전체 과정</text>
+
+  <rect x="36" y="105" width="1728" height="178" class="panel"/>
+  <text x="60" y="138" class="section">0. 입력 데이터 묶음</text>
+  <text x="60" y="163" class="subtitle">프로그램에서는 아래 항목들이 CoordinateInput에 모이고, CoordinateTransformService가 CoordinateResult와 CellCommand 목록을 생성한다.</text>
+
+  <rect x="60" y="184" width="300" height="76" class="input"/>
+  <text x="78" y="208" class="h">Recipe / Cell Layout</text>
+  <text x="78" y="229" class="tiny">CellFirstX/Y, CellPitchX/Y, CellRows/Columns</text>
+  <text x="78" y="247" class="tiny">CellBlockRows/Columns, BlockPitch, PatternOffset</text>
+
+  <rect x="390" y="184" width="300" height="76" class="input"/>
+  <text x="408" y="208" class="h">Review AK Measurement</text>
+  <text x="408" y="229" class="tiny">ReviewCenterX/Y, U0/V0, PixelScaleX/Y</text>
+  <text x="408" y="247" class="tiny">MeasuredAk1U/V, ThetaAlignDeg</text>
+
+  <rect x="720" y="184" width="300" height="76" class="input"/>
+  <text x="738" y="208" class="h">Scanner Design</text>
+  <text x="738" y="229" class="tiny">FirstScannerInitialStageX/Y, OriginTolerance</text>
+  <text x="738" y="247" class="tiny">PhysicalOffset, ScannerPitchX, EvenYOffset, Field</text>
+
+  <rect x="1050" y="184" width="300" height="76" class="input"/>
+  <text x="1068" y="208" class="h">DOE / Review Basis</text>
+  <text x="1068" y="229" class="tiny">ReviewBasisScannerHead, ReviewBasisDoeBeam</text>
+  <text x="1068" y="247" class="tiny">DoeBeamPitchX/Y, DOE 4 x 4 Beam Matrix</text>
+
+  <rect x="1380" y="184" width="300" height="76" class="input"/>
+  <text x="1398" y="208" class="h">Offset / Feedback</text>
+  <text x="1398" y="229" class="tiny">고정 Physical Offset ≠ 동적 Review Correction</text>
+  <text x="1398" y="247" class="tiny">ProcessOffsetGlobalX/Y는 측정오차 보정 전용</text>
+
+  <rect x="36" y="315" width="1728" height="250" class="panel"/>
+  <text x="60" y="348" class="section">1. AK1 Stage Anchor 생성 및 Recipe Local 좌표 생성</text>
+
+  <rect x="60" y="375" width="330" height="148" class="calc"/>
+  <text x="82" y="405" class="h">1-1. Review Pixel → Stage Anchor</text>
+  <text x="82" y="433" class="small">dU = MeasuredAk1U - ReviewPixelCenterU</text>
+  <text x="82" y="456" class="small">dV = MeasuredAk1V - ReviewPixelCenterV</text>
+  <text x="82" y="479" class="small">AK1.X = ReviewCenterX + dU * PixelScaleX</text>
+  <text x="82" y="502" class="small">AK1.Y = ReviewCenterY + dV * PixelScaleY</text>
+
+  <rect x="455" y="375" width="350" height="148" class="calc"/>
+  <text x="477" y="405" class="h">1-2. Cell# Block Origin</text>
+  <text x="477" y="433" class="small">BlockCol = (CellBlock - 1) % BlockColumns</text>
+  <text x="477" y="456" class="small">BlockRow = (CellBlock - 1) / BlockColumns</text>
+  <text x="477" y="479" class="small">OriginX = BlockCol * EffectiveBlockPitchX</text>
+  <text x="477" y="502" class="small">OriginY = BlockRow * EffectiveBlockPitchY</text>
+  <text x="477" y="518" class="tiny">하단 상세 예시: Cell# 번호를 행/열 위치로 변환</text>
+
+  <rect x="870" y="375" width="360" height="148" class="calc"/>
+  <text x="892" y="405" class="h">1-3. Cell 내부 첫 가공점과 Pitch</text>
+  <text x="892" y="433" class="small">LocalX = OriginX + CellFirstX</text>
+  <text x="892" y="456" class="small">       + Column * CellPitchX + PatternOffsetX</text>
+  <text x="892" y="479" class="small">LocalY = OriginY + CellFirstY</text>
+  <text x="892" y="502" class="small">       + Row * CellPitchY + PatternOffsetY</text>
+  <text x="892" y="518" class="tiny">하단 상세 예시: Cell 내부 A1/B1/A2 좌표 생성</text>
+
+  <rect x="1295" y="375" width="390" height="148" class="stage"/>
+  <text x="1317" y="405" class="h">1-4. Board Local → Stage Global</text>
+  <text x="1317" y="433" class="small">Stage = AK1 + R(theta) * Local</text>
+  <text x="1317" y="456" class="small">theta는 Review align 결과 보정각</text>
+  <text x="1317" y="479" class="small">DesignStage = 보정 전 설계 좌표</text>
+  <text x="1317" y="502" class="small">ProcessStage = DesignStage + ProcessOffset</text>
+
+  <path class="arrow2" d="M390 449 H455"/>
+  <path class="arrow2" d="M805 449 H870"/>
+  <path class="arrow2" d="M1230 449 H1295"/>
+
+  <rect x="36" y="600" width="1728" height="392" class="panel"/>
+  <text x="60" y="633" class="section">2. Stage Layout 및 Scanner X 가공 가능 Band 판단</text>
+  <text x="60" y="657" class="subtitle">Review Camera가 물류 앞쪽, Scanner가 뒤쪽에 고정 배치된다. 기판은 Scanner 뒤쪽까지 전진한 뒤 역방향으로 돌아오면서 MOF 가공한다.</text>
+
+  <rect x="70" y="692" width="925" height="235" class="board"/>
+  <text x="82" y="682" class="tiny">Board / Cell Local 영역이 AK1 Stage Anchor 기준으로 투영된 모습</text>
+  <circle cx="110" cy="725" r="8" class="ak"/>
+  <circle cx="110" cy="890" r="8" class="ak"/>
+  <circle cx="960" cy="725" r="8" class="ak"/>
+  <circle cx="960" cy="890" r="8" class="ak"/>
+  <text x="124" y="729" class="tiny">AK1 Stage Anchor</text>
+  <text x="124" y="747" class="tiny">Review 측정으로 결정</text>
+
+  <rect x="395" y="692" width="130" height="235" class="band"/>
+  <rect x="655" y="692" width="130" height="235" class="band"/>
+  <rect x="150" y="755" width="24" height="18" class="cell"/>
+  <rect x="195" y="755" width="24" height="18" class="cell"/>
+  <rect x="240" y="755" width="24" height="18" class="cell"/>
+  <rect x="285" y="755" width="24" height="18" class="cell"/>
+  <rect x="330" y="755" width="24" height="18" class="cell"/>
+  <rect x="375" y="755" width="24" height="18" class="cell"/>
+  <rect x="420" y="755" width="24" height="18" class="cellSel"/>
+  <rect x="465" y="755" width="24" height="18" class="cell"/>
+  <rect x="510" y="755" width="24" height="18" class="cell"/>
+  <rect x="555" y="755" width="24" height="18" class="cell"/>
+  <rect x="600" y="755" width="24" height="18" class="cell"/>
+  <rect x="645" y="755" width="24" height="18" class="cell"/>
+  <rect x="690" y="755" width="24" height="18" class="cellSel"/>
+  <rect x="735" y="755" width="24" height="18" class="cell"/>
+  <rect x="780" y="755" width="24" height="18" class="cell"/>
+  <rect x="150" y="815" width="24" height="18" class="cell"/>
+  <rect x="195" y="815" width="24" height="18" class="cell"/>
+  <rect x="240" y="815" width="24" height="18" class="cell"/>
+  <rect x="285" y="815" width="24" height="18" class="cell"/>
+  <rect x="330" y="815" width="24" height="18" class="cell"/>
+  <rect x="375" y="815" width="24" height="18" class="cell"/>
+  <rect x="420" y="815" width="24" height="18" class="cell"/>
+  <rect x="465" y="815" width="24" height="18" class="cell"/>
+  <rect x="510" y="815" width="24" height="18" class="cell"/>
+  <rect x="555" y="815" width="24" height="18" class="cell"/>
+  <rect x="600" y="815" width="24" height="18" class="cell"/>
+  <rect x="645" y="815" width="24" height="18" class="cell"/>
+  <rect x="690" y="815" width="24" height="18" class="cell"/>
+  <rect x="735" y="815" width="24" height="18" class="cell"/>
+  <rect x="780" y="815" width="24" height="18" class="cell"/>
+
+  <rect x="385" y="942" width="154" height="28" class="badge"/>
+  <text x="398" y="961" class="tiny">H1 X Band: 가공 가능</text>
+  <rect x="645" y="942" width="154" height="28" class="badge"/>
+  <text x="658" y="961" class="tiny">H5 X Band: 가공 가능</text>
+
+  <rect x="1060" y="700" width="110" height="70" class="headOdd"/>
+  <rect x="1210" y="750" width="110" height="70" class="headEven"/>
+  <rect x="1360" y="700" width="110" height="70" class="headOdd"/>
+  <rect x="1060" y="845" width="110" height="70" class="headOdd"/>
+  <rect x="1210" y="895" width="110" height="70" class="headEven"/>
+  <rect x="1360" y="845" width="110" height="70" class="headOdd"/>
+  <text x="1094" y="740" class="small">H1 Odd</text>
+  <text x="1242" y="790" class="small">H2 Even</text>
+  <text x="1394" y="740" class="small">H3 Odd</text>
+  <text x="1094" y="885" class="small">H5 Odd</text>
+  <text x="1242" y="935" class="small">H6 Even</text>
+  <text x="1394" y="885" class="small">H7 Odd</text>
+
+  <path class="dash" d="M435 764 C570 706, 880 695, 1115 880"/>
+  <text x="1118" y="944" class="small">Scanner Head는 설계치수 기준으로 Zigzag 고정 배치</text>
+
+  <rect x="1510" y="700" width="210" height="210" class="scanner"/>
+  <text x="1530" y="730" class="h">X Band 판단식</text>
+  <text x="1530" y="760" class="small">abs(ProcessStageX</text>
+  <text x="1530" y="783" class="small"> - ScannerCenterX)</text>
+  <text x="1530" y="806" class="small"> &lt;= ScannerFieldHalfX</text>
+  <text x="1530" y="842" class="t">Y 방향은 기판 이동으로</text>
+  <text x="1530" y="864" class="t">전체 영역 커버 가능하다고</text>
+  <text x="1530" y="886" class="t">가정하고 표시한다.</text>
+
+  <rect x="36" y="1030" width="1728" height="190" class="panel"/>
+  <text x="60" y="1063" class="section">3. Scanner 상대좌표, MOF Gx/Gy, DOE Review 좌표, Offset Feedback</text>
+
+  <rect x="60" y="1092" width="310" height="95" class="scanner"/>
+  <text x="82" y="1121" class="h">3-1. Camera → Scanner Physical Offset</text>
+  <text x="82" y="1149" class="small">CameraRelative = ProcessStage - ReviewCenter</text>
+  <text x="82" y="1172" class="small">ScannerRelative = CameraRelative - PhysicalOffset</text>
+
+  <rect x="420" y="1092" width="315" height="95" class="scanner"/>
+  <text x="442" y="1121" class="h">3-2. Odd / Even 좌표 부호</text>
+  <text x="442" y="1149" class="small">Odd : Gx = -Dx, Gy = +Dy</text>
+  <text x="442" y="1172" class="small">Even: Gx = +Dx, Gy = -Dy</text>
+
+  <rect x="785" y="1092" width="295" height="95" class="scanner"/>
+  <text x="807" y="1121" class="h">3-3. MOF Command</text>
+  <text x="807" y="1149" class="small">Gx/Gy + Scanner 내부 보정값</text>
+  <text x="807" y="1172" class="small">→ 실제 Scanner 가공 명령</text>
+
+  <rect x="1130" y="1092" width="300" height="95" class="review"/>
+  <text x="1152" y="1121" class="h">3-4. 실제 Review Camera 좌표</text>
+  <text x="1152" y="1149" class="small">Review = ScannerRelative + PhysicalOffset</text>
+  <text x="1152" y="1172" class="small">       + SelectedDoeStageOffset</text>
+
+  <rect x="1480" y="1092" width="245" height="95" class="feedback"/>
+  <text x="1502" y="1121" class="h">3-5. Dynamic Review Correction</text>
+  <text x="1502" y="1149" class="small">Measured - Target = Error</text>
+  <text x="1502" y="1172" class="small">다음 ProcessOffset에 반영</text>
+
+  <path class="arrow" d="M370 1142 H420"/>
+  <path class="arrow" d="M735 1142 H785"/>
+  <path class="arrow" d="M1080 1142 H1130"/>
+  <path class="arrow" d="M1430 1142 H1480"/>
+  <path class="arrow" d="M1605 1092 C1605 1038, 910 1018, 910 1092"/>
+
+  <rect x="60" y="1232" width="1665" height="28" fill="#0f172a" stroke="#334155" rx="6"/>
+  <text x="78" y="1251" class="tiny">핵심 데이터 흐름: CoordinateInput → AK1 Stage Anchor → ProcessStage → CameraRelative → Physical Offset 적용 → Scanner Gx/Gy → DOE Review 좌표 → Dynamic Correction → 다음 Plan</text>
+
+  <rect x="36" y="1288" width="1728" height="218" class="panel"/>
+  <text x="60" y="1321" class="section">4. 1-2 / 1-3 계산식 상세 해설: Cell# 묶음 위치와 묶음 안의 실제 가공점 위치</text>
+  <text x="60" y="1347" class="subtitle">가장 먼저 Cell# 묶음이 기판 안에서 몇 번째 열과 몇 번째 행에 있는지 찾고, 그 다음 해당 묶음 안에서 A1, B1, A2 같은 실제 가공점 좌표를 만든다.</text>
+
+  <rect x="60" y="1372" width="405" height="104" class="calc"/>
+  <text x="80" y="1396" class="h">1-2 의미: Cell# → BlockCol / BlockRow</text>
+  <text x="80" y="1420" class="tiny">CellBlock은 사람이 보는 번호라서 1부터 시작한다. 계산은 0부터 세는 것이 편하므로 CellBlock - 1을 먼저 한다.</text>
+  <text x="80" y="1441" class="small">BlockColumns = 3이면:</text>
+  <text x="80" y="1462" class="small">Cell#1=(Col0,Row0), Cell#2=(Col1,Row0), Cell#3=(Col2,Row0)</text>
+
+  <rect x="495" y="1372" width="360" height="104" class="calc"/>
+  <text x="515" y="1396" class="h">OriginX / OriginY 의미</text>
+  <text x="515" y="1420" class="tiny">Origin은 해당 Cell# 묶음의 좌측상단 시작 위치이다. 즉, Cell# 안의 모든 가공점이 더해질 기준점이다.</text>
+  <text x="515" y="1441" class="small">OriginX = BlockCol * Cell# 간 X Pitch</text>
+  <text x="515" y="1462" class="small">OriginY = BlockRow * Cell# 간 Y Pitch</text>
+
+  <rect x="885" y="1372" width="405" height="104" class="calc"/>
+  <text x="905" y="1396" class="h">1-3 의미: Origin + First + Pitch + Offset</text>
+  <text x="905" y="1420" class="tiny">Origin에서 Cell 내부 첫 가공점까지 이동하고, Column/Row 번호만큼 Pitch를 반복해서 더한 뒤 Pattern Offset을 마지막으로 더한다.</text>
+  <text x="905" y="1441" class="small">A1 = Origin + First + 0*Pitch + Offset</text>
+  <text x="905" y="1462" class="small">B1 = Origin + First + 1*PitchX + Offset, A2 = Origin + First + 1*PitchY + Offset</text>
+
+  <rect x="1320" y="1372" width="390" height="104" class="stage"/>
+  <text x="1340" y="1396" class="h">최종 Local 좌표가 뜻하는 것</text>
+  <text x="1340" y="1420" class="tiny">LocalX/LocalY는 아직 Stage 좌표가 아니라 AK1을 기준으로 본 기판 내부 좌표이다.</text>
+  <text x="1340" y="1441" class="small">다음 단계에서 Stage = AK1 + R(theta) * Local</text>
+  <text x="1340" y="1462" class="small">이 계산을 통해 장비가 이해하는 실제 Stage 좌표가 된다.</text>
+
+  <rect x="80" y="1486" width="160" height="28" class="badge"/>
+  <text x="93" y="1505" class="tiny">Cell# 묶음 위치 먼저</text>
+  <path class="arrow2" d="M240 1500 H310"/>
+  <rect x="310" y="1486" width="195" height="28" class="badge"/>
+  <text x="323" y="1505" class="tiny">묶음 안 첫 가공점 이동</text>
+  <path class="arrow2" d="M505 1500 H575"/>
+  <rect x="575" y="1486" width="185" height="28" class="badge"/>
+  <text x="588" y="1505" class="tiny">Column/Row Pitch 반복</text>
+  <path class="arrow2" d="M760 1500 H830"/>
+  <rect x="830" y="1486" width="170" height="28" class="badge"/>
+  <text x="843" y="1505" class="tiny">Pattern Offset 적용</text>
+  <path class="arrow2" d="M1000 1500 H1070"/>
+  <rect x="1070" y="1486" width="190" height="28" class="badge"/>
+  <text x="1083" y="1505" class="tiny">Recipe Local 좌표 완성</text>
+  <path class="arrow2" d="M1260 1500 H1330"/>
+  <rect x="1330" y="1486" width="260" height="28" class="badge"/>
+  <text x="1343" y="1505" class="tiny">AK1/Theta를 적용해 Stage 좌표로 변환</text>
+
+  <rect x="36" y="1540" width="1728" height="282" class="panel"/>
+  <text x="60" y="1574" class="section">5. 핵심 보완: Review Camera와 Scanner 사이의 고정 물리 Offset</text>
+  <text x="60" y="1600" class="subtitle">리뷰 위치와 레이저 가공 위치는 물리적으로 떨어져 있다. 이 설비 치수를 먼저 적용해야 같은 기판 가공점을 Scanner Gx/Gy 좌표로 정확히 옮길 수 있다.</text>
+
+  <rect x="60" y="1624" width="340" height="142" class="review"/>
+  <text x="82" y="1652" class="h">5-1. Review Camera 기준</text>
+  <text x="82" y="1680" class="small">C_review = (ReviewCenterX, ReviewCenterY)</text>
+  <text x="82" y="1704" class="small">P_camera = ProcessStage - C_review</text>
+  <text x="82" y="1732" class="tiny">AK1 Pixel 측정과 Recipe/Theta로 ProcessStage 생성</text>
+
+  <rect x="450" y="1624" width="390" height="142" class="feedback"/>
+  <text x="472" y="1652" class="h">5-2. H1 초기위치 / Offset 검증</text>
+  <text x="472" y="1680" class="small">ExpectedH1 = C_review + O_RS_H1</text>
+  <text x="472" y="1704" class="small">Error = FirstScannerInitial - ExpectedH1</text>
+  <text x="472" y="1728" class="small">abs(Error.X/Y) &lt;= OriginTolerance</text>
+  <text x="472" y="1750" class="tiny">Scanner 배치는 H1 Initial, Review 변환은 Physical Offset 사용</text>
+
+  <rect x="890" y="1624" width="390" height="142" class="scanner"/>
+  <text x="912" y="1652" class="h">5-3. Process → Review 변환</text>
+  <text x="912" y="1680" class="small">P_scanner = ProcessStage - ScannerCenter</text>
+  <text x="912" y="1704" class="small">P_review = P_scanner + O_RS_i + DoeStage</text>
+  <text x="912" y="1728" class="small">검증 = ProcessStage - C_review + DoeStage</text>
+  <text x="912" y="1750" class="tiny">기존 ProcessStage-BasisHeadDoeStage 식은 Scanner 상대좌표임</text>
+
+  <rect x="1330" y="1624" width="390" height="142" class="calc"/>
+  <text x="1352" y="1652" class="h">5-4. 제공 설정 검증</text>
+  <text x="1352" y="1680" class="small">Review=(105,1200), H1Offset=(10,1000)</text>
+  <text x="1352" y="1704" class="small">H1Initial=(115,2200), H2=(315,2260)</text>
+  <text x="1352" y="1728" class="small">B1 G=(-99.830,1024.804)</text>
+  <text x="1352" y="1750" class="tiny">B1 Review/DOE05=(109.900,35.286), Error=(0,0)</text>
+
+  <path class="arrow" d="M400 1695 H450"/>
+  <path class="arrow" d="M840 1695 H890"/>
+  <path class="arrow" d="M1280 1695 H1330"/>
+
+  <rect x="60" y="1782" width="1660" height="25" fill="#0f172a" stroke="#334155" rx="6"/>
+  <text x="78" y="1800" class="tiny">구분 원칙: Physical Offset = 설비 고정 Geometry / Dynamic Review Correction = 가공 후 측정오차 Feedback. 저장 위치, 변경 권한, 버전과 이력을 반드시 분리한다.</text>
+
+  <rect x="36" y="1840" width="1728" height="294" class="panel"/>
+  <text x="60" y="1874" class="section">6. 실제 물류 배치와 왕복 MOF 공정 순서</text>
+  <text x="60" y="1900" class="subtitle">+Y를 정물류 방향으로 정의한 기본 예: Home → Review Camera(Y=1200) → Scanner Zone(Y≈1640) 순서로 배치되고, MOF는 -Y 역물류 이동 중 수행한다.</text>
+
+  <rect x="65" y="1935" width="210" height="72" class="stage"/>
+  <text x="88" y="1964" class="h">① Home</text>
+  <text x="88" y="1988" class="small">Stage Y = HomeStageY</text>
+
+  <rect x="335" y="1935" width="240" height="72" class="review"/>
+  <text x="358" y="1964" class="h">② Review Camera 통과</text>
+  <text x="358" y="1988" class="small">전진 시 측정 없이 통과</text>
+
+  <rect x="635" y="1935" width="270" height="72" class="scanner"/>
+  <text x="658" y="1964" class="h">③ Scanner 뒤쪽 도착</text>
+  <text x="658" y="1988" class="small">TurnaroundStageY에서 반전</text>
+
+  <rect x="965" y="1935" width="260" height="72" class="calc"/>
+  <text x="988" y="1964" class="h">④ 역방향 MOF</text>
+  <text x="988" y="1988" class="small">큰 StageY → 작은 StageY</text>
+
+  <rect x="1285" y="1935" width="210" height="72" class="review"/>
+  <text x="1308" y="1964" class="h">⑤ Review 후측정</text>
+  <text x="1308" y="1988" class="small">가공 결과/Offset 계산</text>
+
+  <rect x="1555" y="1935" width="150" height="72" class="stage"/>
+  <text x="1578" y="1964" class="h">⑥ Home</text>
+  <text x="1578" y="1988" class="small">원점 복귀</text>
+
+  <path class="arrow2" d="M275 1971 H335"/>
+  <path class="arrow2" d="M575 1971 H635"/>
+  <path class="arrow2" d="M905 1971 H965"/>
+  <path class="arrow2" d="M1225 1971 H1285"/>
+  <path class="arrow2" d="M1495 1971 H1555"/>
+
+  <path class="dash" d="M760 2028 C760 2095, 1095 2095, 1095 2028"/>
+  <text x="800" y="2071" class="h">방향 반전 후 Scanner Zone에서 Review Camera 방향으로 돌아오면서 MOF</text>
+  <text x="800" y="2096" class="tiny">MofSequence = ForwardSignY가 +1이면 ProcessStageY 내림차순, -1이면 오름차순</text>
+
+  <rect x="60" y="2115" width="1660" height="25" fill="#0f172a" stroke="#334155" rx="6"/>
+  <text x="78" y="2133" class="tiny">배치 검증: (ScannerCenterY - ReviewCenterY) × ForwardTransportSignY &gt; 0. 모든 Head가 참이어야 Review Camera 선행 / Scanner 후행 구조가 성립한다.</text>
+</svg>
