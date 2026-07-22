@@ -1,76 +1,91 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000">
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1100" viewBox="0 0 1600 1100">
   <defs>
     <style>
-      .bg{fill:#0b1220}.panel{fill:#111827;stroke:#334155;stroke-width:2}.client{fill:#0f2942;stroke:#38bdf8;stroke-width:2}.controller{fill:#172554;stroke:#60a5fa;stroke-width:2}.ok{fill:#123524;stroke:#34d399;stroke-width:2}.warn{fill:#3b2b0b;stroke:#fbbf24;stroke-width:2}.error{fill:#3f1515;stroke:#f87171;stroke-width:2}.title{fill:#f8fafc;font:700 30px 'Malgun Gothic',sans-serif}.h{fill:#f8fafc;font:700 20px 'Malgun Gothic',sans-serif}.t{fill:#cbd5e1;font:16px 'Malgun Gothic',sans-serif}.s{fill:#94a3b8;font:14px 'Malgun Gothic',sans-serif}.code{fill:#bae6fd;font:15px Consolas,monospace}.arrow{stroke:#7dd3fc;stroke-width:3;fill:none;marker-end:url(#head)}
+      .bg{fill:#08111f}.panel{fill:#101b2d;stroke:#334155;stroke-width:2}.client{fill:#0d2d42;stroke:#22d3ee;stroke-width:2}.a1{fill:#172554;stroke:#60a5fa;stroke-width:2}.ok{fill:#073b2d;stroke:#34d399;stroke-width:2}.warn{fill:#3a2b0a;stroke:#fbbf24;stroke-width:2}.bad{fill:#3d1717;stroke:#fb7185;stroke-width:2}.title{fill:#f8fafc;font:700 30px 'Malgun Gothic',sans-serif}.sub{fill:#cbd5e1;font:16px 'Malgun Gothic',sans-serif}.h{fill:#f8fafc;font:700 19px 'Malgun Gothic',sans-serif}.t{fill:#dbeafe;font:15px 'Malgun Gothic',sans-serif}.s{fill:#94a3b8;font:13px 'Malgun Gothic',sans-serif}.code{fill:#bae6fd;font:14px Consolas,monospace}.num{fill:#08111f;stroke:#67e8f9;stroke-width:2}.n{fill:#67e8f9;font:700 18px 'Malgun Gothic',sans-serif;text-anchor:middle}.arrow{stroke:#67e8f9;stroke-width:3;fill:none;marker-end:url(#head)}
     </style>
-    <marker id="head" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#7dd3fc"/></marker>
+    <marker id="head" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#67e8f9"/></marker>
   </defs>
-  <rect class="bg" width="1600" height="1000"/>
-  <text x="60" y="58" class="title">MOF Coordinate WPF - Automation1 공식 API 직접 연결 흐름</text>
-  <text x="60" y="88" class="t">별도 Automation1Server / JSON Gateway / TCP 46100 없음</text>
+  <rect class="bg" width="1600" height="1100"/>
+  <text x="55" y="52" class="title">Automation1 직접 연결: 좌표 선택부터 실행 완료까지</text>
+  <text x="55" y="82" class="sub">별도 Server 프로그램이나 일반 Socket JSON을 만들지 않고, Client WPF가 Automation1 공식 API로 Controller에 직접 접속합니다.</text>
 
-  <rect x="55" y="120" width="690" height="810" rx="6" class="panel"/>
-  <text x="85" y="160" class="h">Client PC 192.168.10.200</text>
+  <rect x="45" y="112" width="730" height="855" rx="8" class="panel"/>
+  <text x="75" y="150" class="h">Client PC · MOF Coordinate WPF (예: 192.168.10.200)</text>
 
-  <rect x="90" y="195" width="620" height="100" rx="5" class="client"/>
-  <text x="115" y="228" class="h">1. 가공 대상 선택</text>
-  <text x="115" y="258" class="t">Scanner 복수 선택 → 해당 Head의 InField 좌표 전체 선택</text>
-  <text x="115" y="283" class="s">Matrix 단일/복수 선택으로 대상 좌표를 추가 필터링</text>
+  <circle cx="92" cy="210" r="23" class="num"/><text x="92" y="217" class="n">1</text>
+  <rect x="130" y="175" width="600" height="105" rx="6" class="client"/>
+  <text x="155" y="207" class="h">화면에서 가공 대상을 고릅니다</text>
+  <text x="155" y="237" class="t">Scanner 선택 → 그 Scanner가 X 방향으로 닿을 수 있는 Cell 좌표 선택</text>
+  <text x="155" y="263" class="s">여러 Scanner와 여러 Matrix 좌표를 동시에 선택할 수 있습니다.</text>
 
-  <rect x="90" y="325" width="620" height="115" rx="5" class="client"/>
-  <text x="115" y="358" class="h">2. 좌표 계산과 AeroScript 생성</text>
-  <text x="115" y="388" class="t">CellCommand.Gx/Gy → GX/GY 이동 명령</text>
-  <text x="115" y="416" class="code">AeroScriptGenerator.Generate(commands, options)</text>
+  <circle cx="92" cy="345" r="23" class="num"/><text x="92" y="352" class="n">2</text>
+  <rect x="130" y="310" width="600" height="118" rx="6" class="client"/>
+  <text x="155" y="342" class="h">좌표를 실제 가공 순서로 정리합니다</text>
+  <text x="155" y="372" class="t">CellCommand를 기판 기준 LocalY, LocalX 순으로 정렬</text>
+  <text x="155" y="400" class="t">역물류 MOF 가공 순서: AK1 쪽 → AK2 쪽</text>
 
-  <rect x="90" y="470" width="620" height="115" rx="5" class="client"/>
-  <text x="115" y="503" class="h">3. Local 파일과 Job Package</text>
-  <text x="115" y="533" class="t">mof_generated.ascript + SHA-256 + Task + 좌표 수</text>
-  <text x="115" y="561" class="s">Job별 보존 시 UTC 시각과 Job ID를 파일명에 추가</text>
+  <circle cx="92" cy="500" r="23" class="num"/><text x="92" y="507" class="n">3</text>
+  <rect x="130" y="463" width="600" height="145" rx="6" class="client"/>
+  <text x="155" y="495" class="h">운전 모드에 맞는 AeroScript를 만듭니다</text>
+  <text x="155" y="527" class="t">Simulation: Stage 축 없이 속도×Tick 소프트웨어 카운터</text>
+  <text x="155" y="555" class="t">External AUX: 타사 Stage Encoder를 Scanner AUX에서 읽음</text>
+  <text x="155" y="583" class="t">Equipment: 실제 Laser·PSO·Interlock 조건을 포함</text>
 
-  <rect x="90" y="615" width="620" height="125" rx="5" class="client"/>
-  <text x="115" y="648" class="h">4. 공식 API 직접 접속</text>
-  <text x="115" y="680" class="code">Controller.Connect("192.168.10.10", 12200)</text>
-  <text x="115" y="708" class="t">IsRunning / Host / Port / Encryption / Task Count 확인</text>
+  <circle cx="92" cy="680" r="23" class="num"/><text x="92" y="687" class="n">4</text>
+  <rect x="130" y="643" width="600" height="115" rx="6" class="client"/>
+  <text x="155" y="675" class="h">공식 API로 Controller에 직접 연결합니다</text>
+  <text x="155" y="707" class="code">Controller.Connect("192.168.10.10", 12200)</text>
+  <text x="155" y="735" class="s">연결 후 Controller 실행 상태, Task 개수, Host 정보를 확인합니다.</text>
 
-  <rect x="90" y="770" width="620" height="125" rx="5" class="client"/>
-  <text x="115" y="803" class="h">5. Compile 검사, 실행, 완료 대기</text>
-  <text x="115" y="833" class="t">파일/행/열 진단 후 CompiledAeroScript만 실행</text>
-  <text x="115" y="862" class="s">250 ms 상태 조회, ProgramComplete만 정상 완료</text>
+  <circle cx="92" cy="830" r="23" class="num"/><text x="92" y="837" class="n">5</text>
+  <rect x="130" y="793" width="600" height="132" rx="6" class="client"/>
+  <text x="155" y="825" class="h">전송·컴파일·실행·상태조회를 순서대로 수행합니다</text>
+  <text x="155" y="857" class="t">Controller 파일 기록 → 사전 Compile → 지정 Task에서 Run</text>
+  <text x="155" y="885" class="t">Task 상태와 가상 Stage/가공 순번을 약 300 ms마다 조회</text>
+  <text x="155" y="911" class="s">UI는 현재 가공 Cell을 강조하고 진행률을 표시합니다.</text>
 
-  <rect x="855" y="120" width="690" height="810" rx="6" class="panel"/>
-  <text x="885" y="160" class="h">Server PC / Automation1 Controller 192.168.10.10:12200</text>
+  <rect x="825" y="112" width="730" height="855" rx="8" class="panel"/>
+  <text x="855" y="150" class="h">Server PC · Automation1 Controller (예: 192.168.10.10:12200)</text>
 
-  <rect x="890" y="205" width="620" height="105" rx="5" class="controller"/>
-  <text x="915" y="238" class="h">A. Controller File System 기록</text>
-  <text x="915" y="270" class="code">Files.WriteText("programs/...ascript", source)</text>
-  <text x="915" y="296" class="s">Windows D:\ 경로가 아니라 A1 Studio에서 보는 Controller 파일</text>
+  <rect x="865" y="185" width="650" height="112" rx="6" class="a1"/>
+  <text x="890" y="218" class="h">A. Controller 파일 영역에 원본 Script 저장</text>
+  <text x="890" y="250" class="code">Files.WriteText("programs/mof_generated.ascript", source)</text>
+  <text x="890" y="278" class="s">Windows 탐색기 경로가 아니라 A1 Studio에서 보이는 Controller 파일입니다.</text>
 
-  <rect x="890" y="350" width="620" height="105" rx="5" class="controller"/>
-  <text x="915" y="383" class="h">B. Controller 사전 Compile</text>
-  <text x="915" y="415" class="code">Compiler.CompileControllerFile(file, true)</text>
-  <text x="915" y="441" class="s">축/MCD/문법 오류를 파일, 행, 열 단위로 반환</text>
+  <path d="M1190 297 V335" class="arrow"/>
+  <rect x="865" y="335" width="650" height="112" rx="6" class="a1"/>
+  <text x="890" y="368" class="h">B. Controller 설정을 기준으로 Compile</text>
+  <text x="890" y="400" class="code">Compiler.CompileControllerFile(file, true)</text>
+  <text x="890" y="428" class="s">문법, 축 이름, MCD 설정 문제를 파일·행·열 정보로 반환합니다.</text>
 
-  <rect x="890" y="495" width="620" height="115" rx="5" class="controller"/>
-  <text x="915" y="528" class="h">C. Compiled Program 실행과 상태</text>
-  <text x="915" y="560" class="code">Tasks[n].Program.Run(compiled) → Status</text>
-  <text x="915" y="588" class="s">Running / Feedhold / Paused / Complete / Error</text>
+  <path d="M1190 447 V485" class="arrow"/>
+  <rect x="865" y="485" width="650" height="112" rx="6" class="a1"/>
+  <text x="890" y="518" class="h">C. 지정 Task에서 Compiled Program 실행</text>
+  <text x="890" y="550" class="code">Tasks[taskIndex].Program.Run(compiledFile)</text>
+  <text x="890" y="578" class="s">Busy Task에는 중복 실행하지 않고, 시작 전 상태를 먼저 검사합니다.</text>
 
-  <rect x="890" y="650" width="620" height="120" rx="5" class="ok"/>
-  <text x="915" y="683" class="h">D. Server 측 실행 이력 보존</text>
-  <text x="915" y="715" class="code">Files.WriteText("mof_job_*.json", audit)</text>
-  <text x="915" y="743" class="s">Job, Script, SHA-256, 좌표 수, Task, 상태 이벤트, 오류</text>
+  <path d="M1190 597 V635" class="arrow"/>
+  <rect x="865" y="635" width="650" height="145" rx="6" class="ok"/>
+  <text x="890" y="668" class="h">D. Task 상태와 공정 진행값 반환</text>
+  <text x="890" y="700" class="t">TaskState: Running / Paused / ProgramComplete / Error</text>
+  <text x="890" y="730" class="code">$rglobal[0] = Virtual Stage Y</text>
+  <text x="890" y="758" class="code">$iglobal[0] / [1] = 현재 가공 순번 / 전체 개수</text>
 
-  <rect x="890" y="810" width="290" height="80" rx="5" class="ok"/>
-  <text x="915" y="844" class="h">정상 완료</text><text x="915" y="872" class="t">ProgramComplete</text>
-  <rect x="1220" y="810" width="290" height="80" rx="5" class="error"/>
-  <text x="1245" y="844" class="h">실패 / 중지</text><text x="1245" y="872" class="t">Error 또는 Program.Stop</text>
+  <path d="M1190 780 V818" class="arrow"/>
+  <rect x="865" y="818" width="310" height="105" rx="6" class="ok"/>
+  <text x="890" y="852" class="h">정상 완료</text>
+  <text x="890" y="882" class="t">ProgramComplete 확인</text>
+  <text x="890" y="906" class="s">Job 이력과 SHA-256 기록</text>
+  <rect x="1205" y="818" width="310" height="105" rx="6" class="bad"/>
+  <text x="1230" y="852" class="h">오류 또는 중지</text>
+  <text x="1230" y="882" class="t">진단 표시 후 Stop</text>
+  <text x="1230" y="906" class="s">오류 파일·행·열 보존</text>
 
-  <path d="M710 677 H890" class="arrow"/><text x="752" y="657" class="s">Automation1 native protocol</text>
-  <path d="M890 552 H745" class="arrow"/><text x="758" y="532" class="s">TaskState</text>
-  <path d="M1200 310 V350" class="arrow"/>
-  <path d="M1200 455 V495" class="arrow"/>
-  <path d="M1200 610 V650" class="arrow"/>
+  <path d="M730 700 H865" class="arrow"/><text x="752" y="682" class="s">Automation1 공식 통신</text>
+  <path d="M865 704 H775" class="arrow"/><text x="785" y="736" class="s">상태·전역변수</text>
 
-  <rect x="480" y="940" width="640" height="42" rx="5" class="warn"/>
-  <text x="505" y="968" class="t">12200에는 일반 Socket/JSON을 전송하지 않고 반드시 공식 Controller.Connect API를 사용한다.</text>
+  <rect x="45" y="995" width="1510" height="72" rx="7" class="warn"/>
+  <text x="75" y="1025" class="h">핵심 구분</text>
+  <text x="205" y="1025" class="t">12200 포트에는 일반 TCP 문자열이나 JSON을 보내지 않습니다. 반드시 Automation1 SDK의 Controller.Connect API를 사용합니다.</text>
+  <text x="205" y="1052" class="s">Simulation은 순서와 UI 확인용이며, 실제 Laser·PSO·AUX 신호·Interlock 정밀도는 설비 모드에서 별도 검증합니다.</text>
 </svg>
