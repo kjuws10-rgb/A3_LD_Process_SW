@@ -988,21 +988,41 @@ public partial class MainWindow : Window
 
     private double GetBoardScale(double boardWidth, double boardHeight)
     {
-        var blockPitchX = EffectiveBlockPitchX(_input);
-        var blockPitchY = EffectiveBlockPitchY(_input);
-        var maxLocalX = (_input.CellBlockColumns - 1) * blockPitchX
-                        + _input.CellFirstX
+        var cells = _input.Pp.Cells.Count > 0
+            ? _input.Pp.Cells
+            : CreateLegacyCellDefinitions(_input);
+        var maxLocalX = cells.Max(cell => cell.AlignToFirstPixelX)
                         + Math.Max(1, _input.CellColumns - 1) * _input.CellPitchX
-                        + _input.PatternOffsetX;
-        var maxLocalY = (_input.CellBlockRows - 1) * blockPitchY
-                        + _input.CellFirstY
+                        + Math.Abs(_input.PatternOffsetX);
+        var maxLocalY = cells.Max(cell => cell.AlignToFirstPixelY)
                         + Math.Max(1, _input.CellRows - 1) * _input.CellPitchY
-                        + _input.PatternOffsetY;
+                        + Math.Abs(_input.PatternOffsetY);
         var scannerMaxLocalX = _lastResult?.Scanners.Max(x => Math.Abs(x.CenterX - _lastResult.Ak1GlobalX) + x.FieldHalfX) ?? 0;
         maxLocalX = Math.Max(maxLocalX, scannerMaxLocalX);
         var scaleX = (boardWidth - 60) / Math.Max(maxLocalX + _input.CellPitchX, 1);
         var scaleY = (boardHeight - 42) / Math.Max(maxLocalY + _input.CellPitchY, 1);
         return Math.Min(scaleX, scaleY);
+    }
+
+    private static List<CellRecipeDefinition> CreateLegacyCellDefinitions(CoordinateInput input)
+    {
+        var cells = new List<CellRecipeDefinition>();
+        var blockPitchX = EffectiveBlockPitchX(input);
+        var blockPitchY = EffectiveBlockPitchY(input);
+        for (var row = 0; row < Math.Max(1, input.CellBlockRows); row++)
+        {
+            for (var column = 0; column < Math.Max(1, input.CellBlockColumns); column++)
+            {
+                cells.Add(new CellRecipeDefinition
+                {
+                    CellNumber = row * Math.Max(1, input.CellBlockColumns) + column + 1,
+                    AlignToFirstPixelX = column * blockPitchX + input.CellFirstX,
+                    AlignToFirstPixelY = row * blockPitchY + input.CellFirstY
+                });
+            }
+        }
+
+        return cells;
     }
 
     private void DrawScannerHeads(double left, double top, double width)
@@ -1743,6 +1763,19 @@ public partial class MainWindow : Window
 
     private void ConfigureParameterTooltips()
     {
+        SetTip(OnlinePpidNameBox, "ONLINE_PPID_NAME", "CIM 또는 상위 프로그램에서 선택하는 레시피 이름입니다. 생성되는 AeroScript와 로그에도 같이 남겨 추적성을 확보합니다.", "PPID -> PP parameter set -> coordinate/script generation", "None");
+        SetTip(MaxCellNumberBox, "MAX_CELL_NUMBER", "기판 안에 실제로 배치할 Cell 개수입니다. CELL1~CELL50 좌표 중 이 번호 이하만 좌표 생성에 사용합니다.", "Cell list = CELL1..CELL_MAX", "None");
+        SetTip(PpStageSpeedBox, "STAGE_SPEED", "MOF 가공 시 기판이 Y 방향으로 지나가는 속도입니다. Simulation에서는 software counter 속도로 사용하고, 장비 모드에서는 Stage/AUX 조건 검증 기준입니다.", "VirtualStage += StageSpeed * Tick", "None");
+        SetTip(LaserPowerBox, "LASER_POWER", "가공 레이저 파워 설정값입니다. 실제 장비에서는 헤드별 편차가 있으므로 HEAD별 파워 분할 관리로 확장하는 것이 안전합니다.", "PP value -> equipment laser setting", "None");
+        SetTip(LaserFrequencyBox, "LASER_FREQUENCY", "레이저 pulse frequency입니다. PSO pulse period 계산과 보정값 관리의 기준이 됩니다.", "TotalTime(us) = 1 / Frequency * 1,000,000", "None");
+        SetTip(ShotCountBox, "SHOT_COUNT", "한 가공 pixel 위치에서 발사할 shot 수입니다. 추후 Laser_On 또는 PSO waveform count와 연결합니다.", "Each target -> ShotCount pulses", "None");
+        SetTip(NumOfPixelXBox, "NUM_OF_PIXEL_X", "Cell 하나 안에 X 방향으로 배치되는 pixel 개수입니다. Matrix View의 A/B/C... 열 개수가 됩니다.", "Columns = NUM_OF_PIXEL_X", "None");
+        SetTip(NumOfPixelYBox, "NUM_OF_PIXEL_Y", "Cell 하나 안에 Y 방향으로 배치되는 pixel 개수입니다. Matrix View의 1/2/3... 행 개수가 됩니다.", "Rows = NUM_OF_PIXEL_Y", "None");
+        SetTip(PpPitchBox, "PITCH", "Cell 내부 pixel 간 가공 pitch입니다. 현재 샘플에서는 X/Y pitch에 동일하게 적용합니다.", "Local = CellFirst + Col/Row * PITCH", "None");
+        SetTip(ChessBox, "CHESS", "가공 pixel을 일정 간격으로 건너뛰며 처리하는 운전 전략 값입니다. 현재는 PP정보로 저장하고, 실제 tact 최적화 시 target filtering 조건으로 확장합니다.", "Chess 1=all, 2=every other pitch", "None");
+        SetTip(SplitedBeamCountBox, "SPLITED_BEAM_COUNT", "DOE로 분기되는 beam 수입니다. 현재 장비 컨셉은 4 x 4 = 16 beam 고정입니다.", "DOE matrix = 4 x 4", "None");
+        SetTip(ZeroDefenceReviewPointBox, "ZERO_DEFENCE_REVIEW_POINT", "0선 방어 검사를 적용할 review point 개수입니다. Review 측정/보정 루프의 검사 샘플 수로 사용합니다.", "Review guard sample count", "None");
+
         SetTip(BoardXBox, "Board X", "기판의 전체 X 방향 길이입니다. Board 표시 영역과 AK3/AK4 방향 기준 폭을 결정합니다.", "AK 유효 X 거리 = BoardX - 2 * AK Margin X", "Board");
         SetTip(BoardYBox, "Board Y", "기판의 전체 Y 방향 길이입니다. Board 표시 영역과 AK2/AK4 방향 기준 높이를 결정합니다.", "AK 유효 Y 거리 = BoardY - 2 * AK Margin Y", "Board");
         SetTip(AkMarginXBox, "AK Margin X", "기판 Edge에서 Align Key까지의 X 방향 설계 여유거리입니다.", "AK1~AK3 거리 계산과 Board 설명에 사용", "Board");
@@ -1969,6 +2002,19 @@ public partial class MainWindow : Window
 
     private void LoadInputToScreen(CoordinateInput input)
     {
+        OnlinePpidNameBox.Text = input.Pp.OnlinePpidName;
+        MaxCellNumberBox.Text = input.Pp.MaxCellNumber.ToString(CultureInfo.InvariantCulture);
+        PpStageSpeedBox.Text = input.Pp.StageSpeed.ToString(CultureInfo.InvariantCulture);
+        LaserPowerBox.Text = input.Pp.LaserPower.ToString(CultureInfo.InvariantCulture);
+        LaserFrequencyBox.Text = input.Pp.LaserFrequency.ToString(CultureInfo.InvariantCulture);
+        ShotCountBox.Text = input.Pp.ShotCount.ToString(CultureInfo.InvariantCulture);
+        NumOfPixelXBox.Text = input.Pp.NumOfPixelX.ToString(CultureInfo.InvariantCulture);
+        NumOfPixelYBox.Text = input.Pp.NumOfPixelY.ToString(CultureInfo.InvariantCulture);
+        PpPitchBox.Text = input.Pp.Pitch.ToString(CultureInfo.InvariantCulture);
+        ChessBox.Text = input.Pp.Chess.ToString(CultureInfo.InvariantCulture);
+        SplitedBeamCountBox.Text = input.Pp.SplitedBeamCount.ToString(CultureInfo.InvariantCulture);
+        ZeroDefenceReviewPointBox.Text = input.Pp.ZeroDefenceReviewPoint.ToString(CultureInfo.InvariantCulture);
+
         BoardXBox.Text = Format(input.BoardSizeX);
         BoardYBox.Text = Format(input.BoardSizeY);
         AkMarginXBox.Text = Format(input.AlignMarginX);
@@ -1984,10 +2030,11 @@ public partial class MainWindow : Window
         Ak1UBox.Text = Format(input.MeasuredAk1U);
         Ak1VBox.Text = Format(input.MeasuredAk1V);
         ThetaBox.Text = Format(input.ThetaAlignDeg);
-        CellFirstXBox.Text = Format(input.CellFirstX);
-        CellFirstYBox.Text = Format(input.CellFirstY);
-        CellPitchXBox.Text = Format(input.CellPitchX);
-        CellPitchYBox.Text = Format(input.CellPitchY);
+        var firstCell = input.Pp.Cells.FirstOrDefault(cell => cell.CellNumber == 1);
+        CellFirstXBox.Text = Format(firstCell?.AlignToFirstPixelX ?? input.CellFirstX);
+        CellFirstYBox.Text = Format(firstCell?.AlignToFirstPixelY ?? input.CellFirstY);
+        CellPitchXBox.Text = Format(input.Pp.Pitch);
+        CellPitchYBox.Text = Format(input.Pp.Pitch);
         PatternOffsetXBox.Text = Format(input.PatternOffsetX);
         PatternOffsetYBox.Text = Format(input.PatternOffsetY);
         CellColumnsBox.Text = input.CellColumns.ToString(CultureInfo.InvariantCulture);
@@ -2016,6 +2063,10 @@ public partial class MainWindow : Window
         DoePitchYBox.Text = Format(input.DoeBeamPitchY);
         OffsetXBox.Text = Format(input.ProcessOffsetGlobalX);
         OffsetYBox.Text = Format(input.ProcessOffsetGlobalY);
+        if (StageSpeedBox is not null)
+        {
+            StageSpeedBox.Text = input.Pp.StageSpeed.ToString(CultureInfo.InvariantCulture);
+        }
     }
 
     private void LoadViewState()
@@ -2067,14 +2118,41 @@ public partial class MainWindow : Window
 
     private CoordinateInput ReadInputFromScreen()
     {
-        var columns = ReadInt(CellColumnsBox, _input.CellColumns);
-        var rows = ReadInt(CellRowsBox, _input.CellRows);
+        var pp = ClonePp(_input.Pp);
+        pp.OnlinePpidName = string.IsNullOrWhiteSpace(OnlinePpidNameBox.Text)
+            ? _input.Pp.OnlinePpidName
+            : OnlinePpidNameBox.Text.Trim();
+        pp.MaxCellNumber = ReadInt(MaxCellNumberBox, _input.Pp.MaxCellNumber);
+        pp.StageSpeed = ReadInt(PpStageSpeedBox, _input.Pp.StageSpeed);
+        pp.LaserPower = ReadInt(LaserPowerBox, _input.Pp.LaserPower);
+        pp.LaserFrequency = ReadInt(LaserFrequencyBox, _input.Pp.LaserFrequency);
+        pp.ShotCount = ReadInt(ShotCountBox, _input.Pp.ShotCount);
+        pp.NumOfPixelX = ReadInt(NumOfPixelXBox, _input.Pp.NumOfPixelX);
+        pp.NumOfPixelY = ReadInt(NumOfPixelYBox, _input.Pp.NumOfPixelY);
+        pp.Pitch = ReadInt(PpPitchBox, _input.Pp.Pitch);
+        pp.Chess = ReadInt(ChessBox, _input.Pp.Chess);
+        pp.SplitedBeamCount = ReadInt(SplitedBeamCountBox, _input.Pp.SplitedBeamCount);
+        pp.ZeroDefenceReviewPoint = ReadZeroBasedInt(ZeroDefenceReviewPointBox, _input.Pp.ZeroDefenceReviewPoint);
+
+        var columns = Math.Max(1, pp.NumOfPixelX);
+        var rows = Math.Max(1, pp.NumOfPixelY);
         var blockColumns = ReadInt(CellBlockColumnsBox, _input.CellBlockColumns);
         var blockRows = ReadInt(CellBlockRowsBox, _input.CellBlockRows);
         var scannerCount = ReadInt(ScannerCountBox, _input.ScannerCount);
+        var pitch = Math.Max(1, pp.Pitch);
+
+        var cell1FirstX = ReadDouble(CellFirstXBox, _input.CellFirstX);
+        var cell1FirstY = ReadDouble(CellFirstYBox, _input.CellFirstY);
+        var cell1 = pp.Cells.FirstOrDefault(cell => cell.CellNumber == 1);
+        if (cell1 is not null)
+        {
+            cell1.AlignToFirstPixelX = cell1FirstX;
+            cell1.AlignToFirstPixelY = cell1FirstY;
+        }
 
         return new CoordinateInput
         {
+            Pp = pp,
             BoardSizeX = ReadDouble(BoardXBox, _input.BoardSizeX),
             BoardSizeY = ReadDouble(BoardYBox, _input.BoardSizeY),
             AlignMarginX = ReadDouble(AkMarginXBox, _input.AlignMarginX),
@@ -2090,10 +2168,10 @@ public partial class MainWindow : Window
             MeasuredAk1U = ReadDouble(Ak1UBox, _input.MeasuredAk1U),
             MeasuredAk1V = ReadDouble(Ak1VBox, _input.MeasuredAk1V),
             ThetaAlignDeg = ReadDouble(ThetaBox, _input.ThetaAlignDeg),
-            CellFirstX = ReadDouble(CellFirstXBox, _input.CellFirstX),
-            CellFirstY = ReadDouble(CellFirstYBox, _input.CellFirstY),
-            CellPitchX = ReadDouble(CellPitchXBox, _input.CellPitchX),
-            CellPitchY = ReadDouble(CellPitchYBox, _input.CellPitchY),
+            CellFirstX = cell1FirstX,
+            CellFirstY = cell1FirstY,
+            CellPitchX = pitch,
+            CellPitchY = pitch,
             PatternOffsetX = ReadDouble(PatternOffsetXBox, _input.PatternOffsetX),
             PatternOffsetY = ReadDouble(PatternOffsetYBox, _input.PatternOffsetY),
             CellColumns = columns,
@@ -2122,6 +2200,71 @@ public partial class MainWindow : Window
             DoeBeamPitchY = ReadDouble(DoePitchYBox, _input.DoeBeamPitchY),
             ProcessOffsetGlobalX = ReadDouble(OffsetXBox, _input.ProcessOffsetGlobalX),
             ProcessOffsetGlobalY = ReadDouble(OffsetYBox, _input.ProcessOffsetGlobalY)
+        };
+    }
+
+    private static PpidProcessProgram ClonePp(PpidProcessProgram source)
+    {
+        return new PpidProcessProgram
+        {
+            OnlinePpidName = source.OnlinePpidName,
+            StageSpeed = source.StageSpeed,
+            LaserPower = source.LaserPower,
+            LaserFrequency = source.LaserFrequency,
+            ShotCount = source.ShotCount,
+            MaxCellNumber = source.MaxCellNumber,
+            PixelSize = source.PixelSize,
+            NumOfPixelX = source.NumOfPixelX,
+            NumOfPixelY = source.NumOfPixelY,
+            Pitch = source.Pitch,
+            Chess = source.Chess,
+            SplitedBeamCount = source.SplitedBeamCount,
+            MaskingHoleNumber = source.MaskingHoleNumber,
+            MaskingHoles = source.MaskingHoles
+                .Select(hole => new MaskingHoleDefinition
+                {
+                    HoleNumber = hole.HoleNumber,
+                    X = hole.X,
+                    Y = hole.Y,
+                    SizeX = hole.SizeX,
+                    SizeY = hole.SizeY
+                })
+                .ToArray(),
+            CellEdgeMask = new CellEdgeMaskDefinition
+            {
+                UpRoundRadius = source.CellEdgeMask.UpRoundRadius,
+                DownRoundRadius = source.CellEdgeMask.DownRoundRadius,
+                UpLeftRoundX = source.CellEdgeMask.UpLeftRoundX,
+                UpLeftRoundY = source.CellEdgeMask.UpLeftRoundY,
+                UpRightRoundX = source.CellEdgeMask.UpRightRoundX,
+                UpRightRoundY = source.CellEdgeMask.UpRightRoundY,
+                DownLeftRoundX = source.CellEdgeMask.DownLeftRoundX,
+                DownLeftRoundY = source.CellEdgeMask.DownLeftRoundY,
+                DownRightRoundX = source.CellEdgeMask.DownRightRoundX,
+                DownRightRoundY = source.CellEdgeMask.DownRightRoundY
+            },
+            MaxProcessCount = source.MaxProcessCount,
+            ZeroDefenceReviewPoint = source.ZeroDefenceReviewPoint,
+            Cells = source.Cells
+                .Select(cell => new CellRecipeDefinition
+                {
+                    CellNumber = cell.CellNumber,
+                    AlignToFirstPixelX = cell.AlignToFirstPixelX,
+                    AlignToFirstPixelY = cell.AlignToFirstPixelY,
+                    RotationDeg = cell.RotationDeg
+                })
+                .ToList(),
+            Heads = source.Heads
+                .Select(head => new HeadProcessDefinition
+                {
+                    HeadNumber = head.HeadNumber,
+                    ShotTimeDelay = head.ShotTimeDelay,
+                    ScannerRampRate = head.ScannerRampRate,
+                    ScannerJumpSpeed = head.ScannerJumpSpeed,
+                    ScannerJumpDelay = head.ScannerJumpDelay,
+                    DoeZPosition = head.DoeZPosition
+                })
+                .ToList()
         };
     }
 
@@ -2277,9 +2420,71 @@ public partial class MainWindow : Window
 
     private void SaveConfigCsv(string path)
     {
-        var lines = new[]
+        var lines = new List<string>
         {
             "Key,Value",
+            CsvLine("ONLINE_PPID_NAME", _input.Pp.OnlinePpidName),
+            CsvLine("STAGE_SPEED", _input.Pp.StageSpeed),
+            CsvLine("LASER_POWER", _input.Pp.LaserPower),
+            CsvLine("LASER_FREQUENCY", _input.Pp.LaserFrequency),
+            CsvLine("SHOT_COUNT", _input.Pp.ShotCount),
+            CsvLine("MAX_CELL_NUMBER", _input.Pp.MaxCellNumber),
+            CsvLine("PIXEL_SIZE", _input.Pp.PixelSize),
+            CsvLine("NUM_OF_PIXEL_X", _input.Pp.NumOfPixelX),
+            CsvLine("NUM_OF_PIXEL_Y", _input.Pp.NumOfPixelY),
+            CsvLine("PITCH", _input.Pp.Pitch),
+            CsvLine("CHESS", _input.Pp.Chess),
+            CsvLine("SPLITED_BEAM_COUNT", _input.Pp.SplitedBeamCount),
+            CsvLine("MASKING_HOLE_NUMBER", _input.Pp.MaskingHoleNumber),
+        };
+
+        for (var hole = 1; hole <= 5; hole++)
+        {
+            var item = _input.Pp.MaskingHoles.FirstOrDefault(x => x.HoleNumber == hole) ?? new MaskingHoleDefinition { HoleNumber = hole };
+            lines.Add(CsvLine($"MASKING_HOLE{hole}_X", item.X));
+            lines.Add(CsvLine($"MASKING_HOLE{hole}_Y", item.Y));
+        }
+
+        for (var hole = 1; hole <= 5; hole++)
+        {
+            var item = _input.Pp.MaskingHoles.FirstOrDefault(x => x.HoleNumber == hole) ?? new MaskingHoleDefinition { HoleNumber = hole };
+            lines.Add(CsvLine($"MASKING_HOLE{hole}_SIZE_X", item.SizeX));
+            lines.Add(CsvLine($"MASKING_HOLE{hole}_SIZE_Y", item.SizeY));
+        }
+
+        lines.Add(CsvLine("CELL_UP_ROUND_RADIUS", _input.Pp.CellEdgeMask.UpRoundRadius));
+        lines.Add(CsvLine("CELL_DOWN_ROUND_RADIUS", _input.Pp.CellEdgeMask.DownRoundRadius));
+        lines.Add(CsvLine("CELL_UP_LEFT_ROUND_X", _input.Pp.CellEdgeMask.UpLeftRoundX));
+        lines.Add(CsvLine("CELL_UP_LEFT_ROUND_Y", _input.Pp.CellEdgeMask.UpLeftRoundY));
+        lines.Add(CsvLine("CELL_UP_RIGHT_ROUND_X", _input.Pp.CellEdgeMask.UpRightRoundX));
+        lines.Add(CsvLine("CELL_UP_RIGHT_ROUND_Y", _input.Pp.CellEdgeMask.UpRightRoundY));
+        lines.Add(CsvLine("CELL_DOWN_LEFT_ROUND_X", _input.Pp.CellEdgeMask.DownLeftRoundX));
+        lines.Add(CsvLine("CELL_DOWN_LEFT_ROUND_Y", _input.Pp.CellEdgeMask.DownLeftRoundY));
+        lines.Add(CsvLine("CELL_DOWN_RIGHT_ROUND_X", _input.Pp.CellEdgeMask.DownRightRoundX));
+        lines.Add(CsvLine("CELL_DOWN_RIGHT_ROUND_Y", _input.Pp.CellEdgeMask.DownRightRoundY));
+        lines.Add(CsvLine("MAX_PROCESS_COUNT", _input.Pp.MaxProcessCount));
+        lines.Add(CsvLine("ZERO_DEFENCE_REVIEW_POINT", _input.Pp.ZeroDefenceReviewPoint));
+
+        for (var cell = 1; cell <= 50; cell++)
+        {
+            var item = _input.Pp.Cells.FirstOrDefault(x => x.CellNumber == cell);
+            lines.Add(CsvLine($"CELL{cell}_ALIGN_TO_1ST_PIXEL_X", item?.AlignToFirstPixelX ?? 0));
+            lines.Add(CsvLine($"CELL{cell}_ALIGN_TO_1ST_PIXEL_Y", item?.AlignToFirstPixelY ?? 0));
+            lines.Add(CsvLine($"CELL{cell}_ROTATION", item?.RotationDeg ?? 0));
+        }
+
+        for (var head = 1; head <= 8; head++)
+        {
+            var item = _input.Pp.Heads.FirstOrDefault(x => x.HeadNumber == head) ?? new HeadProcessDefinition { HeadNumber = head };
+            lines.Add(CsvLine($"HEAD{head}_SHOT_TIME_DELAY", item.ShotTimeDelay));
+            lines.Add(CsvLine($"HEAD{head}_SCANNER_RAMP_RATE", item.ScannerRampRate));
+            lines.Add(CsvLine($"HEAD{head}_SCANNER_JUMP_SPEED", item.ScannerJumpSpeed));
+            lines.Add(CsvLine($"HEAD{head}_SCANNER_JUMP_DELAY", item.ScannerJumpDelay));
+            lines.Add(CsvLine($"HEAD{head}_DOE_Z_POSITION", item.DoeZPosition));
+        }
+
+        lines.AddRange(new[]
+        {
             CsvLine(nameof(CoordinateInput.BoardSizeX), _input.BoardSizeX),
             CsvLine(nameof(CoordinateInput.BoardSizeY), _input.BoardSizeY),
             CsvLine(nameof(CoordinateInput.AlignMarginX), _input.AlignMarginX),
@@ -2324,7 +2529,7 @@ public partial class MainWindow : Window
             CsvLine(nameof(CoordinateInput.DoeBeamPitchY), _input.DoeBeamPitchY),
             CsvLine(nameof(CoordinateInput.ProcessOffsetGlobalX), _input.ProcessOffsetGlobalX),
             CsvLine(nameof(CoordinateInput.ProcessOffsetGlobalY), _input.ProcessOffsetGlobalY)
-        };
+        });
 
         File.WriteAllLines(path, lines);
     }
@@ -2347,6 +2552,44 @@ public partial class MainWindow : Window
 
         switch (key)
         {
+            case "ONLINE_PPID_NAME": _input.Pp.OnlinePpidName = value; break;
+            case "STAGE_SPEED": _input.Pp.StageSpeed = Math.Max(1, integer); break;
+            case "LASER_POWER": _input.Pp.LaserPower = Math.Max(0, integer); break;
+            case "LASER_FREQUENCY": _input.Pp.LaserFrequency = Math.Max(1, integer); break;
+            case "SHOT_COUNT": _input.Pp.ShotCount = Math.Max(1, integer); break;
+            case "MAX_CELL_NUMBER": _input.Pp.MaxCellNumber = Math.Clamp(integer, 1, 50); break;
+            case "PIXEL_SIZE": _input.Pp.PixelSize = Math.Max(1, integer); break;
+            case "NUM_OF_PIXEL_X":
+                _input.Pp.NumOfPixelX = Math.Max(1, integer);
+                _input.CellColumns = _input.Pp.NumOfPixelX;
+                break;
+            case "NUM_OF_PIXEL_Y":
+                _input.Pp.NumOfPixelY = Math.Max(1, integer);
+                _input.CellRows = _input.Pp.NumOfPixelY;
+                break;
+            case "PITCH":
+                _input.Pp.Pitch = Math.Max(1, integer);
+                _input.CellPitchX = _input.Pp.Pitch;
+                _input.CellPitchY = _input.Pp.Pitch;
+                break;
+            case "CHESS": _input.Pp.Chess = Math.Max(1, integer); break;
+            case "SPLITED_BEAM_COUNT":
+                _input.Pp.SplitedBeamCount = Math.Max(1, integer);
+                _input.ReviewBasisDoeBeam = Clamp(_input.ReviewBasisDoeBeam, 1, Math.Min(16, _input.Pp.SplitedBeamCount));
+                break;
+            case "MASKING_HOLE_NUMBER": _input.Pp.MaskingHoleNumber = Clamp(integer, 0, 5); break;
+            case "CELL_UP_ROUND_RADIUS": _input.Pp.CellEdgeMask.UpRoundRadius = Math.Max(0, integer); break;
+            case "CELL_DOWN_ROUND_RADIUS": _input.Pp.CellEdgeMask.DownRoundRadius = Math.Max(0, integer); break;
+            case "CELL_UP_LEFT_ROUND_X": _input.Pp.CellEdgeMask.UpLeftRoundX = integer; break;
+            case "CELL_UP_LEFT_ROUND_Y": _input.Pp.CellEdgeMask.UpLeftRoundY = integer; break;
+            case "CELL_UP_RIGHT_ROUND_X": _input.Pp.CellEdgeMask.UpRightRoundX = integer; break;
+            case "CELL_UP_RIGHT_ROUND_Y": _input.Pp.CellEdgeMask.UpRightRoundY = integer; break;
+            case "CELL_DOWN_LEFT_ROUND_X": _input.Pp.CellEdgeMask.DownLeftRoundX = integer; break;
+            case "CELL_DOWN_LEFT_ROUND_Y": _input.Pp.CellEdgeMask.DownLeftRoundY = integer; break;
+            case "CELL_DOWN_RIGHT_ROUND_X": _input.Pp.CellEdgeMask.DownRightRoundX = integer; break;
+            case "CELL_DOWN_RIGHT_ROUND_Y": _input.Pp.CellEdgeMask.DownRightRoundY = integer; break;
+            case "MAX_PROCESS_COUNT": _input.Pp.MaxProcessCount = Math.Max(1, integer); break;
+            case "ZERO_DEFENCE_REVIEW_POINT": _input.Pp.ZeroDefenceReviewPoint = Math.Max(0, integer); break;
             case nameof(CoordinateInput.BoardSizeX): _input.BoardSizeX = number; break;
             case nameof(CoordinateInput.BoardSizeY): _input.BoardSizeY = number; break;
             case nameof(CoordinateInput.AlignMarginX): _input.AlignMarginX = number; break;
@@ -2395,6 +2638,148 @@ public partial class MainWindow : Window
             case nameof(CoordinateInput.ProcessOffsetGlobalX): _input.ProcessOffsetGlobalX = number; break;
             case nameof(CoordinateInput.ProcessOffsetGlobalY): _input.ProcessOffsetGlobalY = number; break;
         }
+
+        if (TryApplyCellPpValue(key, number) || TryApplyMaskingHolePpValue(key, integer) || TryApplyHeadPpValue(key, integer))
+        {
+            return;
+        }
+    }
+
+    private bool TryApplyCellPpValue(string key, double value)
+    {
+        const string prefix = "CELL";
+        if (!key.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var underscore = key.IndexOf('_');
+        if (underscore <= prefix.Length ||
+            !int.TryParse(key[prefix.Length..underscore], NumberStyles.Integer, CultureInfo.InvariantCulture, out var cellNo) ||
+            cellNo is < 1 or > 50)
+        {
+            return false;
+        }
+
+        var suffix = key[underscore..].ToUpperInvariant();
+        if (suffix is not "_ALIGN_TO_1ST_PIXEL_X" and not "_ALIGN_TO_1ST_PIXEL_Y" and not "_ROTATION")
+        {
+            return false;
+        }
+
+        var cell = EnsureCellDefinition(cellNo);
+        switch (suffix)
+        {
+            case "_ALIGN_TO_1ST_PIXEL_X": cell.AlignToFirstPixelX = value; break;
+            case "_ALIGN_TO_1ST_PIXEL_Y": cell.AlignToFirstPixelY = value; break;
+            case "_ROTATION": cell.RotationDeg = value; break;
+        }
+
+        return true;
+    }
+
+    private bool TryApplyMaskingHolePpValue(string key, int value)
+    {
+        const string prefix = "MASKING_HOLE";
+        if (!key.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var suffixStart = key.IndexOf('_', prefix.Length);
+        if (suffixStart <= prefix.Length ||
+            !int.TryParse(key[prefix.Length..suffixStart], NumberStyles.Integer, CultureInfo.InvariantCulture, out var holeNo) ||
+            holeNo is < 1 or > 5)
+        {
+            return false;
+        }
+
+        var suffix = key[suffixStart..].ToUpperInvariant();
+        if (suffix is not "_X" and not "_Y" and not "_SIZE_X" and not "_SIZE_Y")
+        {
+            return false;
+        }
+
+        var holes = _input.Pp.MaskingHoles.ToDictionary(hole => hole.HoleNumber);
+        if (!holes.TryGetValue(holeNo, out var hole))
+        {
+            hole = new MaskingHoleDefinition { HoleNumber = holeNo };
+            holes[holeNo] = hole;
+            _input.Pp.MaskingHoles = holes.Values.OrderBy(x => x.HoleNumber).ToArray();
+        }
+
+        switch (suffix)
+        {
+            case "_X": hole.X = value; break;
+            case "_Y": hole.Y = value; break;
+            case "_SIZE_X": hole.SizeX = Math.Max(0, value); break;
+            case "_SIZE_Y": hole.SizeY = Math.Max(0, value); break;
+        }
+
+        return true;
+    }
+
+    private bool TryApplyHeadPpValue(string key, int value)
+    {
+        const string prefix = "HEAD";
+        if (!key.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var underscore = key.IndexOf('_');
+        if (underscore <= prefix.Length ||
+            !int.TryParse(key[prefix.Length..underscore], NumberStyles.Integer, CultureInfo.InvariantCulture, out var headNo) ||
+            headNo is < 1 or > 8)
+        {
+            return false;
+        }
+
+        var suffix = key[underscore..].ToUpperInvariant();
+        if (suffix is not "_SHOT_TIME_DELAY" and not "_SCANNER_RAMP_RATE" and not "_SCANNER_JUMP_SPEED" and not "_SCANNER_JUMP_DELAY" and not "_DOE_Z_POSITION")
+        {
+            return false;
+        }
+
+        var head = EnsureHeadDefinition(headNo);
+        switch (suffix)
+        {
+            case "_SHOT_TIME_DELAY": head.ShotTimeDelay = Math.Max(0, value); break;
+            case "_SCANNER_RAMP_RATE": head.ScannerRampRate = Math.Max(1, value); break;
+            case "_SCANNER_JUMP_SPEED": head.ScannerJumpSpeed = Math.Max(1, value); break;
+            case "_SCANNER_JUMP_DELAY": head.ScannerJumpDelay = Math.Max(0, value); break;
+            case "_DOE_Z_POSITION": head.DoeZPosition = value; break;
+        }
+
+        return true;
+    }
+
+    private CellRecipeDefinition EnsureCellDefinition(int cellNo)
+    {
+        var current = _input.Pp.Cells.FirstOrDefault(cell => cell.CellNumber == cellNo);
+        if (current is not null)
+        {
+            return current;
+        }
+
+        current = new CellRecipeDefinition { CellNumber = cellNo };
+        _input.Pp.Cells.Add(current);
+        _input.Pp.Cells = _input.Pp.Cells.OrderBy(cell => cell.CellNumber).ToList();
+        return current;
+    }
+
+    private HeadProcessDefinition EnsureHeadDefinition(int headNo)
+    {
+        var current = _input.Pp.Heads.FirstOrDefault(head => head.HeadNumber == headNo);
+        if (current is not null)
+        {
+            return current;
+        }
+
+        current = new HeadProcessDefinition { HeadNumber = headNo };
+        _input.Pp.Heads.Add(current);
+        _input.Pp.Heads = _input.Pp.Heads.OrderBy(head => head.HeadNumber).ToList();
+        return current;
     }
 
     private static double ReadDouble(TextBox textBox, double fallback)

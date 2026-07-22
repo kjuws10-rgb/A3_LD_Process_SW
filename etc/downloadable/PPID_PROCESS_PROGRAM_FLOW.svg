@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1680" height="980" viewBox="0 0 1680 980">
+  <defs>
+    <style>
+      .bg{fill:#0b1120}
+      .card{fill:#111827;stroke:#334155;stroke-width:2;rx:12}
+      .accent{fill:#082f49;stroke:#22d3ee;stroke-width:2;rx:10}
+      .recipe{fill:#1e293b;stroke:#f59e0b;stroke-width:2;rx:10}
+      .plan{fill:#172554;stroke:#60a5fa;stroke-width:2;rx:10}
+      .script{fill:#14532d;stroke:#34d399;stroke-width:2;rx:10}
+      .title{font-family:Segoe UI,Malgun Gothic,Arial,sans-serif;font-size:32px;font-weight:700;fill:#f8fafc}
+      .h{font-family:Segoe UI,Malgun Gothic,Arial,sans-serif;font-size:21px;font-weight:700;fill:#f8fafc}
+      .t{font-family:Segoe UI,Malgun Gothic,Arial,sans-serif;font-size:16px;fill:#cbd5e1}
+      .s{font-family:Segoe UI,Malgun Gothic,Arial,sans-serif;font-size:14px;fill:#94a3b8}
+      .code{font-family:Consolas,monospace;font-size:14px;fill:#e2e8f0}
+      .arrow{stroke:#38bdf8;stroke-width:3;fill:none;marker-end:url(#arrow)}
+    </style>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#38bdf8"/>
+    </marker>
+  </defs>
+  <rect class="bg" width="1680" height="980"/>
+  <text class="title" x="54" y="62">PPID PP Recipe to MOF Coordinate Generation</text>
+  <text class="t" x="56" y="94">CellBlock grid is now a legacy fallback. CELLn_ALIGN_TO_1ST_PIXEL_X/Y defines each Cell origin from AK1.</text>
+
+  <rect class="recipe" x="54" y="140" width="460" height="270"/>
+  <text class="h" x="82" y="180">1. PPID / PP source</text>
+  <text class="code" x="82" y="218">ONLINE_PPID_NAME = A3_LD_PP_SAMPLE</text>
+  <text class="code" x="82" y="246">STAGE_SPEED, LASER_POWER</text>
+  <text class="code" x="82" y="274">LASER_FREQUENCY, SHOT_COUNT</text>
+  <text class="code" x="82" y="302">MAX_CELL_NUMBER</text>
+  <text class="code" x="82" y="330">NUM_OF_PIXEL_X/Y, PITCH, CHESS</text>
+  <text class="code" x="82" y="358">MASKING_HOLE*, CELL ROUND*</text>
+  <text class="s" x="82" y="386">Excel-editable CSV in Key,Value format.</text>
+
+  <rect class="recipe" x="54" y="470" width="460" height="270"/>
+  <text class="h" x="82" y="510">2. Cell position definition</text>
+  <text class="code" x="82" y="548">CELL1_ALIGN_TO_1ST_PIXEL_X/Y</text>
+  <text class="code" x="82" y="576">CELL2_ALIGN_TO_1ST_PIXEL_X/Y</text>
+  <text class="code" x="82" y="604">...</text>
+  <text class="code" x="82" y="632">CELL50_ALIGN_TO_1ST_PIXEL_X/Y</text>
+  <text class="code" x="82" y="660">CELLn_ROTATION</text>
+  <text class="s" x="82" y="692">Only Cell 1 through MAX_CELL_NUMBER are used.</text>
+
+  <rect class="accent" x="620" y="140" width="470" height="270"/>
+  <text class="h" x="650" y="180">3. Pixel matrix inside each Cell</text>
+  <text class="code" x="650" y="218">Columns = NUM_OF_PIXEL_X</text>
+  <text class="code" x="650" y="246">Rows = NUM_OF_PIXEL_Y</text>
+  <text class="code" x="650" y="274">PixelPitch = PITCH</text>
+  <text class="code" x="650" y="318">LocalX = CellFirstX + Col * PITCH</text>
+  <text class="code" x="650" y="346">LocalY = CellFirstY + Row * PITCH</text>
+  <text class="s" x="650" y="382">Cell rotation is applied before board theta alignment.</text>
+
+  <rect class="accent" x="620" y="470" width="470" height="270"/>
+  <text class="h" x="650" y="510">4. Review AK1 to Stage coordinate</text>
+  <text class="code" x="650" y="548">AK1 = ReviewCenter + PixelDelta * Scale</text>
+  <text class="code" x="650" y="582">DesignStage = AK1 + R(theta) * Local</text>
+  <text class="code" x="650" y="616">ProcessStage = DesignStage + ReviewOffset</text>
+  <text class="s" x="650" y="654">Review correction offset is separate from fixed physical offset.</text>
+  <text class="s" x="650" y="682">Design, Process, and Review matrix views stay separated.</text>
+
+  <rect class="plan" x="1192" y="140" width="430" height="270"/>
+  <text class="h" x="1222" y="180">5. Scanner / DOE transform</text>
+  <text class="code" x="1222" y="218">ScannerCenter = H1 + HeadPitch</text>
+  <text class="code" x="1222" y="246">CameraToScannerOffset = fixed geometry</text>
+  <text class="code" x="1222" y="282">ScannerRelative = ProcessStage - ScannerCenter</text>
+  <text class="code" x="1222" y="316">Odd : Gx=-X, Gy=+Y</text>
+  <text class="code" x="1222" y="344">Even: Gx=+X, Gy=-Y</text>
+  <text class="s" x="1222" y="382">DOE 16 matrix selects the review basis beam.</text>
+
+  <rect class="script" x="1192" y="470" width="430" height="270"/>
+  <text class="h" x="1222" y="510">6. ST_PROCESS_PLAN / AeroScript</text>
+  <text class="code" x="1222" y="548">RecipeId = ONLINE_PPID_NAME</text>
+  <text class="code" x="1222" y="576">Target list = selected in-field cells</text>
+  <text class="code" x="1222" y="604">Order = AK1 to AK2 reverse MOF order</text>
+  <text class="code" x="1222" y="632">Script header records PP values</text>
+  <text class="s" x="1222" y="670">Simulation: software stage counter</text>
+  <text class="s" x="1222" y="698">Equipment: external Stage AUX feedback</text>
+
+  <path class="arrow" d="M514 275 L620 275"/>
+  <path class="arrow" d="M514 605 L620 605"/>
+  <path class="arrow" d="M1090 275 L1192 275"/>
+  <path class="arrow" d="M1090 605 L1192 605"/>
+  <path class="arrow" d="M854 410 L854 470"/>
+  <path class="arrow" d="M1408 410 L1408 470"/>
+
+  <rect class="card" x="54" y="800" width="1568" height="118"/>
+  <text class="h" x="82" y="838">Summary</text>
+  <text class="t" x="82" y="872">PPID tells the program what to process, under which process conditions, and where each Cell starts from AK1.</text>
+  <text class="t" x="82" y="902">The WPF reads PPID CSV, creates Cell pixel coordinates, applies review AK1 alignment, maps them to scanner Gx/Gy, and records PP values in the generated script.</text>
+</svg>

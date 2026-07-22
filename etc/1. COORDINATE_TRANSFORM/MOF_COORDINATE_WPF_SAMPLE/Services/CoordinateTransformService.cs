@@ -37,55 +37,51 @@ public sealed class CoordinateTransformService
         var theta = input.ThetaAlignDeg * Math.PI / 180.0;
         var cos = Math.Cos(theta);
         var sin = Math.Sin(theta);
-        var blockColumns = Math.Max(1, input.CellBlockColumns);
-        var blockRows = Math.Max(1, input.CellBlockRows);
-        var blockPitchX = EffectiveBlockPitchX(input);
-        var blockPitchY = EffectiveBlockPitchY(input);
-        var commands = new List<CellCommand>(input.CellColumns * input.CellRows * blockColumns * blockRows);
+        var cellDefinitions = ResolveCellDefinitions(input);
+        var commands = new List<CellCommand>(input.CellColumns * input.CellRows * cellDefinitions.Count);
 
-        for (var blockRow = 0; blockRow < blockRows; blockRow++)
+        foreach (var cell in cellDefinitions)
         {
-            for (var blockColumn = 0; blockColumn < blockColumns; blockColumn++)
+            var cellTheta = cell.RotationDeg * Math.PI / 180.0;
+            var cellCos = Math.Cos(cellTheta);
+            var cellSin = Math.Sin(cellTheta);
+
+            for (var row = 0; row < input.CellRows; row++)
             {
-                var cellBlock = blockRow * blockColumns + blockColumn + 1;
-                var blockOriginX = blockColumn * blockPitchX;
-                var blockOriginY = blockRow * blockPitchY;
-
-                for (var row = 0; row < input.CellRows; row++)
+                for (var column = 0; column < input.CellColumns; column++)
                 {
-                    for (var column = 0; column < input.CellColumns; column++)
-                    {
-                        var localX = blockOriginX + input.CellFirstX + column * input.CellPitchX + input.PatternOffsetX;
-                        var localY = blockOriginY + input.CellFirstY + row * input.CellPitchY + input.PatternOffsetY;
+                    var pixelX = column * input.CellPitchX + input.PatternOffsetX;
+                    var pixelY = row * input.CellPitchY + input.PatternOffsetY;
+                    var localX = cell.AlignToFirstPixelX + cellCos * pixelX - cellSin * pixelY;
+                    var localY = cell.AlignToFirstPixelY + cellSin * pixelX + cellCos * pixelY;
 
-                        // Design stage coordinate is the ideal target from AK1 and theta only.
-                        var designStageX = ak1GlobalX + cos * localX - sin * localY;
-                        var designStageY = ak1GlobalY + sin * localX + cos * localY;
+                    // Design stage coordinate is the ideal target from AK1 and theta only.
+                    var designStageX = ak1GlobalX + cos * localX - sin * localY;
+                    var designStageY = ak1GlobalY + sin * localX + cos * localY;
 
-                        // Process stage coordinate includes the correction offset from review feedback.
-                        var processStageX = designStageX + input.ProcessOffsetGlobalX;
-                        var processStageY = designStageY + input.ProcessOffsetGlobalY;
+                    // Process stage coordinate includes the correction offset from review feedback.
+                    var processStageX = designStageX + input.ProcessOffsetGlobalX;
+                    var processStageY = designStageY + input.ProcessOffsetGlobalY;
 
-                        var command = CreateCommand(
-                            input,
-                            column,
-                            row,
-                            cellBlock,
-                            blockColumn,
-                            blockRow,
-                            localX,
-                            localY,
-                            designStageX,
-                            designStageY,
-                            processStageX,
-                            processStageY,
-                            scanners,
-                            selectedReviewScanner,
-                            selectedDoeBeam,
-                            reviewReference);
+                    var command = CreateCommand(
+                        input,
+                        column,
+                        row,
+                        cell.CellNumber,
+                        0,
+                        0,
+                        localX,
+                        localY,
+                        designStageX,
+                        designStageY,
+                        processStageX,
+                        processStageY,
+                        scanners,
+                        selectedReviewScanner,
+                        selectedDoeBeam,
+                        reviewReference);
 
-                        commands.Add(command);
-                    }
+                    commands.Add(command);
                 }
             }
         }
@@ -398,6 +394,46 @@ public sealed class CoordinateTransformService
     private static int Clamp(int value, int min, int max) => Math.Min(max, Math.Max(min, value));
 
     private static double Round(double value) => Math.Round(value, 6);
+
+    private static IReadOnlyList<CellRecipeDefinition> ResolveCellDefinitions(CoordinateInput input)
+    {
+        var maxCellNumber = Math.Max(1, input.Pp.MaxCellNumber);
+        var configuredCells = input.Pp.Cells
+            .Where(cell => cell.CellNumber > 0 && cell.CellNumber <= maxCellNumber)
+            .GroupBy(cell => cell.CellNumber)
+            .Select(group => group.First())
+            .OrderBy(cell => cell.CellNumber)
+            .ToList();
+
+        if (configuredCells.Count > 0)
+        {
+            return configuredCells;
+        }
+
+        var blockColumns = Math.Max(1, input.CellBlockColumns);
+        var blockRows = Math.Max(1, input.CellBlockRows);
+        var blockPitchX = EffectiveBlockPitchX(input);
+        var blockPitchY = EffectiveBlockPitchY(input);
+        var cells = new List<CellRecipeDefinition>(blockColumns * blockRows);
+
+        for (var blockRow = 0; blockRow < blockRows; blockRow++)
+        {
+            for (var blockColumn = 0; blockColumn < blockColumns; blockColumn++)
+            {
+                cells.Add(new CellRecipeDefinition
+                {
+                    CellNumber = blockRow * blockColumns + blockColumn + 1,
+                    AlignToFirstPixelX = blockColumn * blockPitchX + input.CellFirstX,
+                    AlignToFirstPixelY = blockRow * blockPitchY + input.CellFirstY,
+                    RotationDeg = 0
+                });
+            }
+        }
+
+        input.Pp.MaxCellNumber = cells.Count;
+        input.Pp.Cells = cells;
+        return cells;
+    }
 
     private static double EffectiveBlockPitchX(CoordinateInput input)
     {

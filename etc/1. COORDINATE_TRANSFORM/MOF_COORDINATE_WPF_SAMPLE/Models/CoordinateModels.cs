@@ -7,6 +7,8 @@ namespace MofCoordinateDemo.Models;
 /// </summary>
 public sealed class CoordinateInput
 {
+    public PpidProcessProgram Pp { get; set; } = PpidProcessProgram.CreateDefault();
+
     public double BoardSizeX { get; set; } = 1500;
     public double BoardSizeY { get; set; } = 925;
     public double AlignMarginX { get; set; } = 55;
@@ -66,6 +68,94 @@ public sealed class CoordinateInput
 
     public double ProcessOffsetGlobalX { get; set; } = 0;
     public double ProcessOffsetGlobalY { get; set; } = 0;
+}
+
+public sealed class PpidProcessProgram
+{
+    public string OnlinePpidName { get; set; } = "A3_LD_DEFAULT";
+    public int StageSpeed { get; set; } = 20;
+    public int LaserPower { get; set; } = 50;
+    public int LaserFrequency { get; set; } = 100000;
+    public int ShotCount { get; set; } = 1;
+    public int MaxCellNumber { get; set; } = 2;
+    public int PixelSize { get; set; } = 1;
+    public int NumOfPixelX { get; set; } = 3;
+    public int NumOfPixelY { get; set; } = 4;
+    public int Pitch { get; set; } = 20;
+    public int Chess { get; set; } = 1;
+    public int SplitedBeamCount { get; set; } = 16;
+    public int MaskingHoleNumber { get; set; } = 1;
+    public IReadOnlyList<MaskingHoleDefinition> MaskingHoles { get; set; } = Array.Empty<MaskingHoleDefinition>();
+    public CellEdgeMaskDefinition CellEdgeMask { get; set; } = new();
+    public int MaxProcessCount { get; set; } = 1;
+    public int ZeroDefenceReviewPoint { get; set; } = 0;
+    public List<CellRecipeDefinition> Cells { get; set; } = new();
+    public List<HeadProcessDefinition> Heads { get; set; } = new();
+
+    public static PpidProcessProgram CreateDefault()
+    {
+        var pp = new PpidProcessProgram();
+        pp.Cells.Add(new CellRecipeDefinition { CellNumber = 1, AlignToFirstPixelX = 10, AlignToFirstPixelY = 20, RotationDeg = 0 });
+        pp.Cells.Add(new CellRecipeDefinition { CellNumber = 2, AlignToFirstPixelX = 10, AlignToFirstPixelY = 160, RotationDeg = 0 });
+        for (var head = 1; head <= 8; head++)
+        {
+            pp.Heads.Add(new HeadProcessDefinition
+            {
+                HeadNumber = head,
+                ShotTimeDelay = 1,
+                ScannerRampRate = 3000000,
+                ScannerJumpSpeed = 1000,
+                ScannerJumpDelay = 1,
+                DoeZPosition = 0
+            });
+        }
+
+        pp.MaskingHoles = Enumerable.Range(1, 5)
+            .Select(index => new MaskingHoleDefinition { HoleNumber = index })
+            .ToArray();
+        return pp;
+    }
+}
+
+public sealed class CellRecipeDefinition
+{
+    public int CellNumber { get; init; }
+    public double AlignToFirstPixelX { get; set; }
+    public double AlignToFirstPixelY { get; set; }
+    public double RotationDeg { get; set; }
+}
+
+public sealed class MaskingHoleDefinition
+{
+    public int HoleNumber { get; init; }
+    public int X { get; set; }
+    public int Y { get; set; }
+    public int SizeX { get; set; }
+    public int SizeY { get; set; }
+}
+
+public sealed class CellEdgeMaskDefinition
+{
+    public int UpRoundRadius { get; set; }
+    public int DownRoundRadius { get; set; }
+    public int UpLeftRoundX { get; set; }
+    public int UpLeftRoundY { get; set; }
+    public int UpRightRoundX { get; set; }
+    public int UpRightRoundY { get; set; }
+    public int DownLeftRoundX { get; set; }
+    public int DownLeftRoundY { get; set; }
+    public int DownRightRoundX { get; set; }
+    public int DownRightRoundY { get; set; }
+}
+
+public sealed class HeadProcessDefinition
+{
+    public int HeadNumber { get; init; }
+    public int ShotTimeDelay { get; set; }
+    public int ScannerRampRate { get; set; }
+    public int ScannerJumpSpeed { get; set; }
+    public int ScannerJumpDelay { get; set; }
+    public int DoeZPosition { get; set; }
 }
 
 public sealed class ScannerModel

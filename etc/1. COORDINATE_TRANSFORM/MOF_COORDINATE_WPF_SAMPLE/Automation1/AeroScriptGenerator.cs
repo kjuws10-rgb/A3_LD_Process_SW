@@ -297,6 +297,9 @@ public sealed partial class AeroScriptGenerator
         source.AppendLine($"// Generator revision: {GeneratorRevision}");
         source.AppendLine($"// Generated UTC: {DateTimeOffset.UtcNow:O}");
         source.AppendLine($"// Generation mode: {options.Mode}");
+        source.AppendLine($"// ONLINE_PPID_NAME: {input.Pp.OnlinePpidName}");
+        source.AppendLine($"// PP recipe: StageSpeed={input.Pp.StageSpeed}, LaserPower={input.Pp.LaserPower}, LaserFrequency={input.Pp.LaserFrequency}, ShotCount={input.Pp.ShotCount}");
+        source.AppendLine($"// PP geometry: MaxCellNumber={input.Pp.MaxCellNumber}, NumOfPixel=({input.Pp.NumOfPixelX}, {input.Pp.NumOfPixelY}), Pitch={input.Pp.Pitch}, Chess={input.Pp.Chess}, DOE beams={input.Pp.SplitedBeamCount}");
         source.AppendLine($"// Review camera center: ({Format(input.ReviewCenterGlobalX)}, {Format(input.ReviewCenterGlobalY)})");
         source.AppendLine($"// Dynamic process offset: ({Format(input.ProcessOffsetGlobalX)}, {Format(input.ProcessOffsetGlobalY)})");
         source.AppendLine($"// Target count: {commands.Count}");

@@ -30,6 +30,22 @@
                      Foreground="#94A3B8"
                      Margin="0,3,0,12"/>
 
+          <TextBlock Text="PPID / PP Recipe" Style="{StaticResource SectionTitleStyle}"/>
+          <UniformGrid Columns="2" Margin="0,4,0,10">
+            <StackPanel Margin="0,0,8,8"><TextBlock Text="ONLINE_PPID_NAME"/><TextBox x:Name="OnlinePpidNameBox"/></StackPanel>
+            <StackPanel Margin="0,0,0,8"><TextBlock Text="MAX_CELL_NUMBER"/><TextBox x:Name="MaxCellNumberBox"/></StackPanel>
+            <StackPanel Margin="0,0,8,8"><TextBlock Text="STAGE_SPEED"/><TextBox x:Name="PpStageSpeedBox"/></StackPanel>
+            <StackPanel Margin="0,0,0,8"><TextBlock Text="LASER_POWER"/><TextBox x:Name="LaserPowerBox"/></StackPanel>
+            <StackPanel Margin="0,0,8,8"><TextBlock Text="LASER_FREQUENCY"/><TextBox x:Name="LaserFrequencyBox"/></StackPanel>
+            <StackPanel Margin="0,0,0,8"><TextBlock Text="SHOT_COUNT"/><TextBox x:Name="ShotCountBox"/></StackPanel>
+            <StackPanel Margin="0,0,8,8"><TextBlock Text="NUM_OF_PIXEL_X"/><TextBox x:Name="NumOfPixelXBox"/></StackPanel>
+            <StackPanel Margin="0,0,0,8"><TextBlock Text="NUM_OF_PIXEL_Y"/><TextBox x:Name="NumOfPixelYBox"/></StackPanel>
+            <StackPanel Margin="0,0,8,8"><TextBlock Text="PITCH"/><TextBox x:Name="PpPitchBox"/></StackPanel>
+            <StackPanel Margin="0,0,0,8"><TextBlock Text="CHESS"/><TextBox x:Name="ChessBox"/></StackPanel>
+            <StackPanel Margin="0,0,8,8"><TextBlock Text="SPLITED_BEAM_COUNT"/><TextBox x:Name="SplitedBeamCountBox"/></StackPanel>
+            <StackPanel Margin="0,0,0,8"><TextBlock Text="ZERO_DEFENCE_REVIEW_POINT"/><TextBox x:Name="ZeroDefenceReviewPointBox"/></StackPanel>
+          </UniformGrid>
+
           <TextBlock Text="Board / Align" Style="{StaticResource SectionTitleStyle}"/>
           <UniformGrid Columns="2" Margin="0,4,0,10">
             <StackPanel Margin="0,0,8,8"><TextBlock Text="Board X"/><TextBox x:Name="BoardXBox"/></StackPanel>
@@ -53,20 +69,20 @@
             <StackPanel Margin="0,0,8,8"><TextBlock Text="Theta deg"/><TextBox x:Name="ThetaBox"/></StackPanel>
           </UniformGrid>
 
-          <TextBlock Text="Cell / Pattern" Style="{StaticResource SectionTitleStyle}"/>
+          <TextBlock Text="Cell / Pixel Pattern" Style="{StaticResource SectionTitleStyle}"/>
           <UniformGrid Columns="2" Margin="0,4,0,10">
-            <StackPanel Margin="0,0,8,8"><TextBlock Text="First X"/><TextBox x:Name="CellFirstXBox"/></StackPanel>
-            <StackPanel Margin="0,0,0,8"><TextBlock Text="First Y"/><TextBox x:Name="CellFirstYBox"/></StackPanel>
-            <StackPanel Margin="0,0,8,8"><TextBlock Text="Pitch X"/><TextBox x:Name="CellPitchXBox"/></StackPanel>
-            <StackPanel Margin="0,0,0,8"><TextBlock Text="Pitch Y"/><TextBox x:Name="CellPitchYBox"/></StackPanel>
+            <StackPanel Margin="0,0,8,8"><TextBlock Text="Cell1 First X"/><TextBox x:Name="CellFirstXBox"/></StackPanel>
+            <StackPanel Margin="0,0,0,8"><TextBlock Text="Cell1 First Y"/><TextBox x:Name="CellFirstYBox"/></StackPanel>
+            <StackPanel Margin="0,0,8,8"><TextBlock Text="Pixel Pitch X"/><TextBox x:Name="CellPitchXBox"/></StackPanel>
+            <StackPanel Margin="0,0,0,8"><TextBlock Text="Pixel Pitch Y"/><TextBox x:Name="CellPitchYBox"/></StackPanel>
             <StackPanel Margin="0,0,8,8"><TextBlock Text="Pattern Off X"/><TextBox x:Name="PatternOffsetXBox"/></StackPanel>
             <StackPanel Margin="0,0,0,8"><TextBlock Text="Pattern Off Y"/><TextBox x:Name="PatternOffsetYBox"/></StackPanel>
             <StackPanel Margin="0,0,8,8"><TextBlock Text="Columns"/><TextBox x:Name="CellColumnsBox"/></StackPanel>
             <StackPanel Margin="0,0,0,8"><TextBlock Text="Rows"/><TextBox x:Name="CellRowsBox"/></StackPanel>
-            <StackPanel Margin="0,0,8,8"><TextBlock Text="Cell Block Cols"/><TextBox x:Name="CellBlockColumnsBox"/></StackPanel>
-            <StackPanel Margin="0,0,0,8"><TextBlock Text="Cell Block Rows"/><TextBox x:Name="CellBlockRowsBox"/></StackPanel>
-            <StackPanel Margin="0,0,8,8"><TextBlock Text="Block Pitch X"/><TextBox x:Name="CellBlockPitchXBox"/></StackPanel>
-            <StackPanel Margin="0,0,0,8"><TextBlock Text="Block Pitch Y"/><TextBox x:Name="CellBlockPitchYBox"/></StackPanel>
+            <StackPanel Margin="0,0,8,8"><TextBlock Text="Legacy Grid Cols"/><TextBox x:Name="CellBlockColumnsBox"/></StackPanel>
+            <StackPanel Margin="0,0,0,8"><TextBlock Text="Legacy Grid Rows"/><TextBox x:Name="CellBlockRowsBox"/></StackPanel>
+            <StackPanel Margin="0,0,8,8"><TextBlock Text="Legacy Pitch X"/><TextBox x:Name="CellBlockPitchXBox"/></StackPanel>
+            <StackPanel Margin="0,0,0,8"><TextBlock Text="Legacy Pitch Y"/><TextBox x:Name="CellBlockPitchYBox"/></StackPanel>
             <StackPanel Margin="0,0,8,8"><TextBlock Text="Selected Cell#"/><TextBox x:Name="SelectedCellBlockBox"/></StackPanel>
             <StackPanel Margin="0,0,8,8"><TextBlock Text="Selected Col"/><TextBox x:Name="SelectedCellColumnBox"/></StackPanel>
             <StackPanel Margin="0,0,0,8"><TextBlock Text="Selected Row"/><TextBox x:Name="SelectedCellRowBox"/></StackPanel>

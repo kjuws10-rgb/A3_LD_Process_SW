@@ -11,6 +11,7 @@
   </PropertyGroup>
   <ItemGroup>
     <None Update="CELL_LAYOUT_CONFIG_TEMPLATE.csv" CopyToOutputDirectory="PreserveNewest"/>
+    <None Update="PPID_PROCESS_PROGRAM_TEMPLATE.csv" CopyToOutputDirectory="PreserveNewest"/>
     <None Update="CELL_LAYOUT_CONFIG_REVIEW_OFFSET_CHECK.csv" CopyToOutputDirectory="PreserveNewest"/>
     <None Update="VIRTUAL_WAIT_SIMULATION_REFERENCE.ascript" CopyToOutputDirectory="PreserveNewest"/>
     <None Update="EXTERNAL_STAGE_AUX_MOF_REFERENCE.ascript" CopyToOutputDirectory="PreserveNewest"/>
