@@ -5030,10 +5030,11 @@ Type count: 78
 
 ## MOF Coordinate Sample - Automation1 Direct API Classes (2026-07-22)
 
-- `Automation1DirectClient`: 공식 `Aerotech.Automation1.DotNet.Controller`를 강타입으로 사용해 원격 Controller 연결, Script 기록, Task 실행, 상태 조회, 중지, 감사 기록을 담당한다.
-- `Automation1DirectClient.ConnectAsync`: `Controller.Connect(host, port)`를 호출하고 Host, Port, IsRunning, 암호화 여부, Task Count, API 버전을 반환한다.
+- `Automation1DirectClient`: 공식 `Aerotech.Automation1.DotNet.Controller`를 강타입으로 사용해 원격 Controller 연결, Script 기록, 축/환경 검증, 사전 컴파일, Task 실행, 상태 조회, 중지, 감사 기록을 담당한다.
+- `Automation1DirectClient.ConnectAsync`: `Controller.Connect(host, port)`를 호출하고 Host, Port, IsRunning, 암호화 여부, Task Count, Virtual/Physical 축 요약, API 버전을 반환한다.
 - `Automation1DirectClient.UploadAsync`: Task 번호를 검증하고 `Controller.Files.WriteText`로 AeroScript와 최초 Job Audit를 Controller File System에 기록한다.
-- `Automation1DirectClient.RunAsync`: Task busy 상태를 방어한 뒤 `Runtime.Tasks[n].Program.Run(controllerFile)`을 호출한다.
+- `Automation1DirectClient.CompileAsync`: Package의 필수 축과 Simulation Virtual 축 조건을 검사하고 `Controller.Compiler.CompileControllerFile`을 호출한다. `CompileException.CompilerErrors`를 파일/행/열/메시지 형식으로 변환한다.
+- `Automation1DirectClient.RunAsync`: Task busy 상태와 설비 모드 4개 준비 조건을 확인한 뒤 사전 컴파일된 `CompiledAeroScript`를 `Runtime.Tasks[n].Program.Run(compiledProgram)`으로 실행한다.
 - `Automation1DirectClient.GetStatusAsync`: TaskState를 `Running`, `Completed`, `Failed`로 변환하고 변경 이벤트를 Audit JSON에 추가한다.
 - `Automation1DirectClient.StopAsync`: 실행 중 Task에 `Program.Stop(5000)`을 요청하고 중지 이력을 기록한다.
 - `Automation1JobAudit`: Job ID, Controller endpoint, Script, Task, 좌표 수, 생성 모드, SHA-256, 최종 상태와 이벤트 목록을 보관한다.
@@ -5042,7 +5043,9 @@ Type count: 78
 - `Automation1DirectStatus`: Job별 상태, TaskState, 오류, Script와 Audit Controller 파일명을 전달한다.
 - `AeroScriptGenerator`: Client PC에서 `VirtualWaitSimulation` 또는 `HardwareCoordinateProgram`을 생성한다. Virtual 모드는 Stage PositionFeedback wait와 GX/GY 이동 순서를 검증한다.
 - `AeroScriptGenerationOptions`: Stage Y, GX/GY, speed, ramp, FIR, MotionUpdateRate, ExecuteNumLines, MoveDelay, wait step과 software limit을 전달한다.
-- `AeroScriptPackage`: Job ID, Controller file, UTF-8 source, SHA-256, Task index, 대상 좌표 수와 생성 모드를 보관한다.
+- `AeroScriptPackage`: Job ID, Controller file, UTF-8 source, SHA-256, Task index, 대상 좌표 수, 생성 모드, 실행 환경, 필수 축 이름을 보관한다.
+- `Automation1ExecutionEnvironment`: `Simulation`, `Equipment` 실행 환경을 구분한다.
+- `Automation1HardwareReadiness`: 실제 설비 실행 전 축, Safety Interlock, Laser/Beam Path, 작업자 최종 승인 상태를 보관한다.
 - `AeroScriptLocalFileStore`: Local Script 경로 정규화, 폴더 생성, UTF-8(no BOM) 실제 파일 저장을 담당한다.
 - `MainWindow.GenerateCurrentAeroScriptPackage`: 선택 Scanner의 `InField` 좌표를 Script로 만들고 Local 파일과 Job Package를 생성한다.
 - `MainWindow.SelectAllProcessablePointsForHighlightedScanners`: 선택 Head의 `InField` 좌표 전체를 Matrix 선택 집합으로 만든다.

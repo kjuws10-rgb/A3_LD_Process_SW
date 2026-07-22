@@ -2,6 +2,8 @@
 
 이 샘플은 Review Camera에서 측정한 AK1 Pixel 좌표를 기반으로 기판 내부 Cell 좌표를 Stage Global 좌표로 변환하고, Multi Scanner의 Zigzag Odd/Even 배치에 따라 MOF 가공 명령 `Gx`, `Gy`를 생성하는 예제이다.
 
+2026-07-22 업데이트에서는 Automation1 실행을 `Simulation - Virtual Wait`와 `Equipment - Hardware Coordinate`로 분리했다. Controller 기록 후 `Controller.Compiler.CompileControllerFile`로 사전 컴파일하고, 파일/행/열별 오류가 없을 때만 `CompiledAeroScript`를 Task에 실행한다. Simulation은 MCD의 Virtual 축만 허용하며, Equipment 실행은 축 상태·Safety Interlock·Laser/Beam Path·작업자 최종 승인 확인을 모두 요구한다.
+
 2026-07-17 업데이트에서는 Review Camera 광학 중심과 H1 Scanner 가공 중심 사이의 고정 물리 오프셋을 좌표 변환의 필수 입력으로 분리했다. Scanner 배치는 명시적인 `FirstScannerInitialStageX/Y`에서 시작하고, 이 값이 `ReviewCenter + CameraToScannerPhysicalOffset`과 일치하는지 검증한다. 가공 후 측정오차를 보정하는 `ProcessOffsetGlobal`은 별도 데이터로 관리한다.
 
 장비 물류 순서는 `Home → Review Camera 통과 → Scanner 뒤쪽까지 정방향 이동 → 방향 반전 → 역방향 이동 중 MOF → Review Camera 후측정 → Home 복귀`로 반영했다. 기본 설정은 +Y가 정물류 방향이며, MOF 명령은 Stage Y가 큰 가공점부터 작은 가공점 순서로 실행된다.
@@ -180,7 +182,8 @@ Transform Consistency Error = (0, 0)
 - `Controller File`은 `Controller.Files.WriteText`로 기록할 Automation1 Controller File System 경로이다.
 - WPF는 제공된 Aerotech Automation1 .NET API 2.13.1을 직접 참조하며 `Controller.Connect(host, 12200)`로 접속한다.
 - 별도 `Automation1Server`, JSON Gateway, API Key, TCP 46100은 사용하지 않는다.
-- `Task.Program.Run(controllerFile)` 실행 후 250 ms 주기로 `Task.Status.TaskState`를 확인한다.
+- `Controller.Compiler.CompileControllerFile(controllerFile, true)`로 먼저 컴파일하고 상세 진단을 표시한다.
+- 컴파일된 `CompiledAeroScript`만 `Task.Program.Run(compiledProgram)`으로 실행한 뒤 250 ms 주기로 `Task.Status.TaskState`를 확인한다.
 - `ProgramComplete`만 정상 완료이며 `Error` 또는 완료 전 비정상 상태 전환은 실패로 처리한다.
 - 실행 Script와 `mof_job_*.json` 감사 이력은 Controller File System에 남는다.
 - 설치·운영·장애 점검은 `AUTOMATION1_DIRECT_OPERATION_PROCEDURE.md`와 `AUTOMATION1_DIRECT_CLIENT_FLOW.svg`를 참조한다.

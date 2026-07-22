@@ -12,6 +12,7 @@ public sealed class Automation1DirectClient : IAsyncDisposable
     private readonly Automation1ConnectionOptions _options;
     private readonly SemaphoreSlim _operationGate = new(1, 1);
     private Controller? _controller;
+    private CompiledAeroScript? _compiledAeroScript;
     private AeroScriptPackage? _activePackage;
     private Automation1DirectStatus? _lastStatus;
     private Automation1JobAudit? _audit;
@@ -40,8 +41,14 @@ public sealed class Automation1DirectClient : IAsyncDisposable
         return ExecuteLockedAsync(() => UploadCore(package), cancellationToken);
     }
 
-    public Task<Automation1DirectStatus> RunAsync(string jobId, CancellationToken cancellationToken) =>
-        ExecuteLockedAsync(() => RunCore(jobId), cancellationToken);
+    public Task<Automation1DirectStatus> CompileAsync(string jobId, CancellationToken cancellationToken) =>
+        ExecuteLockedAsync(() => CompileCore(jobId), cancellationToken);
+
+    public Task<Automation1DirectStatus> RunAsync(
+        string jobId,
+        Automation1HardwareReadiness hardwareReadiness,
+        CancellationToken cancellationToken) =>
+        ExecuteLockedAsync(() => RunCore(jobId, hardwareReadiness), cancellationToken);
 
     public Task<Automation1DirectStatus> GetStatusAsync(string jobId, CancellationToken cancellationToken) =>
         ExecuteLockedAsync(() => GetStatusCore(jobId), cancellationToken);
@@ -90,6 +97,10 @@ public sealed class Automation1DirectClient : IAsyncDisposable
 
         var isRunning = _controller.IsRunning;
         var taskCount = isRunning ? _controller.Runtime.Tasks.Count : 0;
+        var axisSummary = isRunning
+            ? string.Join(", ", _controller.Runtime.Axes.Select(axis =>
+                $"{axis.AxisName}({(axis.HyperWireDevice is null ? "Virtual" : "Physical")})"))
+            : "Controller stopped";
         var host = _controller.Information.Host ?? _options.Host;
         var port = _controller.Information.Port;
         var encrypted = _controller.Information.IsConnectionEncrypted;
@@ -100,9 +111,10 @@ public sealed class Automation1DirectClient : IAsyncDisposable
             isRunning,
             encrypted,
             taskCount,
+            axisSummary,
             apiVersion,
             $"Direct Automation1 connection ready: {host}:{port}, Running={isRunning}, " +
-            $"Encrypted={encrypted}, Tasks={taskCount}, API={apiVersion}");
+            $"Encrypted={encrypted}, Tasks={taskCount}, Axes=[{axisSummary}], API={apiVersion}");
         return LastConnectionInfo;
     }
 
@@ -113,6 +125,7 @@ public sealed class Automation1DirectClient : IAsyncDisposable
         controller.Files.WriteText(package.ControllerFileName, package.ScriptText);
 
         _activePackage = package;
+        _compiledAeroScript = null;
         _runRequestedAtUtc = null;
         var controllerDirectory = package.ControllerFileName.LastIndexOf('/') is var slashIndex && slashIndex >= 0
             ? package.ControllerFileName[..(slashIndex + 1)]
@@ -131,10 +144,59 @@ public sealed class Automation1DirectClient : IAsyncDisposable
         return _lastStatus;
     }
 
-    private Automation1DirectStatus RunCore(string jobId)
+    private Automation1DirectStatus CompileCore(string jobId)
     {
         var package = EnsureActivePackage(jobId);
         var controller = EnsureRunningController();
+        ValidateTask(controller, package.TaskIndex);
+        ValidateExecutionEnvironment(controller, package);
+
+        try
+        {
+            _compiledAeroScript = controller.Compiler.CompileControllerFile(
+                package.ControllerFileName,
+                compileWithDebugInformation: true);
+            var warnings = _compiledAeroScript.CompilerWarnings.ToArray();
+            var warningText = warnings.Length == 0
+                ? "No compiler warnings."
+                : $"Compiler warnings: {FormatCompilerResults(warnings)}";
+            var taskState = controller.Runtime.Tasks[package.TaskIndex].Status.TaskState.ToString();
+            var compiled = CreateStatus(
+                package,
+                Automation1DirectState.Compiled,
+                taskState,
+                $"AeroScript compile succeeded. {warningText}",
+                "",
+                _audit?.ControllerAuditFileName ?? "");
+            UpdateStatusAndAudit(compiled);
+            return compiled;
+        }
+        catch (CompileException ex)
+        {
+            _compiledAeroScript = null;
+            var details = FormatCompilerResults(ex.CompilerErrors);
+            var failed = CreateStatus(
+                package,
+                Automation1DirectState.Failed,
+                "CompileError",
+                "AeroScript compile failed. Review the file, line, column, and message below.",
+                details,
+                _audit?.ControllerAuditFileName ?? "");
+            UpdateStatusAndAudit(failed);
+            throw new InvalidOperationException(
+                $"AeroScript compile failed:{Environment.NewLine}{details}",
+                ex);
+        }
+    }
+
+    private Automation1DirectStatus RunCore(
+        string jobId,
+        Automation1HardwareReadiness hardwareReadiness)
+    {
+        var package = EnsureActivePackage(jobId);
+        var controller = EnsureRunningController();
+        ValidateExecutionEnvironment(controller, package);
+        ValidateHardwareReadiness(package, hardwareReadiness);
         var task = controller.Runtime.Tasks[package.TaskIndex];
         var before = task.Status;
         if (IsBusyTaskState(before.TaskState))
@@ -143,8 +205,33 @@ public sealed class Automation1DirectClient : IAsyncDisposable
                 $"Task {package.TaskIndex} is already busy: {before.TaskState}.");
         }
 
+        var compiledProgram = _compiledAeroScript;
+        if (compiledProgram is null)
+        {
+            CompileCore(jobId);
+            compiledProgram = _compiledAeroScript
+                              ?? throw new InvalidOperationException("AeroScript compilation did not produce a program.");
+        }
+
         _runRequestedAtUtc = DateTimeOffset.UtcNow;
-        task.Program.Run(package.ControllerFileName);
+        try
+        {
+            task.Program.Run(compiledProgram);
+        }
+        catch (Exception ex)
+        {
+            _runRequestedAtUtc = null;
+            var failed = CreateStatus(
+                package,
+                Automation1DirectState.Failed,
+                task.Status.TaskState.ToString(),
+                $"Task {package.TaskIndex} failed to start the compiled AeroScript program.",
+                ex.Message,
+                _audit?.ControllerAuditFileName ?? "");
+            UpdateStatusAndAudit(failed);
+            throw;
+        }
+
         return RefreshTaskStatus(controller, package);
     }
 
@@ -295,6 +382,66 @@ public sealed class Automation1DirectClient : IAsyncDisposable
             TaskState.QueueRunning or
             TaskState.QueuePaused;
 
+    private static void ValidateExecutionEnvironment(Controller controller, AeroScriptPackage package)
+    {
+        var configuredAxes = controller.Runtime.Axes
+            .ToDictionary(axis => axis.AxisName, StringComparer.OrdinalIgnoreCase);
+        var missingAxes = package.RequiredAxisNames
+            .Where(axisName => !configuredAxes.ContainsKey(axisName))
+            .ToArray();
+        if (missingAxes.Length > 0)
+        {
+            throw new InvalidOperationException(
+                $"The controller MCD does not contain required axes: {string.Join(", ", missingAxes)}. " +
+                $"Configured axes: {string.Join(", ", configuredAxes.Keys.OrderBy(name => name))}.");
+        }
+
+        if (package.ExecutionEnvironment != Automation1ExecutionEnvironment.Simulation)
+        {
+            return;
+        }
+
+        var physicalAxes = package.RequiredAxisNames
+            .Where(axisName => configuredAxes[axisName].HyperWireDevice is not null)
+            .ToArray();
+        if (physicalAxes.Length > 0)
+        {
+            throw new InvalidOperationException(
+                "Simulation mode was selected, but these required axes are backed by physical HyperWire devices: " +
+                $"{string.Join(", ", physicalAxes)}. Use virtual axes or explicitly select Equipment mode.");
+        }
+    }
+
+    private static void ValidateHardwareReadiness(
+        AeroScriptPackage package,
+        Automation1HardwareReadiness readiness)
+    {
+        if (package.ExecutionEnvironment == Automation1ExecutionEnvironment.Simulation)
+        {
+            return;
+        }
+
+        if (!readiness.IsReady)
+        {
+            var missing = new List<string>();
+            if (!readiness.MotionAxesReady) missing.Add("motion axes ready");
+            if (!readiness.SafetyInterlocksReady) missing.Add("safety interlocks ready");
+            if (!readiness.LaserAndBeamPathReady) missing.Add("laser/beam path ready");
+            if (!readiness.OperatorConfirmed) missing.Add("operator final confirmation");
+            throw new InvalidOperationException(
+                $"Equipment mode execution is blocked. Confirm: {string.Join(", ", missing)}.");
+        }
+    }
+
+    private static string FormatCompilerResults(IEnumerable<CompilerResult> results)
+    {
+        var lines = results.Select(result =>
+            $"{result.AeroScriptSourceFileName ?? "<memory>"}" +
+            $"({result.StartingLine},{result.StartingColumn})-" +
+            $"({result.EndingLine},{result.EndingColumn}): {result.Message}").ToArray();
+        return lines.Length == 0 ? "No compiler diagnostic details were returned." : string.Join(Environment.NewLine, lines);
+    }
+
     private static Automation1DirectStatus CreateStatus(
         AeroScriptPackage package,
         Automation1DirectState state,
@@ -350,6 +497,7 @@ public sealed class Automation1DirectClient : IAsyncDisposable
         finally
         {
             _controller = null;
+            _compiledAeroScript = null;
             _activePackage = null;
             _lastStatus = null;
             _audit = null;
@@ -399,6 +547,8 @@ public sealed class Automation1JobAudit
     public required int TaskIndex { get; init; }
     public required int TargetCount { get; init; }
     public required string GenerationMode { get; init; }
+    public required string ExecutionEnvironment { get; init; }
+    public required IReadOnlyList<string> RequiredAxisNames { get; init; }
     public required string Sha256 { get; init; }
     public required DateTimeOffset CreatedAtUtc { get; init; }
     public DateTimeOffset UpdatedAtUtc { get; set; }
@@ -423,6 +573,8 @@ public sealed class Automation1JobAudit
             TaskIndex = package.TaskIndex,
             TargetCount = package.TargetCount,
             GenerationMode = package.GenerationMode.ToString(),
+            ExecutionEnvironment = package.ExecutionEnvironment.ToString(),
+            RequiredAxisNames = package.RequiredAxisNames,
             Sha256 = package.Sha256,
             CreatedAtUtc = package.CreatedAtUtc,
             UpdatedAtUtc = package.CreatedAtUtc

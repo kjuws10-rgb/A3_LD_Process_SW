@@ -215,8 +215,24 @@ public partial class MainWindow : Window
             var package = _currentScriptPackage
                           ?? throw new InvalidOperationException("먼저 Script를 생성하고 Controller File System에 기록해야 합니다.");
             var client = await GetAutomation1DirectClientAsync(cancellationToken);
-            var response = await client.RunAsync(package.JobId, cancellationToken);
+            var response = await client.RunAsync(
+                package.JobId,
+                ReadHardwareReadiness(package.GenerationMode),
+                cancellationToken);
             ShowAutomation1Response("실행 명령", response);
+        });
+    }
+
+    private async void CompileAeroScriptButton_Click(object sender, RoutedEventArgs e)
+    {
+        await RunScriptUiOperationAsync(async cancellationToken =>
+        {
+            var package = _currentScriptPackage
+                          ?? throw new InvalidOperationException(
+                              "AeroScript를 먼저 생성하고 Controller에 기록한 뒤 Compile 검사를 실행하십시오.");
+            var client = await GetAutomation1DirectClientAsync(cancellationToken);
+            var response = await client.CompileAsync(package.JobId, cancellationToken);
+            ShowAutomation1Response("Compile check", response);
         });
     }
 
@@ -260,7 +276,14 @@ public partial class MainWindow : Window
             EnsureAutomation1Success("Controller 기록", upload);
             ShowAutomation1Response("Controller 기록", upload);
 
-            var run = await client.RunAsync(package.JobId, cancellationToken);
+            var compile = await client.CompileAsync(package.JobId, cancellationToken);
+            EnsureAutomation1Success("Compile check", compile);
+            ShowAutomation1Response("Compile check", compile);
+
+            var run = await client.RunAsync(
+                package.JobId,
+                ReadHardwareReadiness(package.GenerationMode),
+                cancellationToken);
             EnsureAutomation1Success("실행 명령", run);
             ShowAutomation1Response("실행 명령", run);
 
@@ -328,6 +351,7 @@ public partial class MainWindow : Window
             taskIndex,
             commandList.Length,
             options.Mode,
+            AeroScriptGenerator.ResolveRequiredAxisNames(commandList, options),
             PreserveControllerJobFileCheckBox.IsChecked == true);
         LocalScriptPathBox.Text = localScriptPath;
         ScriptPreviewBox.Text = source;
@@ -422,6 +446,20 @@ public partial class MainWindow : Window
                    MessageBoxResult.No) == MessageBoxResult.Yes;
     }
 
+    private Automation1HardwareReadiness ReadHardwareReadiness(AeroScriptGenerationMode generationMode)
+    {
+        if (generationMode == AeroScriptGenerationMode.VirtualWaitSimulation)
+        {
+            return Automation1HardwareReadiness.Simulation;
+        }
+
+        return new Automation1HardwareReadiness(
+            EquipmentMotionReadyCheckBox.IsChecked == true,
+            EquipmentInterlockReadyCheckBox.IsChecked == true,
+            EquipmentLaserReadyCheckBox.IsChecked == true,
+            EquipmentOperatorConfirmCheckBox.IsChecked == true);
+    }
+
     private async Task<Automation1DirectClient> GetAutomation1DirectClientAsync(
         CancellationToken cancellationToken,
         bool forceReconnect = false)
@@ -490,6 +528,11 @@ public partial class MainWindow : Window
     {
         AppendDeploymentLog(
             $"[{operation}] State={response.State}, TaskState={response.TaskState}, Message={response.Message}");
+        if (!string.IsNullOrWhiteSpace(response.Error))
+        {
+            AppendDeploymentLog($"[{operation} detail] {response.Error}");
+        }
+
         if (!string.IsNullOrWhiteSpace(response.ControllerAuditFileName))
         {
             AppendDeploymentLog($"[Controller 기록] Audit={response.ControllerAuditFileName}");
@@ -527,6 +570,7 @@ public partial class MainWindow : Window
         GenerateAeroScriptButton.IsEnabled = isEnabled;
         ControllerConnectionButton.IsEnabled = isEnabled;
         UploadAeroScriptButton.IsEnabled = isEnabled;
+        CompileAeroScriptButton.IsEnabled = isEnabled;
         RunAeroScriptButton.IsEnabled = isEnabled;
         QueryAeroScriptStatusButton.IsEnabled = isEnabled;
         StopAeroScriptButton.IsEnabled = true;

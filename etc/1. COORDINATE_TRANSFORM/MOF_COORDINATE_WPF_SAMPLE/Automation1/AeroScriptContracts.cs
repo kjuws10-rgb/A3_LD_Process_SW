@@ -9,6 +9,12 @@ public enum AeroScriptGenerationMode
     HardwareCoordinateProgram
 }
 
+public enum Automation1ExecutionEnvironment
+{
+    Simulation,
+    Equipment
+}
+
 public enum Automation1ConnectionMode
 {
     NoAuthentication,
@@ -22,6 +28,7 @@ public enum Automation1DirectState
     Disconnected,
     Connected,
     Uploaded,
+    Compiled,
     Running,
     Completed,
     Failed,
@@ -46,8 +53,21 @@ public sealed record Automation1ConnectionInfo(
     bool IsRunning,
     bool IsEncrypted,
     int TaskCount,
+    string AxisSummary,
     string ApiVersion,
     string Message);
+
+public sealed record Automation1HardwareReadiness(
+    bool MotionAxesReady,
+    bool SafetyInterlocksReady,
+    bool LaserAndBeamPathReady,
+    bool OperatorConfirmed)
+{
+    public static Automation1HardwareReadiness Simulation { get; } = new(true, true, true, true);
+
+    public bool IsReady =>
+        MotionAxesReady && SafetyInterlocksReady && LaserAndBeamPathReady && OperatorConfirmed;
+}
 
 public sealed record Automation1DirectStatus(
     string JobId,
@@ -68,6 +88,8 @@ public sealed record AeroScriptPackage(
     int TaskIndex,
     int TargetCount,
     AeroScriptGenerationMode GenerationMode,
+    Automation1ExecutionEnvironment ExecutionEnvironment,
+    IReadOnlyList<string> RequiredAxisNames,
     DateTimeOffset CreatedAtUtc)
 {
     public static AeroScriptPackage Create(
@@ -76,10 +98,12 @@ public sealed record AeroScriptPackage(
         int taskIndex,
         int targetCount,
         AeroScriptGenerationMode generationMode,
+        IReadOnlyList<string> requiredAxisNames,
         bool preserveJobFile)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(controllerFileName);
         ArgumentException.ThrowIfNullOrWhiteSpace(scriptText);
+        ArgumentNullException.ThrowIfNull(requiredAxisNames);
         if (taskIndex <= 0)
         {
             throw new ArgumentOutOfRangeException(nameof(taskIndex), "Automation1 task index must be 1 or greater.");
@@ -99,6 +123,10 @@ public sealed record AeroScriptPackage(
             taskIndex,
             targetCount,
             generationMode,
+            generationMode == AeroScriptGenerationMode.VirtualWaitSimulation
+                ? Automation1ExecutionEnvironment.Simulation
+                : Automation1ExecutionEnvironment.Equipment,
+            requiredAxisNames.Distinct(StringComparer.OrdinalIgnoreCase).ToArray(),
             createdAt);
     }
 

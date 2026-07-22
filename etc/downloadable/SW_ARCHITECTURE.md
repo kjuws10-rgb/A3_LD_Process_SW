@@ -486,7 +486,11 @@ GX + Stage Y MOF pair 전제
 
 ### 2026-07-20 연결 및 좌표 I/F 보완
 
-Client의 `Script 생성`은 `Local Script File`에 실제 `.ascript`를 저장한 뒤 별도의 `Controller File` 경로를 Package에 넣는다. `Automation1DirectClient.ConnectAsync`는 공식 `Controller.Connect(host, port)` 결과에서 Host, Port, IsRunning, 암호화 여부, Task 수를 확인한다. Scanner UI 선택은 선택 Head별 `InField` 좌표 합집합을 `_selectedPointKeys`에 반영한다.
+Client의 `Script 생성`은 `Local Script File`에 실제 `.ascript`를 저장한 뒤 별도의 `Controller File` 경로를 Package에 넣는다. `Automation1DirectClient.ConnectAsync`는 공식 `Controller.Connect(host, port)` 결과에서 Host, Port, IsRunning, 암호화 여부, Task 수와 Virtual/Physical 축 구성을 확인한다. Scanner UI 선택은 선택 Head별 `InField` 좌표 합집합을 `_selectedPointKeys`에 반영한다.
+
+실행 환경은 `Simulation`과 `Equipment`로 분리한다. Simulation Package는 MCD에 필요한 `Y/GX/GY` 축이 존재하고 모두 Virtual 축인지 확인한 뒤 Laser/PSO/HW Aux/Galvo 명령이 없는 Virtual Wait Script를 사용한다. Equipment Package는 실제 좌표 Script를 사용하며 축 준비, Safety Interlock, Laser/Beam Path, 작업자 최종 승인을 모두 통과해야 실행할 수 있다.
+
+Controller 기록 뒤에는 `Controller.Compiler.CompileControllerFile(file, true)`를 명시적으로 호출한다. 문법, 축 이름, MCD 또는 Library 오류는 `CompileException.CompilerErrors`의 파일/행/열/메시지로 UI와 Audit에 기록된다. 성공한 `CompiledAeroScript` 객체만 `Runtime.Tasks[n].Program.Run(compiledProgram)`으로 실행하므로 컴파일 실패와 실행 중 Fault를 서로 구분할 수 있다.
 
 Script 이동값은 `CellCommand.Gx/Gy`이며 Review 표시값은 `ReviewCoordinateX/Y`이다. 생성 Script 주석과 Client 로그는 두 좌표를 함께 기록하지만 Scanner 명령에는 Process Gx/Gy만 사용한다.
 

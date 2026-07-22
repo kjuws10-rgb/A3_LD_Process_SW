@@ -33,9 +33,9 @@
   <text x="115" y="708" class="t">IsRunning / Host / Port / Encryption / Task Count 확인</text>
 
   <rect x="90" y="770" width="620" height="125" rx="5" class="client"/>
-  <text x="115" y="803" class="h">5. 완료 대기와 UI 표시</text>
-  <text x="115" y="833" class="t">250 ms 상태 조회, 상태 변화만 로그 기록</text>
-  <text x="115" y="862" class="s">ProgramComplete=정상, Error/비정상 이탈=실패</text>
+  <text x="115" y="803" class="h">5. Compile 검사, 실행, 완료 대기</text>
+  <text x="115" y="833" class="t">파일/행/열 진단 후 CompiledAeroScript만 실행</text>
+  <text x="115" y="862" class="s">250 ms 상태 조회, ProgramComplete만 정상 완료</text>
 
   <rect x="855" y="120" width="690" height="810" rx="6" class="panel"/>
   <text x="885" y="160" class="h">Server PC / Automation1 Controller 192.168.10.10:12200</text>
@@ -46,14 +46,14 @@
   <text x="915" y="296" class="s">Windows D:\ 경로가 아니라 A1 Studio에서 보는 Controller 파일</text>
 
   <rect x="890" y="350" width="620" height="105" rx="5" class="controller"/>
-  <text x="915" y="383" class="h">B. 지정 Task 실행</text>
-  <text x="915" y="415" class="code">Runtime.Tasks[n].Program.Run(controllerFile)</text>
-  <text x="915" y="441" class="s">Task가 Running/Paused/Queue 상태이면 실행 거부</text>
+  <text x="915" y="383" class="h">B. Controller 사전 Compile</text>
+  <text x="915" y="415" class="code">Compiler.CompileControllerFile(file, true)</text>
+  <text x="915" y="441" class="s">축/MCD/문법 오류를 파일, 행, 열 단위로 반환</text>
 
   <rect x="890" y="495" width="620" height="115" rx="5" class="controller"/>
-  <text x="915" y="528" class="h">C. Task 상태 Snapshot</text>
-  <text x="915" y="560" class="code">Runtime.Tasks[n].Status.TaskState</text>
-  <text x="915" y="588" class="s">ProgramRunning / Feedhold / Paused / Complete / Error</text>
+  <text x="915" y="528" class="h">C. Compiled Program 실행과 상태</text>
+  <text x="915" y="560" class="code">Tasks[n].Program.Run(compiled) → Status</text>
+  <text x="915" y="588" class="s">Running / Feedhold / Paused / Complete / Error</text>
 
   <rect x="890" y="650" width="620" height="120" rx="5" class="ok"/>
   <text x="915" y="683" class="h">D. Server 측 실행 이력 보존</text>

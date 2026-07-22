@@ -215,10 +215,10 @@
               <StackPanel Margin="12">
                 <UniformGrid Columns="5" Margin="0,0,0,8">
                   <StackPanel Margin="0,0,8,8">
-                    <TextBlock Text="Script Mode"/>
-                    <ComboBox x:Name="ScriptModeComboBox" SelectedIndex="0" ToolTip="Virtual Wait Simulation은 Laser/PSO 없이 wait 통과만 검증합니다. Hardware Coordinate Program은 실제 장비용 좌표 프로그램 골격입니다.">
-                      <ComboBoxItem Content="Virtual Wait Simulation" Tag="VirtualWaitSimulation"/>
-                      <ComboBoxItem Content="Hardware Coordinate Program" Tag="HardwareCoordinateProgram"/>
+                    <TextBlock Text="실행 환경 / Script Mode"/>
+                    <ComboBox x:Name="ScriptModeComboBox" SelectedIndex="0" ToolTip="시뮬레이션은 Virtual 축과 wait 흐름만 검증합니다. 설비 모드는 실제 축과 안전 조건을 모두 확인한 뒤 실행합니다.">
+                      <ComboBoxItem Content="Simulation - Virtual Wait" Tag="VirtualWaitSimulation"/>
+                      <ComboBoxItem Content="Equipment - Hardware Coordinate" Tag="HardwareCoordinateProgram"/>
                     </ComboBox>
                   </StackPanel>
                   <StackPanel Margin="0,0,8,8"><TextBlock Text="Controller Host"/><TextBox x:Name="ControllerHostBox" Text="192.168.10.10" ToolTip="Client PC에서 Automation1 Studio와 같은 방식으로 직접 접속할 원격 Controller 또는 Server PC 주소입니다."/></StackPanel>
@@ -268,6 +268,18 @@
                   <CheckBox x:Name="PreserveControllerJobFileCheckBox" Content="Job별 Controller Script 보존" IsChecked="True" Foreground="#E2E8F0" Margin="14,0,0,0" ToolTip="파일명에 생성시각과 Job ID를 붙여 Controller File System에 실행 Script를 보존합니다."/>
                 </WrapPanel>
 
+                <Border Background="#201A0D" BorderBrush="#F59E0B" BorderThickness="1" CornerRadius="4" Padding="10" Margin="0,0,0,8">
+                  <StackPanel>
+                    <TextBlock Text="설비 모드 실행 확인" Foreground="#FCD34D" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                    <WrapPanel>
+                      <CheckBox x:Name="EquipmentMotionReadyCheckBox" Content="축 초기화/원점/Limit 확인" Foreground="#E2E8F0" Margin="0,0,16,4" ToolTip="실제 축의 Enable, Home, Fault, Software Limit 및 이동 가능 상태를 작업자가 확인합니다."/>
+                      <CheckBox x:Name="EquipmentInterlockReadyCheckBox" Content="안전 Interlock 확인" Foreground="#E2E8F0" Margin="0,0,16,4" ToolTip="Door, Emergency Stop, Stage/Scanner 간섭 및 설비 안전 회로 상태를 확인합니다."/>
+                      <CheckBox x:Name="EquipmentLaserReadyCheckBox" Content="Laser/Beam Path 확인" Foreground="#E2E8F0" Margin="0,0,16,4" ToolTip="Laser Ready, Shutter, Beam Path 및 출력 허가 조건을 확인합니다."/>
+                      <CheckBox x:Name="EquipmentOperatorConfirmCheckBox" Content="최종 실행 승인" Foreground="#FDE68A" Margin="0,0,16,4" ToolTip="좌표, 속도, Ramp, Task, 가공 대상과 주변 안전 상태를 최종 확인합니다."/>
+                    </WrapPanel>
+                  </StackPanel>
+                </Border>
+
                 <TextBlock Text="Virtual Mode는 Laser/PSO/HW Aux 출력이 아니라 Y PositionFeedback wait 해제 순서만 검증합니다. 한 번에 Scanner Head 한 개만 선택하십시오."
                            Foreground="#FBBF24" TextWrapping="Wrap" Margin="0,0,0,8"/>
 
@@ -276,7 +288,8 @@
                   <Button x:Name="OpenLocalScriptFolderButton" Content="저장 위치 열기" Margin="0,0,6,0" Click="OpenLocalScriptFolderButton_Click"/>
                   <Button x:Name="ControllerConnectionButton" Content="Automation1 직접 연결" Margin="0,0,6,0" Background="#075985" BorderBrush="#38BDF8" Click="ControllerConnectionButton_Click"/>
                   <Button x:Name="UploadAeroScriptButton" Content="2. Controller 기록" Margin="0,0,6,0" Click="UploadAeroScriptButton_Click"/>
-                  <Button x:Name="RunAeroScriptButton" Content="3. Task 실행" Margin="0,0,6,0" Click="RunAeroScriptButton_Click"/>
+                  <Button x:Name="CompileAeroScriptButton" Content="3. Compile 검사" Margin="0,0,6,0" Background="#6D28D9" BorderBrush="#A78BFA" Click="CompileAeroScriptButton_Click" ToolTip="Controller Compiler로 먼저 컴파일하여 파일, 행, 열, 오류 메시지를 확인합니다."/>
+                  <Button x:Name="RunAeroScriptButton" Content="4. Task 실행" Margin="0,0,6,0" Click="RunAeroScriptButton_Click"/>
                   <Button x:Name="QueryAeroScriptStatusButton" Content="상태 조회" Margin="0,0,6,0" Click="QueryAeroScriptStatusButton_Click"/>
                   <Button x:Name="StopAeroScriptButton" Content="실행 중지" Margin="0,0,6,0" Background="#7F1D1D" BorderBrush="#F87171" Click="StopAeroScriptButton_Click"/>
                   <Button x:Name="ExecuteAeroScriptWorkflowButton" Content="전체 실행 및 완료 대기" Background="#047857" BorderBrush="#10B981" Click="ExecuteAeroScriptWorkflowButton_Click"/>
