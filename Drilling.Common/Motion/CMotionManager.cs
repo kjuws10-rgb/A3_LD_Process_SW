@@ -484,7 +484,7 @@ public sealed class CMotionManager : IMotionManager
 
         if (!_axisData.TryGetValue(normalizedAxisId, out var axisData))
         {
-            throw new InvalidOperationException($"Motion axis was not registered in IPS_MOTOR.csv: {axisId}");
+            throw new InvalidOperationException($"Motion axis was not registered in JHMI_MOTOR.csv: {axisId}");
         }
 
         if (!_axes.TryGetValue(normalizedAxisId, out var axisState))

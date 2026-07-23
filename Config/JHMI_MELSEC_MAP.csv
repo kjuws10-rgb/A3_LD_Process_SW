@@ -1,0 +1,21 @@
+ID,USE,GROUP,NAME,DEVICE NO,ADDRESS,DATA TYPE,DIRECTION,ACCESS,SCALE,LENGTH,POLL_MS,DESCRIPTION
+PROCESS_ALIVE,1,PROCESS,Process Alive,0,W30000.0,BIT,OUT,RW,1,1,100,Process PC alive bit
+PROCESS_ALARM_OCCUR,1,PROCESS,Process Alarm Occur,0,W30000.1,BIT,OUT,RW,1,1,100,Process alarm state
+PROCESS_AUTO_MODE,1,PROCESS,Process Auto Mode,0,W30000.2,BIT,OUT,RW,1,1,100,Process auto mode state
+PROCESS_COMPLETE,1,PROCESS,Process Complete,0,W30000.3,BIT,OUT,RW,1,1,100,Process complete signal
+STAGE_Y_TARGET_POS,1,STAGE,Stage Y Target Position,0,W30100,DOUBLE,OUT,W,0.001,2,0,Stage Y target position
+STAGE_Y_TARGET_SPEED,1,STAGE,Stage Y Target Speed,0,W30102,DOUBLE,OUT,W,0.001,2,0,Stage Y target speed
+REVIEW_X_TARGET_POS,1,STAGE,Review X Target Position,0,W30104,DOUBLE,OUT,W,0.001,2,0,Review camera X target position
+REVIEW_X_TARGET_SPEED,1,STAGE,Review X Target Speed,0,W30106,DOUBLE,OUT,W,0.001,2,0,Review camera X target speed
+AXIS_MOVE_START_REQ,1,STAGE,Axis Move Start Request,0,W30120.0,BIT,OUT,W,1,1,0,Stage/review axis move start request
+AXIS_MOVE_STOP_REQ,1,STAGE,Axis Move Stop Request,0,W30120.1,BIT,OUT,W,1,1,0,Stage/review axis move stop request
+AXIS_MOVE_COMPLETE,1,STAGE,Axis Move Complete,0,W30121.0,BIT,IN,R,1,1,50,Stage/review axis move complete
+AXIS_MOVE_ERROR,1,STAGE,Axis Move Error,0,W30121.1,BIT,IN,R,1,1,50,Stage/review axis move error
+REVIEW_TYPE,1,REVIEW,Review Type,0,W30200,WORD,OUT,W,1,1,0,Review inspection type
+REVIEW_TRIGGER_COUNT,1,REVIEW,Review Trigger Count,0,W30201,WORD,OUT,W,1,1,0,Review IOF trigger count
+REVIEW_START_REQ,1,REVIEW,Review Start Request,0,W30210.0,BIT,OUT,W,1,1,0,Review sequence start request
+REVIEW_SEQUENCE_COMPLETE,1,REVIEW,Review Sequence Complete,0,W30211.0,BIT,IN,R,1,1,50,Review sequence complete signal
+GLASS_ID,1,PRODUCT,Glass ID,0,W31000,STRING,IN,R,1,20,500,Current glass id
+PPID,1,PRODUCT,PPID,0,W31020,STRING,IN,R,1,20,500,Current PPID
+EQ_RECIPE,1,PRODUCT,EQ Recipe,0,W31040,STRING,IN,R,1,20,500,Current equipment recipe
+OPTIC_STATUS_ALL,1,OPTIC,Optic Status All,0,W32000,WORD,IN,R,1,1,500,Optic total status check

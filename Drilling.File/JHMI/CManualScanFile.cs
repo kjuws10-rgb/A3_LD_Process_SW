@@ -7,7 +7,7 @@ using Drilling.Common.InterLock;
 using Drilling.Common.Station;
 using Drilling.File.Parser;
 
-namespace Drilling.File.IPS;
+namespace Drilling.File.JHMI;
 
 public sealed class CManualScanFile(string configRoot) : IManualScanFile
 {
@@ -336,7 +336,7 @@ public sealed class CManualScanFile(string configRoot) : IManualScanFile
 
     private string GetFormPath()
     {
-        return Path.Combine(configRoot, "IPS_MANUAL_SCAN.csv");
+        return Path.Combine(configRoot, "JHMI_MANUAL_SCAN.csv");
     }
 
     private string GetSettingPath(string settingName)

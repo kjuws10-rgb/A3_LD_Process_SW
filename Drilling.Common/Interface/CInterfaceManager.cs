@@ -27,7 +27,8 @@ public enum EN_EQP_MODULE
     Chiller,
     Attenuator,
     Bet,
-    PowerMeter
+    PowerMeter,
+    Melsec
 }
 
 public enum EN_INTERFACE_TYPE
@@ -40,7 +41,8 @@ public enum EN_INTERFACE_TYPE
     SocketServer,
     SocketClientUdp,
     SocketServerUdp,
-    AcsNet
+    AcsNet,
+    XpsNet
 }
 
 public sealed record ST_INTERFACE_HISTORY(
@@ -140,6 +142,8 @@ public interface IInterfaceManager
     bool IsSimulation { get; }
 
     IReadOnlyList<IInterfaceDevice> Devices { get; }
+
+    IMelsec Melsec { get; }
 
     void SetSimulationMode(bool enabled);
 
@@ -344,18 +348,21 @@ public sealed class CInterfaceManager : IInterfaceManager
     private readonly ILogManager? _logManager;
     private readonly IBETFile? _betFile;
     private readonly IPowerMeterFile? _powerMeterFile;
+    private readonly CMelsec _melsec;
     private bool? _simulationMode;
 
     public CInterfaceManager(
         bool? simulationMode = null,
         ILogManager? logManager = null,
         IBETFile? betFile = null,
-        IPowerMeterFile? powerMeterFile = null)
+        IPowerMeterFile? powerMeterFile = null,
+        IReadOnlyList<ST_MELSEC_MAP_DATA>? melsecMap = null)
     {
         _simulationMode = simulationMode;
         _logManager = logManager;
         _betFile = betFile;
         _powerMeterFile = powerMeterFile;
+        _melsec = new CMelsec(this, _logManager, melsecMap);
     }
 
     public bool IsSimulation => _devices.Count == 0
@@ -363,6 +370,8 @@ public sealed class CInterfaceManager : IInterfaceManager
         : _devices.Values.All(device => device.IsSimulation);
 
     public IReadOnlyList<IInterfaceDevice> Devices => _devices.Values.ToArray();
+
+    public IMelsec Melsec => _melsec;
 
     public void SetSimulationMode(bool enabled)
     {
@@ -1964,7 +1973,9 @@ public sealed class CInterfaceManager : IInterfaceManager
             new(3, "PWM_CHECK_HEAD03", true, "W", 23.50, 1.000, 20.0, 3, 1000, 100, 500, 300, 0.0000, 1.0068, "WAIT"),
             new(4, "PWM_CHECK_HEAD04", true, "W", 23.50, 1.000, 20.0, 3, 1000, 100, 500, 300, 0.0000, 1.0034, "WAIT"),
             new(5, "PWM_CHECK_HEAD05", true, "W", 23.50, 0.800, 20.0, 2, 800, 100, 300, 200, 0.0000, 0.8020, "WAIT"),
-            new(6, "PWM_CHECK_HEAD06", false, "W", 23.50, 0.800, 20.0, 2, 800, 100, 300, 200, 0.0000, null, "SKIP")
+            new(6, "PWM_CHECK_HEAD06", true, "W", 23.50, 0.800, 20.0, 2, 800, 100, 300, 200, 0.0000, 0.8015, "WAIT"),
+            new(7, "PWM_CHECK_HEAD07", true, "W", 23.50, 0.800, 20.0, 2, 800, 100, 300, 200, 0.0000, 0.8008, "WAIT"),
+            new(8, "PWM_CHECK_HEAD08", true, "W", 23.50, 0.800, 20.0, 2, 800, 100, 300, 200, 0.0000, 0.8024, "WAIT")
         ];
 
         return new ST_POWER_METER_TABLE_DATA(processes, selectedFile, steps);
@@ -2103,6 +2114,7 @@ internal static class CInterfaceConnectOption
                 EN_INTERFACE_TYPE.SocketClientUdp or EN_INTERFACE_TYPE.SocketServerUdp or
                 EN_INTERFACE_TYPE.ModbusTcp => CreateSocketOption(args),
             EN_INTERFACE_TYPE.AcsNet => CreateAcsOption(args),
+            EN_INTERFACE_TYPE.XpsNet => CreateXpsOption(args),
             EN_INTERFACE_TYPE.OpcUa => CreateOpcUaOption(args),
             _ => CreateSocketOption(args)
         };
@@ -2137,6 +2149,29 @@ internal static class CInterfaceConnectOption
         var localAddress = DefaultIfBlank(args[0], "0.0.0.0");
         var remoteAddress = DefaultIfBlank(args[1], "127.0.0.1");
         var port = ReadInt(args[2], 701);
+        var timeoutMs = ReadInt(args[3], 3000);
+        var retryCount = ReadInt(args[4], 1);
+
+        return new ST_INTERFACE_CONNECT_OPTION(
+            $"{remoteAddress}:{port}",
+            localAddress,
+            remoteAddress,
+            port,
+            timeoutMs,
+            retryCount,
+            "",
+            0,
+            "",
+            0,
+            "",
+            "");
+    }
+
+    private static ST_INTERFACE_CONNECT_OPTION CreateXpsOption(IReadOnlyList<string> args)
+    {
+        var localAddress = DefaultIfBlank(args[0], "0.0.0.0");
+        var remoteAddress = DefaultIfBlank(args[1], "192.168.254.254");
+        var port = ReadInt(args[2], 5001);
         var timeoutMs = ReadInt(args[3], 3000);
         var retryCount = ReadInt(args[4], 1);
 

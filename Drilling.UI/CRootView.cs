@@ -12,6 +12,7 @@ using Drilling.Common.Motion;
 using Drilling.Common.Alarm;
 using Drilling.Common.InterLock;
 using Drilling.Common.Product;
+using Drilling.Common.Review;
 using Drilling.Common.Station;
 
 namespace Drilling.UI;
@@ -26,6 +27,8 @@ public sealed class CRootView : CBindingBase
         EN_MENU.Setting,
         EN_MENU.Alarm,
         EN_MENU.Monitor,
+        EN_MENU.Review,
+        EN_MENU.Correction,
         EN_MENU.Pm,
         EN_MENU.Exit
     ];
@@ -47,12 +50,14 @@ public sealed class CRootView : CBindingBase
     private string _currentDateText = DateTime.Now.ToString("yyyy-MM-dd");
     private string _currentTimeText = DateTime.Now.ToString("HH:mm:ss");
     private int _selectedHeadNo = 4;
+    private readonly HashSet<int> _selectedPreviewHeadNos = [];
     private string _selectedManualSettingName = "CIRCLE_TEST.scan";
     private string _selectedRecipeId = "";
     private string _selectedRecipeCategory = "ALL";
     private string _selectedSettingTab = "OPTION";
     private string _selectedSettingGroup = "ALL";
     private string _selectedMonitorTab = "IO";
+    private EN_UI_THEME _currentTheme = EN_UI_THEME.Dark;
     private bool _statusRefreshRunning;
     private ST_PM_LOCK_STATUS _pmLockStatus = new(false, null);
 
@@ -65,7 +70,9 @@ public sealed class CRootView : CBindingBase
         IManualScanFile manualScanFile,
         IRecipeManager recipeManager,
         ISettingManager settingManager,
-        IProductManager productManager)
+        IProductManager productManager,
+        IReviewManager reviewManager,
+        IReviewRuleFile reviewRuleFile)
     {
         _stationManager = stationManager;
         _interfaceManager = interfaceManager;
@@ -73,6 +80,7 @@ public sealed class CRootView : CBindingBase
         _alarmManager = alarmManager;
         _interLockManager = interLockManager;
         _recipeManager = recipeManager;
+        CThemeManager.Apply(_currentTheme);
 
         Menus = new ObservableCollection<CMenuItem>(
             OperatorMenus.Select(menu => new CMenuItem(menu, GetMenuDisplayName(menu))));
@@ -86,6 +94,10 @@ public sealed class CRootView : CBindingBase
         StartCommand = new CButtonCommand(async _ => await StartCycle(), _ => SelectedMenu.Menu == EN_MENU.Main);
         StopCommand = new CButtonCommand(async _ => await StopCycle(), _ => SelectedMenu.Menu == EN_MENU.Main);
         SelectHeadCommand = new CButtonCommand(async parameter => await SelectHead(parameter), _ => CanSelectHead);
+        TogglePreviewHeadCommand = new CButtonCommand(
+            async parameter => await TogglePreviewHead(parameter),
+            _ => SelectedMenu.Menu == EN_MENU.Main);
+        ToggleThemeCommand = new CButtonCommand(async _ => await ToggleTheme());
 
         _menus = CreateMenus(
             stationManager,
@@ -96,7 +108,9 @@ public sealed class CRootView : CBindingBase
             manualScanFile,
             recipeManager,
             settingManager,
-            productManager);
+            productManager,
+            reviewManager,
+            reviewRuleFile);
 
         StartClock();
         _ = PrepareInitialProcessPlan();
@@ -113,14 +127,17 @@ public sealed class CRootView : CBindingBase
         get => _selectedMenu;
         set
         {
+            var previousMenu = _selectedMenu.Menu;
             if (!SetProperty(ref _selectedMenu, value))
             {
                 return;
             }
 
+            ResetMenuStateOnOpen(previousMenu, value.Menu);
             StartCommand.NotifyCanExecuteChanged();
             StopCommand.NotifyCanExecuteChanged();
             SelectHeadCommand.NotifyCanExecuteChanged();
+            TogglePreviewHeadCommand.NotifyCanExecuteChanged();
             RefreshShellStatusItems();
             _ = RefreshCurrentScreen();
         }
@@ -154,11 +171,23 @@ public sealed class CRootView : CBindingBase
         ? "Engineer / Simulation"
         : "Engineer / Live";
 
+    public string ThemeToggleText => _currentTheme == EN_UI_THEME.Light
+        ? "DARK"
+        : "LIGHT";
+
+    public string ThemeModeText => _currentTheme == EN_UI_THEME.Light
+        ? "Light Theme"
+        : "Dark Theme";
+
     public CButtonCommand StartCommand { get; }
 
     public CButtonCommand StopCommand { get; }
 
     public CButtonCommand SelectHeadCommand { get; }
+
+    public CButtonCommand TogglePreviewHeadCommand { get; }
+
+    public CButtonCommand ToggleThemeCommand { get; }
 
     private bool CanSelectHead => SelectedMenu.Menu is EN_MENU.Main or EN_MENU.Manual;
 
@@ -193,6 +222,31 @@ public sealed class CRootView : CBindingBase
         {
             StatusMessage = "PM lock entered. Operation commands are blocked.";
         }
+    }
+
+    private void ResetMenuStateOnOpen(
+        EN_MENU previousMenu,
+        EN_MENU selectedMenu)
+    {
+        if (selectedMenu != EN_MENU.Review || previousMenu == EN_MENU.Review)
+        {
+            return;
+        }
+
+        if (_menus.TryGetValue(EN_MENU.Review, out var menu) && menu is CMenuReview reviewMenu)
+        {
+            reviewMenu.ResetForMenuOpen();
+        }
+    }
+
+    private async Task ToggleTheme()
+    {
+        _currentTheme = CThemeManager.Toggle();
+        OnPropertyChanged(nameof(ThemeToggleText));
+        OnPropertyChanged(nameof(ThemeModeText));
+        RefreshShellStatusItems();
+        await RefreshCurrentScreen();
+        StatusMessage = $"{ThemeModeText} applied.";
     }
 
     private void RefreshShellStatusItems()
@@ -368,6 +422,26 @@ public sealed class CRootView : CBindingBase
             return CreateMonitorFooterStatusItems();
         }
 
+        if (menu == EN_MENU.Review)
+        {
+            return
+            [
+                new("SCREEN", "REVIEW / INSPECTION", "SIM"),
+                new("POINT", "Review Standby", "WAIT"),
+                new("SIM", "Simulation PASS", "ONLINE")
+            ];
+        }
+
+        if (menu == EN_MENU.Correction)
+        {
+            return
+            [
+                new("SCREEN", "CORRECTION / OFFSET", "SIM"),
+                new("TABLE", "Correction Standby", "WAIT"),
+                new("SIM", "Simulation PASS", "ONLINE")
+            ];
+        }
+
         if (menu == EN_MENU.Pm)
         {
             var isLocked = _systemStatus.PMLockState == EN_PM_LOCK_STATE.Locked;
@@ -449,7 +523,7 @@ public sealed class CRootView : CBindingBase
         parameters["PanelId"] = "SIM-PANEL-001";
         parameters["LotId"] = "SIM-LOT-001";
         parameters.TryAdd("DIAMETER", "0.350");
-        parameters.TryAdd("HEAD_COUNT", "12");
+        parameters.TryAdd("HEAD_COUNT", "8");
 
         return parameters;
     }
@@ -490,6 +564,61 @@ public sealed class CRootView : CBindingBase
         await RefreshCurrentScreen();
     }
 
+    private async Task TogglePreviewHead(object? parameter)
+    {
+        if (parameter is string action)
+        {
+            if (action.Equals("ALL", StringComparison.OrdinalIgnoreCase))
+            {
+                _selectedPreviewHeadNos.Clear();
+                foreach (var head in CurrentScreen.MainOperating?.HeadPreviews ?? [])
+                {
+                    _selectedPreviewHeadNos.Add(head.HeadNo);
+                }
+
+                UpdatePreviewHeadStatusMessage();
+                await RefreshCurrentScreen();
+                return;
+            }
+
+            if (action.Equals("CLEAR", StringComparison.OrdinalIgnoreCase))
+            {
+                _selectedPreviewHeadNos.Clear();
+                UpdatePreviewHeadStatusMessage();
+                await RefreshCurrentScreen();
+                return;
+            }
+        }
+
+        var headNo = parameter switch
+        {
+            int value => value,
+            string text when int.TryParse(text, out var parsed) => parsed,
+            ST_HEAD_PREVIEW head => head.HeadNo,
+            _ => 0
+        };
+
+        if (headNo <= 0)
+        {
+            return;
+        }
+
+        if (!_selectedPreviewHeadNos.Add(headNo))
+        {
+            _selectedPreviewHeadNos.Remove(headNo);
+        }
+
+        UpdatePreviewHeadStatusMessage();
+        await RefreshCurrentScreen();
+    }
+
+    private void UpdatePreviewHeadStatusMessage()
+    {
+        StatusMessage = _selectedPreviewHeadNos.Count == 0
+            ? "Head preview selection cleared."
+            : $"Head preview: {string.Join(", ", _selectedPreviewHeadNos.OrderBy(value => value).Select(value => $"H{value:00}"))}";
+    }
+
     private void StartClock()
     {
         var timer = new DispatcherTimer
@@ -516,11 +645,19 @@ public sealed class CRootView : CBindingBase
         IManualScanFile manualScanFile,
         IRecipeManager recipeManager,
         ISettingManager settingManager,
-        IProductManager productManager)
+        IProductManager productManager,
+        IReviewManager reviewManager,
+        IReviewRuleFile reviewRuleFile)
     {
         IMenu[] menus =
         [
-            new CMenuMain(stationManager, () => _selectedHeadNo, SelectHeadCommand),
+            new CMenuMain(
+                stationManager,
+                recipeManager,
+                settingManager,
+                () => _selectedRecipeId,
+                () => _selectedPreviewHeadNos,
+                TogglePreviewHeadCommand),
             new CMenuManual(
                 manualScanFile,
                 () => _selectedHeadNo,
@@ -570,6 +707,16 @@ public sealed class CRootView : CBindingBase
                 value => _selectedMonitorTab = value,
                 message => StatusMessage = message,
                 RefreshShellStatusItems,
+                RefreshCurrentScreen),
+            new CMenuReview(
+                reviewManager,
+                reviewRuleFile,
+                recipeManager,
+                () => _selectedRecipeId,
+                message => StatusMessage = message,
+                () => _ = RefreshCurrentScreen()),
+            new CMenuCorrection(
+                message => StatusMessage = message,
                 RefreshCurrentScreen),
             new CMenuPm(GetPMLockStatus, EnterPMLock),
             new CMenuExit()
@@ -680,6 +827,12 @@ public sealed class CRootView : CBindingBase
                 new("PRODUCT", "Product Tracking", "ONLINE"),
                 new("SIM", "Simulation PASS", "ONLINE")
             ],
+            "MELSEC" =>
+            [
+                new("SCREEN", "MONITOR / MELSEC", "SIM"),
+                new("PLC", "Read / Write Map", "WARN"),
+                new("SIM", "Simulation PASS", "ONLINE")
+            ],
             _ =>
             [
                 new("SCREEN", $"MONITOR / {_selectedMonitorTab}", "SIM"),
@@ -696,7 +849,7 @@ public sealed class CRootView : CBindingBase
         {
             "ATT" => "ATTENUATOR",
             "POWER" or "POWERMETER" or "POWER_METER" => "POWER METER",
-            "IO" or "MOTOR" or "LASER" or "CHILLER" or "ATTENUATOR" or "BET" or "POWER METER" or "PRODUCT" or "ETC" => normalized,
+            "IO" or "MOTOR" or "LASER" or "CHILLER" or "ATTENUATOR" or "BET" or "POWER METER" or "PRODUCT" or "MELSEC" or "ETC" => normalized,
             _ => "IO"
         };
     }
@@ -847,6 +1000,7 @@ public sealed class CRootView : CBindingBase
             EN_EQP_MODULE.Attenuator => "ATTENUATOR",
             EN_EQP_MODULE.Bet => "BET",
             EN_EQP_MODULE.PowerMeter => "POWER METER",
+            EN_EQP_MODULE.Melsec => "MELSEC",
             _ => module.ToString().ToUpperInvariant()
         };
     }
@@ -891,6 +1045,8 @@ public sealed class CRootView : CBindingBase
             EN_MENU.Setting => "SETTING",
             EN_MENU.Alarm => "ALARM",
             EN_MENU.Monitor => "MONITOR",
+            EN_MENU.Review => "REVIEW",
+            EN_MENU.Correction => "CORRECTION",
             EN_MENU.Pm => "PM",
             EN_MENU.Exit => "EXIT",
             _ => menu.ToString()

@@ -273,7 +273,7 @@ public sealed class CMenuSetting : CBindingBase, IMenu
 
         if (row.IsModified)
         {
-            _setStatusMessage("Save IPS_INTERFACE.csv before connect.");
+            _setStatusMessage("Save JHMI_INTERFACE.csv before connect.");
             return;
         }
 
@@ -311,7 +311,7 @@ public sealed class CMenuSetting : CBindingBase, IMenu
 
         if (row.IsModified)
         {
-            _setStatusMessage("Save IPS_INTERFACE.csv before disconnect.");
+            _setStatusMessage("Save JHMI_INTERFACE.csv before disconnect.");
             return;
         }
 
@@ -346,11 +346,11 @@ public sealed class CMenuSetting : CBindingBase, IMenu
             }
             catch (IOException exception)
             {
-                _setStatusMessage($"IPS_INTERFACE save blocked. {exception.Message}");
+                _setStatusMessage($"JHMI_INTERFACE save blocked. {exception.Message}");
                 return;
             }
 
-            _setStatusMessage("IPS_INTERFACE.csv saved, verified, and applied to InterfaceManager.");
+            _setStatusMessage("JHMI_INTERFACE.csv saved, verified, and applied to InterfaceManager.");
             _showLoadingScreen(EN_MENU.Setting, "SETTING");
             _refreshShellStatus();
             await _refreshCurrentScreen();
@@ -734,7 +734,7 @@ public sealed class CMenuSetting : CBindingBase, IMenu
             "SOCKET_C_UDP" => EN_INTERFACE_TYPE.SocketClientUdp,
             "SOCKET_S_UDP" => EN_INTERFACE_TYPE.SocketServerUdp,
             "ACS_NET" or "ACS" => EN_INTERFACE_TYPE.AcsNet,
-            _ => throw new InvalidDataException($"IPS_INTERFACE save blocked. Unknown TYPE: {value}")
+            _ => throw new InvalidDataException($"JHMI_INTERFACE save blocked. Unknown TYPE: {value}")
         };
     }
 
@@ -751,7 +751,7 @@ public sealed class CMenuSetting : CBindingBase, IMenu
             "CONEX_AGP" or "ATTENUATOR" => EN_EQP_MODULE.Attenuator,
             "BEAM_EXPANDER" or "BET" => EN_EQP_MODULE.Bet,
             "POWER_METER" or "POWERMETER" or "POWERMAX" => EN_EQP_MODULE.PowerMeter,
-            _ => throw new InvalidDataException($"IPS_INTERFACE save blocked. Unknown DEVICE: {value}")
+            _ => throw new InvalidDataException($"JHMI_INTERFACE save blocked. Unknown DEVICE: {value}")
         };
     }
 
@@ -798,7 +798,7 @@ public sealed class CMenuSetting : CBindingBase, IMenu
     {
         if (string.IsNullOrWhiteSpace(value))
         {
-            throw new InvalidDataException($"IPS_INTERFACE save blocked. {fieldName} cannot be empty.");
+            throw new InvalidDataException($"JHMI_INTERFACE save blocked. {fieldName} cannot be empty.");
         }
 
         return value.Trim();
@@ -810,7 +810,7 @@ public sealed class CMenuSetting : CBindingBase, IMenu
         {
             "1" or "TRUE" or "ON" or "YES" or "USE" or "SIMUL" or "SIMULATION" or "SIM" => true,
             "0" or "FALSE" or "OFF" or "NO" or "ONLINE" or "LIVE" or "REAL" => false,
-            _ => throw new InvalidDataException($"IPS_INTERFACE save blocked. {nickName}/{fieldName} must be 1/0 or ON/OFF.")
+            _ => throw new InvalidDataException($"JHMI_INTERFACE save blocked. {nickName}/{fieldName} must be 1/0 or ON/OFF.")
         };
     }
 
@@ -818,7 +818,7 @@ public sealed class CMenuSetting : CBindingBase, IMenu
     {
         if (!int.TryParse(value.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var result) || result < 0)
         {
-            throw new InvalidDataException($"IPS_INTERFACE save blocked. {nickName}/{fieldName} must be a non-negative integer.");
+            throw new InvalidDataException($"JHMI_INTERFACE save blocked. {nickName}/{fieldName} must be a non-negative integer.");
         }
 
         return result;

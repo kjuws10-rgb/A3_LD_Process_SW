@@ -1,13 +1,13 @@
 using Drilling.Common.Managers;
 using Drilling.File.Parser;
 
-namespace Drilling.File.IPS;
+namespace Drilling.File.JHMI;
 
 public sealed class CConfigStructureFile(string configRoot) : IConfigStructureFile
 {
     private static readonly IReadOnlyList<ST_REQUIRED_CSV> RequiredCsvFiles =
     [
-        Csv("IPS_RCP", "IPS_RCP.csv",
+        Csv("JHMI_RCP", "JHMI_RCP.csv",
         [
             ["TAB"],
             ["GROUP"],
@@ -27,7 +27,7 @@ public sealed class CConfigStructureFile(string configRoot) : IConfigStructureFi
             ["ORDER"]
         ], ValidateTabNameKey),
 
-        Csv("IPS_SETTING", "IPS_SETTING.csv",
+        Csv("JHMI_SETTING", "JHMI_SETTING.csv",
         [
             ["TAB"],
             ["GROUP"],
@@ -44,7 +44,7 @@ public sealed class CConfigStructureFile(string configRoot) : IConfigStructureFi
             ["ORDER"]
         ], ValidateTabNameKey),
 
-        Csv("IPS_INTERFACE", "IPS_INTERFACE.csv",
+        Csv("JHMI_INTERFACE", "JHMI_INTERFACE.csv",
         [
             ["TYPE"],
             ["DEVICE"],
@@ -60,7 +60,7 @@ public sealed class CConfigStructureFile(string configRoot) : IConfigStructureFi
             ["ARG5"]
         ], ValidateDeviceNumberKey),
 
-        Csv("IPS_MOTOR", "IPS_MOTOR.csv",
+        Csv("JHMI_MOTOR", "JHMI_MOTOR.csv",
         [
             ["NAME", "MOTOR NAME", "AXIS NAME"],
             ["USE"],
@@ -74,7 +74,7 @@ public sealed class CConfigStructureFile(string configRoot) : IConfigStructureFi
             ["MAX"]
         ], ValidateNameKey),
 
-        Csv("IPS_IO", "IPS_IO.csv",
+        Csv("JHMI_IO", "JHMI_IO.csv",
         [
             ["ID"],
             ["USE"],
@@ -85,7 +85,23 @@ public sealed class CConfigStructureFile(string configRoot) : IConfigStructureFi
             ["DEV NO", "DEVICE NO"]
         ], ValidateIdKey),
 
-        Csv("IPS_BET", "IPS_BET.csv",
+        Csv("JHMI_MELSEC_MAP", "JHMI_MELSEC_MAP.csv",
+        [
+            ["ID"],
+            ["USE"],
+            ["GROUP"],
+            ["NAME"],
+            ["DEVICE NO", "DEV NO", "NUMBER"],
+            ["ADDRESS"],
+            ["DATA TYPE", "DATATYPE", "TYPE"],
+            ["DIRECTION", "DIR"],
+            ["ACCESS"],
+            ["SCALE"],
+            ["LENGTH", "SIZE"],
+            ["POLL_MS", "POLL MS", "POLL"]
+        ], ValidateIdKey),
+
+        Csv("JHMI_BET", "JHMI_BET.csv",
         [
             ["INDEX"],
             ["USE"],
@@ -96,7 +112,7 @@ public sealed class CConfigStructureFile(string configRoot) : IConfigStructureFi
             ["ROWBEAMSIZE"]
         ], ValidateIndexKey),
 
-        Csv("IPS_POWERMETER", "IPS_POWERMETER.csv",
+        Csv("JHMI_POWERMETER", "JHMI_POWERMETER.csv",
         [
             ["STEP"],
             ["OPTION_NAME"],
@@ -115,7 +131,18 @@ public sealed class CConfigStructureFile(string configRoot) : IConfigStructureFi
             ["STATE"]
         ], ValidateStepKey),
 
-        Csv("IPS_MANUAL_SCAN", "IPS_MANUAL_SCAN.csv",
+        Csv("JHMI_REVIEW_RULE", "JHMI_REVIEW_RULE.csv",
+        [
+            ["GROUP"],
+            ["KEY"],
+            ["DISPLAY NAME"],
+            ["DATA TYPE"],
+            ["VALUE"],
+            ["DESCRIPTION"],
+            ["ORDER"]
+        ], ValidateGroupKey),
+
+        Csv("JHMI_MANUAL_SCAN", "JHMI_MANUAL_SCAN.csv",
         [
             ["NAME"],
             ["DISPLAY NAME"],
@@ -154,7 +181,8 @@ public sealed class CConfigStructureFile(string configRoot) : IConfigStructureFi
                 EnsureDirectory("Setting Directory", "Setting", cancellationToken),
                 EnsureDirectory("BET Directory", "BET", cancellationToken),
                 EnsureDirectory("Manual Directory", "Manual", cancellationToken),
-                EnsureDirectory("PowerMeter Directory", "PowerMeter", cancellationToken)
+                EnsureDirectory("PowerMeter Directory", "PowerMeter", cancellationToken),
+                EnsureDirectory("ReviewRule Directory", "ReviewRule", cancellationToken)
             ]);
 
         foreach (var csvFile in RequiredCsvFiles)
@@ -172,6 +200,7 @@ public sealed class CConfigStructureFile(string configRoot) : IConfigStructureFi
         statuses.Add(CheckRecipeValueFiles(cancellationToken));
         statuses.Add(CheckManualValueFiles(cancellationToken));
         statuses.Add(CheckPowerMeterValueFiles(cancellationToken));
+        statuses.Add(CheckReviewRuleValueFiles(cancellationToken));
 
         return Task.FromResult<IReadOnlyList<ST_CONFIG_FILE_STATUS>>(statuses);
     }
@@ -226,7 +255,7 @@ public sealed class CConfigStructureFile(string configRoot) : IConfigStructureFi
                 true,
                 false,
                 false,
-                "Required IPS schema file is missing.");
+                "Required JHMI schema file is missing.");
         }
 
         try
@@ -326,6 +355,17 @@ public sealed class CConfigStructureFile(string configRoot) : IConfigStructureFi
             "*.pwm",
             [["STEP"], ["OPTION_NAME"], ["POWER_OUT"]],
             ValidateStepKey,
+            cancellationToken);
+    }
+
+    private ST_CONFIG_FILE_STATUS CheckReviewRuleValueFiles(CancellationToken cancellationToken)
+    {
+        return CheckCsvValueFiles(
+            "Review Rule Files",
+            "ReviewRule",
+            "*.csv",
+            [["GROUP"], ["KEY"], ["VALUE"]],
+            ValidateGroupKey,
             cancellationToken);
     }
 
@@ -521,6 +561,17 @@ public sealed class CConfigStructureFile(string configRoot) : IConfigStructureFi
             rows,
             ["NAME"],
             row => CCsvParser.Get(row, "NAME").Trim().ToUpperInvariant());
+    }
+
+    private static void ValidateGroupKey(
+        string tableName,
+        IReadOnlyList<IReadOnlyDictionary<string, string>> rows)
+    {
+        ValidateUniqueKey(
+            tableName,
+            rows,
+            ["GROUP", "KEY"],
+            row => $"{CCsvParser.Get(row, "GROUP").Trim().ToUpperInvariant()}|{CCsvParser.Get(row, "KEY").Trim().ToUpperInvariant()}");
     }
 
     private static void ValidateIdKey(

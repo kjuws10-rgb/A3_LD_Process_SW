@@ -5,6 +5,7 @@ using Drilling.Common.InterLock;
 using Drilling.Common.Managers;
 using Drilling.Common.Motion;
 using Drilling.Common.Product;
+using Drilling.Common.Review;
 using Drilling.Common.Station;
 
 namespace Drilling.Common.Managers;
@@ -101,6 +102,7 @@ public sealed record ST_CONFIG_LOAD_STATUS(
     int InterfaceCount,
     int MotorCount,
     int IoCount,
+    int MelsecMapCount,
     bool ActiveProductLoaded,
     IReadOnlyList<string> StartupMessages,
     IReadOnlyList<ST_MANAGER_STARTUP_STEP> StartupSteps);
@@ -153,7 +155,10 @@ public sealed class CManager
     private readonly IPowerMeterFile _powerMeterFile;
     private readonly IMotorFile _motorFile;
     private readonly IIoFile _ioFile;
+    private readonly IMelsecMapFile _melsecMapFile;
     private readonly IProductFile _productFile;
+    private readonly IReviewResultFile _reviewResultFile;
+    private readonly IReviewRuleFile _reviewRuleFile;
     private readonly ILogManager _logManager;
     private readonly IAutomationScriptFile _automationScriptFile;
     private readonly IConfigStructureFile? _configStructureFile;
@@ -167,6 +172,7 @@ public sealed class CManager
     private readonly IRecipeManager _recipeManager;
     private readonly ISettingManager _settingManager;
     private readonly IProductManager _productManager;
+    private readonly IReviewManager _reviewManager;
     private readonly object _startupLock = new();
     private readonly List<string> _startupMessages = [];
     private readonly List<ST_MANAGER_STARTUP_STEP> _startupSteps = [];
@@ -174,6 +180,7 @@ public sealed class CManager
     private int _loadedInterfaceCount;
     private int _loadedMotorCount;
     private int _loadedIoCount;
+    private int _loadedMelsecMapCount;
     private bool _activeProductLoaded;
 
     public CManager(
@@ -186,7 +193,10 @@ public sealed class CManager
         IPowerMeterFile powerMeterFile,
         IMotorFile motorFile,
         IIoFile ioFile,
+        IMelsecMapFile melsecMapFile,
         IProductFile productFile,
+        IReviewResultFile reviewResultFile,
+        IReviewRuleFile reviewRuleFile,
         ILogManager logManager,
         IAutomationScriptFile automationScriptFile,
         bool? simulationMode = null,
@@ -201,7 +211,10 @@ public sealed class CManager
         _powerMeterFile = powerMeterFile;
         _motorFile = motorFile;
         _ioFile = ioFile;
+        _melsecMapFile = melsecMapFile;
         _productFile = productFile;
+        _reviewResultFile = reviewResultFile;
+        _reviewRuleFile = reviewRuleFile;
         _logManager = logManager;
         _automationScriptFile = automationScriptFile;
         _configStructureFile = configStructureFile;
@@ -217,6 +230,13 @@ public sealed class CManager
 
         var interfaceData = LoadInterfaceList();
         RegisterInterfaceList(interfaceData);
+
+        var melsecMapData = LoadMelsecMapList();
+        _interfaceManager.Melsec.ReloadMap(melsecMapData);
+        AddStartupStep(
+            "Register JHMI_MELSEC_MAP",
+            EN_MANAGER_STARTUP_RESULT.Ready,
+            $"Registered {melsecMapData.Count} MELSEC map row(s).");
 
         var motorData = LoadMotorList();
         var ioData = LoadIoList();
@@ -238,6 +258,13 @@ public sealed class CManager
             "CProductManager created.");
         LoadActiveProduct();
 
+        _settingManager = new CSettingManager(_settingFile, _interfaceFile, _interfaceManager);
+        _reviewManager = new CReviewManager(_reviewResultFile, _interfaceManager, _settingManager);
+        AddStartupStep(
+            "Create Review Manager",
+            EN_MANAGER_STARTUP_RESULT.Ready,
+            "CReviewManager created.");
+
         _stationManager = new CStationManager(
             _interfaceManager,
             _motionManager,
@@ -252,7 +279,6 @@ public sealed class CManager
             $"Script={GetScriptDirectory()}");
 
         _recipeManager = new CRecipeManager(_recipeFile);
-        _settingManager = new CSettingManager(_settingFile, _interfaceFile, _interfaceManager);
         AddStartupStep(
             "Create Menu Managers",
             EN_MANAGER_STARTUP_RESULT.Ready,
@@ -292,6 +318,7 @@ public sealed class CManager
                 _loadedInterfaceCount,
                 _loadedMotorCount,
                 _loadedIoCount,
+                _loadedMelsecMapCount,
                 _activeProductLoaded,
                 _startupMessages.ToArray(),
                 _startupSteps.ToArray());
@@ -376,6 +403,11 @@ public sealed class CManager
         return _productManager;
     }
 
+    public IReviewManager Review()
+    {
+        return _reviewManager;
+    }
+
     public IInterfaceManager Interface()
     {
         return _interfaceManager;
@@ -441,9 +473,19 @@ public sealed class CManager
         return _ioFile;
     }
 
+    public IMelsecMapFile MelsecMapFile()
+    {
+        return _melsecMapFile;
+    }
+
     public IProductFile ProductFile()
     {
         return _productFile;
+    }
+
+    public IReviewRuleFile ReviewRuleFile()
+    {
+        return _reviewRuleFile;
     }
 
     private void CheckConfigRoot()
@@ -503,7 +545,7 @@ public sealed class CManager
             _loadedInterfaceCount = interfaceData.Count;
 
             AddStartupStep(
-                "Load IPS_INTERFACE",
+                "Load JHMI_INTERFACE",
                 EN_MANAGER_STARTUP_RESULT.Ready,
                 $"Loaded {interfaceData.Count} interface row(s).");
 
@@ -511,7 +553,7 @@ public sealed class CManager
         }
         catch (Exception ex) when (IsStartupDataException(ex))
         {
-            AddStartupFailure("Load IPS_INTERFACE", ex);
+            AddStartupFailure("Load JHMI_INTERFACE", ex);
             return [];
         }
     }
@@ -550,7 +592,7 @@ public sealed class CManager
             var motorData = _motorFile.LoadAll().GetAwaiter().GetResult();
             _loadedMotorCount = motorData.Count;
             AddStartupStep(
-                "Load IPS_MOTOR",
+                "Load JHMI_MOTOR",
                 EN_MANAGER_STARTUP_RESULT.Ready,
                 $"Loaded {motorData.Count} motor row(s).");
 
@@ -558,7 +600,7 @@ public sealed class CManager
         }
         catch (Exception ex) when (IsStartupDataException(ex))
         {
-            AddStartupFailure("Load IPS_MOTOR", ex);
+            AddStartupFailure("Load JHMI_MOTOR", ex);
             return [];
         }
     }
@@ -570,7 +612,7 @@ public sealed class CManager
             var ioData = _ioFile.LoadAll().GetAwaiter().GetResult();
             _loadedIoCount = ioData.Count;
             AddStartupStep(
-                "Load IPS_IO",
+                "Load JHMI_IO",
                 EN_MANAGER_STARTUP_RESULT.Ready,
                 $"Loaded {ioData.Count} IO row(s).");
 
@@ -578,7 +620,27 @@ public sealed class CManager
         }
         catch (Exception ex) when (IsStartupDataException(ex))
         {
-            AddStartupFailure("Load IPS_IO", ex);
+            AddStartupFailure("Load JHMI_IO", ex);
+            return [];
+        }
+    }
+
+    private IReadOnlyList<ST_MELSEC_MAP_DATA> LoadMelsecMapList()
+    {
+        try
+        {
+            var melsecMapData = _melsecMapFile.LoadAll().GetAwaiter().GetResult();
+            _loadedMelsecMapCount = melsecMapData.Count;
+            AddStartupStep(
+                "Load JHMI_MELSEC_MAP",
+                EN_MANAGER_STARTUP_RESULT.Ready,
+                $"Loaded {melsecMapData.Count} MELSEC map row(s).");
+
+            return melsecMapData;
+        }
+        catch (Exception ex) when (IsStartupDataException(ex))
+        {
+            AddStartupFailure("Load JHMI_MELSEC_MAP", ex);
             return [];
         }
     }
