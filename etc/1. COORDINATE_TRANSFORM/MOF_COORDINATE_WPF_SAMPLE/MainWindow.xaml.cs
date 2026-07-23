@@ -41,6 +41,7 @@ public partial class MainWindow : Window
     private readonly Dictionary<int, Rectangle> _boardProcessVisuals = new();
     private readonly DispatcherTimer _layoutRenderTimer;
     private readonly DispatcherTimer _processMonitorTimer;
+    private readonly DispatcherTimer _axisPositionTimer;
     private IReadOnlyList<CellCommand> _activeScriptCommands = Array.Empty<CellCommand>();
     private readonly Dictionary<string, IReadOnlyList<CellCommand>> _activeScriptCommandsByJobId = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<int> _completedMonitorSequences = new();
@@ -48,6 +49,7 @@ public partial class MainWindow : Window
     private string _scannerAxisPositionSummary = "";
     private int _lastMonitorSequence;
     private bool _isProcessMonitorPolling;
+    private bool _isAxisPositionPolling;
     private Automation1DirectStatus? _lastMonitorStatus;
     private const double MinimumLayoutCanvasWidth = 640.0;
     private const double MinimumLayoutCanvasHeight = 560.0;
@@ -74,6 +76,11 @@ public partial class MainWindow : Window
             Interval = TimeSpan.FromMilliseconds(300)
         };
         _processMonitorTimer.Tick += ProcessMonitorTimer_Tick;
+        _axisPositionTimer = new DispatcherTimer(DispatcherPriority.Background)
+        {
+            Interval = TimeSpan.FromMilliseconds(500)
+        };
+        _axisPositionTimer.Tick += AxisPositionTimer_Tick;
         LoadViewState();
         Loaded += (_, _) =>
         {
@@ -94,6 +101,7 @@ public partial class MainWindow : Window
         {
             _scriptWorkflowCancellation?.Cancel();
             _layoutRenderTimer.Stop();
+            _axisPositionTimer.Stop();
             if (_automation1Client is not null)
             {
                 _automation1Client.DisposeAsync().AsTask().GetAwaiter().GetResult();
@@ -675,6 +683,7 @@ public partial class MainWindow : Window
 
         if (!forceReconnect && _automation1Client is not null && _connectedAutomation1Options == options)
         {
+            StartAxisPositionPolling();
             return _automation1Client;
         }
 
@@ -695,6 +704,7 @@ public partial class MainWindow : Window
             AppendDeploymentLog($"[Axis Position] Current scanner position read skipped: {ex.Message}");
         }
 
+        StartAxisPositionPolling();
         return _automation1Client;
     }
 
@@ -811,6 +821,41 @@ public partial class MainWindow : Window
     {
         _processMonitorTimer.Stop();
         _processMonitorTimer.Start();
+        StartAxisPositionPolling();
+    }
+
+    private void StartAxisPositionPolling()
+    {
+        if (_automation1Client is null)
+        {
+            return;
+        }
+
+        _axisPositionTimer.Stop();
+        _axisPositionTimer.Start();
+    }
+
+    private async void AxisPositionTimer_Tick(object? sender, EventArgs e)
+    {
+        if (_isAxisPositionPolling || _automation1Client is null)
+        {
+            return;
+        }
+
+        _isAxisPositionPolling = true;
+        try
+        {
+            await RefreshScannerAxisPositionsAsync(_automation1Client, CancellationToken.None, redraw: true);
+        }
+        catch (Exception ex)
+        {
+            _axisPositionTimer.Stop();
+            AppendDeploymentLog($"[Axis Position] Polling stopped: {ex.Message}");
+        }
+        finally
+        {
+            _isAxisPositionPolling = false;
+        }
     }
 
     private async void ProcessMonitorTimer_Tick(object? sender, EventArgs e)
@@ -833,7 +878,6 @@ public partial class MainWindow : Window
             {
                 UpdateProcessMonitor(status);
             }
-            await RefreshScannerAxisPositionsAsync(_automation1Client, CancellationToken.None, redraw: true);
             if (statuses.All(status => status.State is Automation1DirectState.Completed or Automation1DirectState.Failed or Automation1DirectState.Stopped))
             {
                 _processMonitorTimer.Stop();
@@ -1388,9 +1432,9 @@ public partial class MainWindow : Window
             Canvas.SetTop(box, y);
             LayoutCanvas.Children.Add(box);
 
-            DrawText($"Scanner\n#{scanner.Index}", x + 8, y + 14, 15, FontWeights.SemiBold, isActiveScanner ? Brushes.White : new SolidColorBrush(Color.FromRgb(203, 213, 225)));
+            DrawText($"Scanner\n#{scanner.Index}", x + 8, y + 8, 14, FontWeights.SemiBold, isActiveScanner ? Brushes.White : new SolidColorBrush(Color.FromRgb(203, 213, 225)));
+            DrawTextBox(FormatScannerAxisPosition(scanner.Index), x + 4, y + 39, boxWidth - 8, 21, 8.5, FontWeights.SemiBold, new SolidColorBrush(Color.FromRgb(125, 211, 252)));
             DrawText($"Design ({scanner.CenterX:0.#}, {scanner.CenterY:0.#})", x - 16, y + boxHeight + 6, 10, FontWeights.Normal, new SolidColorBrush(Color.FromRgb(148, 163, 184)));
-            DrawText(FormatScannerAxisPosition(scanner.Index), x - 24, y + boxHeight + 22, 10, FontWeights.SemiBold, new SolidColorBrush(Color.FromRgb(125, 211, 252)));
         }
     }
 
@@ -1475,10 +1519,10 @@ public partial class MainWindow : Window
         if (!_scannerAxisPositions.TryGetValue(scannerIndex, out var position))
         {
             var axes = ResolveScannerAxes(scannerIndex);
-            return $"Now {axes.X}=--, {axes.Y}=--";
+            return $"{axes.X}:--\n{axes.Y}:--";
         }
 
-        return $"Now {position.AxisXName}={position.AxisXPosition:0.###}, {position.AxisYName}={position.AxisYPosition:0.###}";
+        return $"{position.AxisXName}:{position.AxisXPosition:0.###}\n{position.AxisYName}:{position.AxisYPosition:0.###}";
     }
 
     private void UpdateScannerPositionSummary()
@@ -2367,6 +2411,36 @@ public partial class MainWindow : Window
             FontWeight = weight,
             Foreground = brush,
             TextAlignment = TextAlignment.Center,
+            IsHitTestVisible = false
+        };
+        Canvas.SetLeft(block, x);
+        Canvas.SetTop(block, y);
+        LayoutCanvas.Children.Add(block);
+    }
+
+    private void DrawTextBox(
+        string text,
+        double x,
+        double y,
+        double width,
+        double height,
+        double size,
+        FontWeight weight,
+        Brush brush)
+    {
+        var block = new TextBlock
+        {
+            Width = width,
+            Height = height,
+            Text = text,
+            FontSize = size,
+            FontWeight = weight,
+            Foreground = brush,
+            TextAlignment = TextAlignment.Center,
+            TextWrapping = TextWrapping.NoWrap,
+            TextTrimming = TextTrimming.CharacterEllipsis,
+            LineStackingStrategy = LineStackingStrategy.BlockLineHeight,
+            LineHeight = Math.Max(9.0, size + 1.0),
             IsHitTestVisible = false
         };
         Canvas.SetLeft(block, x);

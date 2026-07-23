@@ -5,6 +5,8 @@
 - Each scanner now displays current `GXn/GYn` `PositionFeedback` below the scanner icon after Automation1 connection.
 - Axis positions refresh after direct connection, after manual axis commands, and during process monitoring.
 - The top summary line also includes a compact current axis-position list such as `H1: GX1=0.000, GY1=0.000`.
+- The scanner icon now shows live axis positions inside the button body without the `Now` prefix, using two compact lines such as `GX1:0.000` and `GY1:0.000`.
+- A dedicated 500 ms axis-position polling timer keeps scanner positions updating even when no AeroScript process task is running.
 - Scanner icon right-click opens an axis control context menu for that head.
 - The head menu exposes `GXn` and `GYn` submenus with `Enable`, `Disable`, `Home`, `Jog Move`, and `Motion Parameter Setting`.
 - Right-clicking an empty area of the board layout opens an all-scanner menu for `All Enable`, `All Disable`, `All Home`, and `All Motion Parameter Setting`.
