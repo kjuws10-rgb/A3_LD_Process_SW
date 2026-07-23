@@ -58,6 +58,14 @@ public sealed record Automation1ConnectionInfo(
     string ApiVersion,
     string Message);
 
+public sealed record ScannerAxisPosition(
+    int ScannerIndex,
+    string AxisXName,
+    string AxisYName,
+    double AxisXPosition,
+    double AxisYPosition,
+    DateTimeOffset UpdatedAtUtc);
+
 public sealed record Automation1HardwareReadiness(
     bool MotionAxesReady,
     bool SafetyInterlocksReady,

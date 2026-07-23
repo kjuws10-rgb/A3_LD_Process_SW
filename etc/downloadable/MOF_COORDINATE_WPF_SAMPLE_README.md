@@ -2,6 +2,9 @@
 
 ## 2026-07-23 Scanner Axis Context Menu Update
 
+- Each scanner now displays current `GXn/GYn` `PositionFeedback` below the scanner icon after Automation1 connection.
+- Axis positions refresh after direct connection, after manual axis commands, and during process monitoring.
+- The top summary line also includes a compact current axis-position list such as `H1: GX1=0.000, GY1=0.000`.
 - Scanner icon right-click opens an axis control context menu for that head.
 - The head menu exposes `GXn` and `GYn` submenus with `Enable`, `Disable`, `Home`, `Jog Move`, and `Motion Parameter Setting`.
 - Right-clicking an empty area of the board layout opens an all-scanner menu for `All Enable`, `All Disable`, `All Home`, and `All Motion Parameter Setting`.

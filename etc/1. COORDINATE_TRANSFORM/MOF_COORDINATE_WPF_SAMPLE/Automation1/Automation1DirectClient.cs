@@ -66,6 +66,14 @@ public sealed class Automation1DirectClient : IAsyncDisposable
             cancellationToken);
     }
 
+    public Task<IReadOnlyList<ScannerAxisPosition>> ReadScannerAxisPositionsAsync(
+        IReadOnlyList<(int ScannerIndex, string AxisXName, string AxisYName)> scanners,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(scanners);
+        return ExecuteLockedAsync(() => ReadScannerAxisPositionsCore(scanners), cancellationToken);
+    }
+
     private async Task<T> ExecuteLockedAsync<T>(Func<T> operation, CancellationToken cancellationToken)
     {
         await _operationGate.WaitAsync(cancellationToken);
@@ -302,6 +310,35 @@ public sealed class Automation1DirectClient : IAsyncDisposable
 
         controller.Runtime.Commands.Execute(aeroScript, taskIndex);
         return $"Axis command completed on Task {taskIndex}: {description}";
+    }
+
+    private IReadOnlyList<ScannerAxisPosition> ReadScannerAxisPositionsCore(
+        IReadOnlyList<(int ScannerIndex, string AxisXName, string AxisYName)> scanners)
+    {
+        var controller = EnsureRunningController();
+        var requiredAxes = scanners
+            .SelectMany(scanner => new[] { scanner.AxisXName, scanner.AxisYName })
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        ValidateAxisNames(controller, requiredAxes);
+
+        var configuration = new StatusItemConfiguration();
+        foreach (var axisName in requiredAxes)
+        {
+            configuration.Axis.Add(AxisStatusItem.PositionFeedback, axisName);
+        }
+
+        var results = controller.Runtime.Status.GetStatusItems(configuration);
+        var updatedAtUtc = DateTimeOffset.UtcNow;
+        return scanners
+            .Select(scanner => new ScannerAxisPosition(
+                scanner.ScannerIndex,
+                scanner.AxisXName,
+                scanner.AxisYName,
+                results.Axis[AxisStatusItem.PositionFeedback, scanner.AxisXName].Value,
+                results.Axis[AxisStatusItem.PositionFeedback, scanner.AxisYName].Value,
+                updatedAtUtc))
+            .ToArray();
     }
 
     private Automation1DirectStatus RefreshTaskStatus(Controller controller, Automation1JobRuntime runtime)

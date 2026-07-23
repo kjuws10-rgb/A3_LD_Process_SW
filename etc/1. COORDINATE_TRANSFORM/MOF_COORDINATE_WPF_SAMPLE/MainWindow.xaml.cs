@@ -44,6 +44,8 @@ public partial class MainWindow : Window
     private IReadOnlyList<CellCommand> _activeScriptCommands = Array.Empty<CellCommand>();
     private readonly Dictionary<string, IReadOnlyList<CellCommand>> _activeScriptCommandsByJobId = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<int> _completedMonitorSequences = new();
+    private readonly Dictionary<int, ScannerAxisPosition> _scannerAxisPositions = new();
+    private string _scannerAxisPositionSummary = "";
     private int _lastMonitorSequence;
     private bool _isProcessMonitorPolling;
     private Automation1DirectStatus? _lastMonitorStatus;
@@ -684,6 +686,15 @@ public partial class MainWindow : Window
         _automation1Client = new Automation1DirectClient(options);
         await _automation1Client.ConnectAsync(cancellationToken);
         _connectedAutomation1Options = options;
+        try
+        {
+            await RefreshScannerAxisPositionsAsync(_automation1Client, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            AppendDeploymentLog($"[Axis Position] Current scanner position read skipped: {ex.Message}");
+        }
+
         return _automation1Client;
     }
 
@@ -822,6 +833,7 @@ public partial class MainWindow : Window
             {
                 UpdateProcessMonitor(status);
             }
+            await RefreshScannerAxisPositionsAsync(_automation1Client, CancellationToken.None, redraw: true);
             if (statuses.All(status => status.State is Automation1DirectState.Completed or Automation1DirectState.Failed or Automation1DirectState.Stopped))
             {
                 _processMonitorTimer.Stop();
@@ -1039,6 +1051,11 @@ public partial class MainWindow : Window
             $"H1 초기위치 = ({_input.FirstScannerInitialStageX:0.###}, {_input.FirstScannerInitialStageY:0.###}) / 기대값 = ({_lastResult.ExpectedFirstScannerStageX:0.###}, {_lastResult.ExpectedFirstScannerStageY:0.###}) / 원점검증 = {(_lastResult.FirstScannerOriginValid ? "정상" : "불일치")}   " +
             $"반전 Y = {_lastResult.TurnaroundStageY:0.###} mm / 배치검증 = {(_lastResult.EquipmentOrderValid ? "정상" : "확인필요")}   " +
             $"Review 기준 = H{_lastResult.SelectedReviewScanner.Index} DOE{_lastResult.SelectedDoeBeam.BeamNo:00}";
+
+        if (!string.IsNullOrWhiteSpace(_scannerAxisPositionSummary))
+        {
+            SummaryText.Text += $"   Current Scanner Axis Position: {_scannerAxisPositionSummary}";
+        }
 
         FormulaText.Text =
             "동작 순서: Home에서 정방향으로 Review Camera를 먼저 통과해 Scanner 뒤쪽까지 이동한 뒤 방향을 반전합니다. 역방향 복귀 중 기판의 AK1 측에서 AK2 측 순서로 MOF 가공하고, Review Camera에서 후측정한 다음 Home으로 복귀합니다. " +
@@ -1372,7 +1389,8 @@ public partial class MainWindow : Window
             LayoutCanvas.Children.Add(box);
 
             DrawText($"Scanner\n#{scanner.Index}", x + 8, y + 14, 15, FontWeights.SemiBold, isActiveScanner ? Brushes.White : new SolidColorBrush(Color.FromRgb(203, 213, 225)));
-            DrawText($"({scanner.CenterX:0.#}, {scanner.CenterY:0.#})", x - 4, y + boxHeight + 6, 10, FontWeights.Normal, new SolidColorBrush(Color.FromRgb(148, 163, 184)));
+            DrawText($"Design ({scanner.CenterX:0.#}, {scanner.CenterY:0.#})", x - 16, y + boxHeight + 6, 10, FontWeights.Normal, new SolidColorBrush(Color.FromRgb(148, 163, 184)));
+            DrawText(FormatScannerAxisPosition(scanner.Index), x - 24, y + boxHeight + 22, 10, FontWeights.SemiBold, new SolidColorBrush(Color.FromRgb(125, 211, 252)));
         }
     }
 
@@ -1418,6 +1436,64 @@ public partial class MainWindow : Window
     private void LayoutCanvas_ContextMenuOpening(object sender, ContextMenuEventArgs e)
     {
         LayoutCanvas.ContextMenu = BuildAllScannerContextMenu();
+    }
+
+    private async Task RefreshScannerAxisPositionsAsync(
+        Automation1DirectClient client,
+        CancellationToken cancellationToken,
+        bool redraw = true)
+    {
+        if (_lastResult is null)
+        {
+            return;
+        }
+
+        var scanners = _lastResult.Scanners
+            .OrderBy(scanner => scanner.Index)
+            .Select(scanner =>
+            {
+                var axes = ResolveScannerAxes(scanner.Index);
+                return (scanner.Index, axes.X, axes.Y);
+            })
+            .ToArray();
+
+        var positions = await client.ReadScannerAxisPositionsAsync(scanners, cancellationToken);
+        foreach (var position in positions)
+        {
+            _scannerAxisPositions[position.ScannerIndex] = position;
+        }
+
+        UpdateScannerPositionSummary();
+        if (redraw)
+        {
+            DrawLayout();
+        }
+    }
+
+    private string FormatScannerAxisPosition(int scannerIndex)
+    {
+        if (!_scannerAxisPositions.TryGetValue(scannerIndex, out var position))
+        {
+            var axes = ResolveScannerAxes(scannerIndex);
+            return $"Now {axes.X}=--, {axes.Y}=--";
+        }
+
+        return $"Now {position.AxisXName}={position.AxisXPosition:0.###}, {position.AxisYName}={position.AxisYPosition:0.###}";
+    }
+
+    private void UpdateScannerPositionSummary()
+    {
+        if (_scannerAxisPositions.Count == 0)
+        {
+            return;
+        }
+
+        var text = string.Join("   ", _scannerAxisPositions
+            .Values
+            .OrderBy(position => position.ScannerIndex)
+            .Select(position =>
+                $"H{position.ScannerIndex}: {position.AxisXName}={position.AxisXPosition:0.###}, {position.AxisYName}={position.AxisYPosition:0.###}"));
+        _scannerAxisPositionSummary = text;
     }
 
     private ContextMenu BuildScannerContextMenu(ScannerModel scanner)
@@ -1554,6 +1630,7 @@ public partial class MainWindow : Window
             var result = await client.ExecuteAxisCommandAsync(description, axes, aeroScript, taskIndex, cancellationToken);
             AppendDeploymentLog($"[Axis Command] {result}");
             AppendDeploymentLog($"[Axis Command Script] {aeroScript.Replace(Environment.NewLine, " | ")}");
+            await RefreshScannerAxisPositionsAsync(client, cancellationToken);
             ScriptJobText.Text = result;
         }, TimeSpan.FromSeconds(30));
     }
