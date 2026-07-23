@@ -24,6 +24,7 @@ public partial class MainWindow : Window
     private CoordinateInput _input = new();
     private CoordinateResult? _lastResult;
     private AeroScriptPackage? _currentScriptPackage;
+    private IReadOnlyList<AeroScriptPackage> _currentScriptPackages = Array.Empty<AeroScriptPackage>();
     private Automation1DirectClient? _automation1Client;
     private Automation1ConnectionOptions? _connectedAutomation1Options;
     private CancellationTokenSource? _scriptWorkflowCancellation;
@@ -41,6 +42,7 @@ public partial class MainWindow : Window
     private readonly DispatcherTimer _layoutRenderTimer;
     private readonly DispatcherTimer _processMonitorTimer;
     private IReadOnlyList<CellCommand> _activeScriptCommands = Array.Empty<CellCommand>();
+    private readonly Dictionary<string, IReadOnlyList<CellCommand>> _activeScriptCommandsByJobId = new(StringComparer.OrdinalIgnoreCase);
     private int _lastMonitorSequence;
     private bool _isProcessMonitorPolling;
     private Automation1DirectStatus? _lastMonitorStatus;
@@ -183,7 +185,7 @@ public partial class MainWindow : Window
     {
         try
         {
-            GenerateCurrentAeroScriptPackage();
+            GenerateCurrentAeroScriptPackages();
         }
         catch (Exception ex)
         {
@@ -196,10 +198,13 @@ public partial class MainWindow : Window
     {
         await RunScriptUiOperationAsync(async cancellationToken =>
         {
-            var package = _currentScriptPackage ?? GenerateCurrentAeroScriptPackage();
+            var packages = GetCurrentAeroScriptPackagesOrGenerate();
             var client = await GetAutomation1DirectClientAsync(cancellationToken);
-            var response = await client.UploadAsync(package, cancellationToken);
-            ShowAutomation1Response("Controller 기록", response);
+            foreach (var package in packages)
+            {
+                var response = await client.UploadAsync(package, cancellationToken);
+                ShowAutomation1Response($"Controller 기록 H{ResolveHeadFromPackage(package)}", response);
+            }
         });
     }
 
@@ -245,14 +250,16 @@ public partial class MainWindow : Window
 
         await RunScriptUiOperationAsync(async cancellationToken =>
         {
-            var package = _currentScriptPackage
-                          ?? throw new InvalidOperationException("먼저 Script를 생성하고 Controller File System에 기록해야 합니다.");
+            var packages = GetCurrentAeroScriptPackagesOrThrow();
             var client = await GetAutomation1DirectClientAsync(cancellationToken);
-            var response = await client.RunAsync(
-                package.JobId,
-                ReadHardwareReadiness(package.GenerationMode),
-                cancellationToken);
-            ShowAutomation1Response("실행 명령", response);
+            foreach (var package in packages)
+            {
+                var response = await client.RunAsync(
+                    package.JobId,
+                    ReadHardwareReadiness(package.GenerationMode),
+                    cancellationToken);
+                ShowAutomation1Response($"Task 실행 H{ResolveHeadFromPackage(package)}", response);
+            }
             StartProcessMonitorPolling();
         });
     }
@@ -261,12 +268,13 @@ public partial class MainWindow : Window
     {
         await RunScriptUiOperationAsync(async cancellationToken =>
         {
-            var package = _currentScriptPackage
-                          ?? throw new InvalidOperationException(
-                              "AeroScript를 먼저 생성하고 Controller에 기록한 뒤 Compile 검사를 실행하십시오.");
+            var packages = GetCurrentAeroScriptPackagesOrThrow();
             var client = await GetAutomation1DirectClientAsync(cancellationToken);
-            var response = await client.CompileAsync(package.JobId, cancellationToken);
-            ShowAutomation1Response("Compile check", response);
+            foreach (var package in packages)
+            {
+                var response = await client.CompileAsync(package.JobId, cancellationToken);
+                ShowAutomation1Response($"Compile check H{ResolveHeadFromPackage(package)}", response);
+            }
         });
     }
 
@@ -274,11 +282,13 @@ public partial class MainWindow : Window
     {
         await RunScriptUiOperationAsync(async cancellationToken =>
         {
-            var package = _currentScriptPackage
-                          ?? throw new InvalidOperationException("조회할 Script Job이 없습니다.");
+            var packages = GetCurrentAeroScriptPackagesOrThrow();
             var client = await GetAutomation1DirectClientAsync(cancellationToken);
-            var response = await client.GetStatusAsync(package.JobId, cancellationToken);
-            ShowAutomation1Response("상태 조회", response);
+            foreach (var package in packages)
+            {
+                var response = await client.GetStatusAsync(package.JobId, cancellationToken);
+                ShowAutomation1Response($"상태 조회 H{ResolveHeadFromPackage(package)}", response);
+            }
         });
     }
 
@@ -286,12 +296,14 @@ public partial class MainWindow : Window
     {
         await RunScriptUiOperationAsync(async cancellationToken =>
         {
-            var package = _currentScriptPackage
-                          ?? throw new InvalidOperationException("중지할 Script Job이 없습니다.");
+            var packages = GetCurrentAeroScriptPackagesOrThrow();
             var client = await GetAutomation1DirectClientAsync(cancellationToken);
-            var status = await client.StopAsync(package.JobId, cancellationToken);
             _processMonitorTimer.Stop();
-            ShowAutomation1Response("실행 중지", status);
+            foreach (var package in packages)
+            {
+                var status = await client.StopAsync(package.JobId, cancellationToken);
+                ShowAutomation1Response($"실행 중지 H{ResolveHeadFromPackage(package)}", status);
+            }
         });
     }
 
@@ -304,47 +316,66 @@ public partial class MainWindow : Window
 
         await RunScriptUiOperationAsync(async cancellationToken =>
         {
-            var package = GenerateCurrentAeroScriptPackage();
+            var packages = GenerateCurrentAeroScriptPackages();
             var client = await GetAutomation1DirectClientAsync(cancellationToken);
 
-            var upload = await client.UploadAsync(package, cancellationToken);
-            EnsureAutomation1Success("Controller 기록", upload);
-            ShowAutomation1Response("Controller 기록", upload);
+            foreach (var package in packages)
+            {
+                var upload = await client.UploadAsync(package, cancellationToken);
+                EnsureAutomation1Success("Controller 기록", upload);
+                ShowAutomation1Response($"Controller 기록 H{ResolveHeadFromPackage(package)}", upload);
 
-            var compile = await client.CompileAsync(package.JobId, cancellationToken);
-            EnsureAutomation1Success("Compile check", compile);
-            ShowAutomation1Response("Compile check", compile);
+                var compile = await client.CompileAsync(package.JobId, cancellationToken);
+                EnsureAutomation1Success("Compile check", compile);
+                ShowAutomation1Response($"Compile check H{ResolveHeadFromPackage(package)}", compile);
+            }
 
-            var run = await client.RunAsync(
-                package.JobId,
-                ReadHardwareReadiness(package.GenerationMode),
-                cancellationToken);
-            EnsureAutomation1Success("실행 명령", run);
-            ShowAutomation1Response("실행 명령", run);
+            foreach (var package in packages)
+            {
+                var run = await client.RunAsync(
+                    package.JobId,
+                    ReadHardwareReadiness(package.GenerationMode),
+                    cancellationToken);
+                EnsureAutomation1Success("Task 실행", run);
+                ShowAutomation1Response($"Task 실행 H{ResolveHeadFromPackage(package)}", run);
+            }
 
             string? lastStatusKey = null;
             while (true)
             {
                 await Task.Delay(250, cancellationToken);
-                var status = await client.GetStatusAsync(package.JobId, cancellationToken);
-                EnsureAutomation1Success("상태 조회", status);
-                UpdateProcessMonitor(status);
-                var statusKey = $"{status.State}|{status.TaskState}|{status.Message}|{status.Error}";
+                var statuses = new List<Automation1DirectStatus>();
+                foreach (var package in packages)
+                {
+                    var status = await client.GetStatusAsync(package.JobId, cancellationToken);
+                    EnsureAutomation1Success("상태 조회", status);
+                    statuses.Add(status);
+                }
+
+                var displayStatus = statuses.OrderByDescending(status => status.CurrentMofSequence).First();
+                UpdateProcessMonitor(displayStatus);
+                var statusKey = string.Join("|", statuses.Select(status =>
+                    $"{status.JobId[..8]}:{status.State}:{status.TaskState}:{status.Message}:{status.Error}"));
                 if (!statusKey.Equals(lastStatusKey, StringComparison.Ordinal))
                 {
-                    ShowAutomation1Response("상태", status);
+                    foreach (var status in statuses)
+                    {
+                        ShowAutomation1Response("상태", status);
+                    }
+
                     lastStatusKey = statusKey;
                 }
 
-                if (status.State == Automation1DirectState.Completed)
+                if (statuses.All(status => status.State == Automation1DirectState.Completed))
                 {
-                    AppendDeploymentLog("[완료] 원격 Automation1 Task가 ProgramComplete 상태입니다.");
+                    AppendDeploymentLog("[완료] 선택된 모든 Automation1 Task가 ProgramComplete 상태입니다.");
                     return;
                 }
 
-                if (status.State == Automation1DirectState.Failed)
+                var failed = statuses.FirstOrDefault(status => status.State == Automation1DirectState.Failed);
+                if (failed is not null)
                 {
-                    throw new InvalidOperationException(status.Message);
+                    throw new InvalidOperationException(failed.Message);
                 }
             }
         }, TimeSpan.FromMinutes(30));
@@ -419,6 +450,118 @@ public partial class MainWindow : Window
         return AeroScriptLocalFileStore.ResolvePath(LocalScriptPathBox.Text, AppContext.BaseDirectory);
     }
 
+    private IReadOnlyList<AeroScriptPackage> GenerateCurrentAeroScriptPackages()
+    {
+        CommitCellPpGrid();
+        _input = ReadInputFromScreen();
+        GenerateAndRender();
+        var result = _lastResult ?? throw new InvalidOperationException("좌표 결과가 생성되지 않았습니다.");
+        var selectedHeads = ParseScannerHeadSet(_input.HighlightScannerHeads);
+
+        IEnumerable<CellCommand> commands = result.MofExecutionCommands.Where(command => command.InField);
+        if (selectedHeads.Count > 0)
+        {
+            commands = commands.Where(command => selectedHeads.Contains(command.ScannerIndex));
+        }
+
+        if (SelectedCoordinatesOnlyCheckBox.IsChecked == true)
+        {
+            commands = commands.Where(command => _selectedPointKeys.Contains(PointKey(command)));
+        }
+
+        var commandList = commands.OrderBy(command => command.MofSequence).ToArray();
+        if (commandList.Length == 0)
+        {
+            throw new InvalidOperationException("No process coordinates are selected for AeroScript generation.");
+        }
+
+        var options = ReadAeroScriptGenerationOptions();
+        _activeScriptCommands = commandList;
+        ResetProcessMonitor(commandList.Length);
+
+        var baseTaskIndex = Math.Max(1, ReadInt(Automation1TaskIndexBox, 1));
+        var controllerFile = ControllerFileNameBox.Text.Trim();
+        ValidateControllerFileNameForClient(controllerFile);
+        var baseLocalScriptPath = LocalScriptPathBox.Text;
+        var groups = commandList
+            .GroupBy(command => command.ScannerIndex)
+            .OrderBy(group => group.Key)
+            .ToArray();
+        var packages = new List<AeroScriptPackage>(groups.Length);
+        var preview = new System.Text.StringBuilder();
+        string? firstLocalScriptPath = null;
+        _activeScriptCommandsByJobId.Clear();
+
+        for (var groupIndex = 0; groupIndex < groups.Length; groupIndex++)
+        {
+            var group = groups[groupIndex];
+            var headCommands = group.OrderBy(command => command.MofSequence).ToArray();
+            var source = _aeroScriptGenerator.Generate(_input, headCommands, options);
+            var localScriptPath = AeroScriptLocalFileStore.Save(
+                AddHeadSuffix(baseLocalScriptPath, group.Key),
+                source,
+                AppContext.BaseDirectory);
+            firstLocalScriptPath ??= localScriptPath;
+
+            var package = AeroScriptPackage.Create(
+                AddHeadSuffix(controllerFile, group.Key),
+                source,
+                baseTaskIndex + groupIndex,
+                headCommands.Length,
+                options.Mode,
+                AeroScriptGenerator.ResolveRequiredAxisNames(headCommands, options),
+                PreserveControllerJobFileCheckBox.IsChecked == true);
+            packages.Add(package);
+            _activeScriptCommandsByJobId[package.JobId] = headCommands;
+            preview.AppendLine($"// ===== H{group.Key}, Task {package.TaskIndex}, Controller {package.ControllerFileName} =====");
+            preview.AppendLine(source);
+            preview.AppendLine();
+            AppendDeploymentLog(
+                $"[Generator] H{group.Key}, Task={package.TaskIndex}, Revision={AeroScriptGenerator.GeneratorRevision}, " +
+                $"Local SHA-256={package.Sha256}, saved-and-readback verified: {localScriptPath}");
+        }
+
+        _currentScriptPackages = packages;
+        _currentScriptPackage = packages.First();
+        LocalScriptPathBox.Text = firstLocalScriptPath ?? ResolveLocalScriptPath();
+        ScriptPreviewBox.Text = preview.ToString();
+        ScriptJobText.Text =
+            $"생성 완료: Scanner Task={packages.Count}, 좌표={commandList.Length}, " +
+            $"Mode={options.Mode}, Task={baseTaskIndex}~{baseTaskIndex + packages.Count - 1}";
+        AppendDeploymentLog(
+            $"[생성] Client PC에서 {options.Mode}, {packages.Count}개 Scanner Task, {commandList.Length}개 좌표로 로컬 파일 저장 완료");
+        AppendDeploymentLog(
+            $"[Controller 저장] 직접 연결 후 Controller File System에 {string.Join(", ", packages.Select(p => p.ControllerFileName))} 기록");
+
+        return packages;
+    }
+
+    private IReadOnlyList<AeroScriptPackage> GetCurrentAeroScriptPackagesOrGenerate() =>
+        _currentScriptPackages.Count > 0 ? _currentScriptPackages : GenerateCurrentAeroScriptPackages();
+
+    private IReadOnlyList<AeroScriptPackage> GetCurrentAeroScriptPackagesOrThrow() =>
+        _currentScriptPackages.Count > 0
+            ? _currentScriptPackages
+            : throw new InvalidOperationException("먼저 Script를 생성하고 Controller File System에 기록해야 합니다.");
+
+    private static int ResolveHeadFromPackage(AeroScriptPackage package)
+    {
+        var match = System.Text.RegularExpressions.Regex.Match(
+            package.ControllerFileName,
+            @"_H(?<head>\d+)\.",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        return match.Success && int.TryParse(match.Groups["head"].Value, out var head) ? head : 0;
+    }
+
+    private static string AddHeadSuffix(string path, int head)
+    {
+        var slashIndex = Math.Max(path.LastIndexOf('/'), path.LastIndexOf('\\'));
+        var dotIndex = path.LastIndexOf('.');
+        return dotIndex > slashIndex
+            ? path.Insert(dotIndex, $"_H{head}")
+            : $"{path}_H{head}.ascript";
+    }
+
     private static void ValidateControllerFileNameForClient(string controllerFile)
     {
         if (string.IsNullOrWhiteSpace(controllerFile) ||
@@ -452,9 +595,10 @@ public partial class MainWindow : Window
             ExecuteNumLines = Math.Max(1, ReadInt(ExecuteNumLinesBox, 110)),
             SetupDwellSeconds = ReadDouble(SetupDwellSecondsBox, 0.2),
             MoveDelayMilliseconds = ReadDouble(MoveDelayMillisecondsBox, 0.1),
-            ExternalEncoderCountsPerUnit = ReadDouble(ExternalEncoderCountsPerUnitBox, 2000),
+            ExternalEncoderCountsPerUnit = ReadDouble(ExternalEncoderCountsPerUnitBox, 16000),
             ExternalEncoderDirectionSign = ReadDouble(ExternalEncoderDirectionSignBox, -1),
             AuxiliaryInitialWaitDistance = ReadDouble(AuxiliaryInitialWaitDistanceBox, 0.1),
+            FollowDistanceBeforeProcessMm = ReadDouble(FollowDistanceBeforeProcessBox, 200),
             VirtualStageTickSeconds = ReadDouble(VirtualStageTickSecondsBox, 0.02),
             SoftwareLimitLow = ReadDouble(SoftwareLimitLowBox, -10_000),
             SoftwareLimitHigh = ReadDouble(SoftwareLimitHighBox, 10_000),
@@ -593,6 +737,7 @@ public partial class MainWindow : Window
         RestoreBoardMonitorStroke(_lastMonitorSequence);
         _lastMonitorSequence = 0;
         _lastMonitorStatus = null;
+        _activeScriptCommandsByJobId.Clear();
         ProcessProgressBar.Value = 0;
         ProcessMonitorText.Text = totalTargets > 0 ? $"가공 모니터: 0 / {totalTargets}" : "가공 모니터: 대기";
         VirtualStagePositionText.Text = "Virtual Stage Y: -";
@@ -601,13 +746,14 @@ public partial class MainWindow : Window
     private void UpdateProcessMonitor(Automation1DirectStatus status)
     {
         _lastMonitorStatus = status;
-        var total = status.TotalMofTargets > 0 ? status.TotalMofTargets : _activeScriptCommands.Count;
+        var commandSource = _activeScriptCommandsByJobId.GetValueOrDefault(status.JobId) ?? _activeScriptCommands;
+        var total = status.TotalMofTargets > 0 ? status.TotalMofTargets : commandSource.Count;
         var current = Math.Clamp(status.CurrentMofSequence, 0, Math.Max(0, total));
         ProcessProgressBar.Value = total > 0 ? current * 100.0 / total : 0;
         VirtualStagePositionText.Text = $"Virtual Stage Y: {status.VirtualStagePosition:0.###}";
 
-        var command = current > 0 && current <= _activeScriptCommands.Count
-            ? _activeScriptCommands[(int)current - 1]
+        var command = current > 0 && current <= commandSource.Count
+            ? commandSource[(int)current - 1]
             : null;
         ProcessMonitorText.Text = command is null
             ? $"가공 모니터: {current} / {total}"
@@ -635,7 +781,7 @@ public partial class MainWindow : Window
 
     private async void ProcessMonitorTimer_Tick(object? sender, EventArgs e)
     {
-        if (_isProcessMonitorPolling || _automation1Client is null || _currentScriptPackage is null)
+        if (_isProcessMonitorPolling || _automation1Client is null || _currentScriptPackages.Count == 0)
         {
             return;
         }
@@ -643,9 +789,15 @@ public partial class MainWindow : Window
         _isProcessMonitorPolling = true;
         try
         {
-            var status = await _automation1Client.GetStatusAsync(_currentScriptPackage.JobId, CancellationToken.None);
-            UpdateProcessMonitor(status);
-            if (status.State is Automation1DirectState.Completed or Automation1DirectState.Failed or Automation1DirectState.Stopped)
+            var statuses = new List<Automation1DirectStatus>();
+            foreach (var package in _currentScriptPackages)
+            {
+                statuses.Add(await _automation1Client.GetStatusAsync(package.JobId, CancellationToken.None));
+            }
+
+            var displayStatus = statuses.OrderByDescending(status => status.CurrentMofSequence).First();
+            UpdateProcessMonitor(displayStatus);
+            if (statuses.All(status => status.State is Automation1DirectState.Completed or Automation1DirectState.Failed or Automation1DirectState.Stopped))
             {
                 _processMonitorTimer.Stop();
             }

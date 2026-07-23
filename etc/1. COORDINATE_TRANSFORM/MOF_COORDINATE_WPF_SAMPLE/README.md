@@ -1,5 +1,20 @@
 # MOF Coordinate WPF Sample
 
+## 2026-07-23 Field AUX MOF Multi-Task Update
+
+이번 버전은 현장 설비에서 사용하는 Automation1 AeroScript 구조를 기준으로 External Stage AUX MOF 생성을 다시 맞췄다.
+
+- 외부 Stage Y축은 Automation1 축으로 만들지 않는다. Stage encoder는 scanner `GY`의 `AuxiliaryFeedback`으로 들어오는 것으로 본다.
+- 기본 encoder 분해능은 현장값인 `16000 cts/mm`로 변경했다.
+- `Follow Before Process mm` 입력을 추가했다. 기본값은 `200 mm`이며, 가공 시작 전까지 scanner가 Stage를 따라가는 구간이다.
+- External Stage AUX MOF script는 현장 코드처럼 `MoveRapid([GY,GX], [gy,gx])`, `wait(StatusGetAxisItem(GY, AxisStatusItem.AuxiliaryFeedback) > count)`, `GalvoLaserOutput(GY, GalvoLaser.On/Off)` 순서로 생성한다.
+- wait threshold는 `200 mm 추종거리 + AUX Initial Wait + AK1->AK2 방향 LocalY 진행량`에 `External Encoder cnt/mm`를 곱해 count로 만든다.
+- scanner `GY/GX` 좌표는 가공 위치 명령이고, AUX wait count는 외부 Stage 이동량이다. 두 값은 같은 좌표계가 아니므로 숫자가 다를 수 있다.
+- 여러 scanner를 선택하면 scanner head별로 독립 `.ascript`를 생성한다. `Automation1 Task`가 1이고 H1/H3/H5를 선택하면 H1은 Task 1, H3은 Task 2, H5는 Task 3에 배정된다.
+- Controller file과 local file은 `_H{head}` suffix가 붙는다. 예: `programs/mof_generated_H3.ascript`.
+- Controller upload, compile, run, status, stop, 전체 실행은 생성된 모든 scanner Task를 대상으로 처리한다.
+- 상태 모니터는 실행 중인 Task들의 진행 상태를 조회하고 가장 진행된 좌표를 기준으로 UI를 갱신한다.
+
 ## 2026-07-23 PPID Process Program Update
 
 이번 버전은 기존 `CellBlockColumns / CellBlockRows / CellBlockPitch` 중심의 배치 개념을 PPID 기반 PP 정보로 대체한다.

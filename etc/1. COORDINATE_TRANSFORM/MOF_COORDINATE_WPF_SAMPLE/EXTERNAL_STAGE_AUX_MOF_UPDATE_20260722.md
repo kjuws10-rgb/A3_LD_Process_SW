@@ -1,5 +1,36 @@
 # External Stage AUX MOF Update V5
 
+## 2026-07-23 Field Script Alignment V9
+
+The generated equipment script now follows the field script concept shared from the line:
+
+- Stage Y is a third-party axis and is not commanded by Automation1.
+- Stage encoder resolution defaults to `16000 counts/mm`.
+- The scanner follows the Stage until the configured `Follow Before Process mm` distance. Default: `200 mm`.
+- Pre-follow commands are generated as 10 mm steps:
+
+```aeroscript
+MoveRapid([GY,GX], [-10,0])
+wait(StatusGetAxisItem(GY, AxisStatusItem.AuxiliaryFeedback) > $encoder + (160000))
+...
+MoveRapid([GY,GX], [-200,0])
+wait(StatusGetAxisItem(GY, AxisStatusItem.AuxiliaryFeedback) > $encoder + (3200000))
+```
+
+- Process commands then use generated scanner coordinates:
+
+```aeroscript
+MoveRapid([GY,GX], [<process GY>, <process GX>])
+wait(StatusGetAxisItem(GY, AxisStatusItem.AuxiliaryFeedback) > $encoder + (<stage travel count>))
+GalvoLaserOutput(GY, GalvoLaser.On)
+MoveDelay([GY,GX], <shot delay>)
+GalvoLaserOutput(GY, GalvoLaser.Off)
+```
+
+Important distinction: `GY/GX` are scanner process coordinates. The `wait(...)` threshold is external Stage travel converted to encoder counts. These values are related by the MOF concept but are not the same coordinate.
+
+When multiple scanners are selected, the WPF client creates one script package per scanner and assigns consecutive Automation1 Tasks. This avoids mixing multiple scanner heads into one AeroScript Task and lets Automation1 run them in parallel.
+
 ## Equipment Model
 
 The board Stage is controlled by a third-party motion controller. Automation1 does not contain or command a Stage Y axis. The physical Stage encoder is wired to the auxiliary encoder input associated with each scanner GY axis.

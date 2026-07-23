@@ -11,12 +11,8 @@ public sealed class Automation1DirectClient : IAsyncDisposable
 {
     private readonly Automation1ConnectionOptions _options;
     private readonly SemaphoreSlim _operationGate = new(1, 1);
+    private readonly Dictionary<string, Automation1JobRuntime> _jobs = new(StringComparer.OrdinalIgnoreCase);
     private Controller? _controller;
-    private CompiledAeroScript? _compiledAeroScript;
-    private AeroScriptPackage? _activePackage;
-    private Automation1DirectStatus? _lastStatus;
-    private Automation1JobAudit? _audit;
-    private DateTimeOffset? _runRequestedAtUtc;
     private bool _disposed;
 
     public Automation1ConnectionInfo? LastConnectionInfo { get; private set; }
@@ -124,41 +120,42 @@ public sealed class Automation1DirectClient : IAsyncDisposable
         ValidateTask(controller, package.TaskIndex);
         controller.Files.WriteText(package.ControllerFileName, package.ScriptText);
 
-        _activePackage = package;
-        _compiledAeroScript = null;
-        _runRequestedAtUtc = null;
         var controllerDirectory = package.ControllerFileName.LastIndexOf('/') is var slashIndex && slashIndex >= 0
             ? package.ControllerFileName[..(slashIndex + 1)]
             : "";
         var auditFile =
             $"{controllerDirectory}mof_job_{package.CreatedAtUtc:yyyyMMdd_HHmmss}_{package.JobId[..8]}.json";
-        _audit = Automation1JobAudit.Create(package, _options.Host, _options.Port, auditFile);
-        _lastStatus = CreateStatus(
+        var runtime = new Automation1JobRuntime(
+            package,
+            Automation1JobAudit.Create(package, _options.Host, _options.Port, auditFile));
+        _jobs[package.JobId] = runtime;
+        runtime.LastStatus = CreateStatus(
             package,
             Automation1DirectState.Uploaded,
             "ProgramReady",
             $"Controller.Files.WriteText completed: {package.ControllerFileName}",
             "",
             auditFile);
-        AppendAuditEvent(_lastStatus);
-        return _lastStatus;
+        AppendAuditEvent(runtime, runtime.LastStatus);
+        return runtime.LastStatus;
     }
 
     private Automation1DirectStatus CompileCore(string jobId)
     {
-        var package = EnsureActivePackage(jobId);
+        var runtime = EnsureJob(jobId);
+        var package = runtime.Package;
         var controller = EnsureRunningController();
         ValidateTask(controller, package.TaskIndex);
         ValidateExecutionEnvironment(controller, package);
 
         try
         {
-            _compiledAeroScript = controller.Compiler.CompileControllerFile(
+            runtime.CompiledAeroScript = controller.Compiler.CompileControllerFile(
                 package.ControllerFileName,
                 compileWithDebugInformation: true);
             var compiledControllerFileName = GetCompiledControllerFileName(package.ControllerFileName);
-            controller.Files.WriteBytes(compiledControllerFileName, _compiledAeroScript.CompiledBytes);
-            var warnings = _compiledAeroScript.CompilerWarnings.ToArray();
+            controller.Files.WriteBytes(compiledControllerFileName, runtime.CompiledAeroScript.CompiledBytes);
+            var warnings = runtime.CompiledAeroScript.CompilerWarnings.ToArray();
             var warningText = warnings.Length == 0
                 ? "No compiler warnings."
                 : $"Compiler warnings: {FormatCompilerResults(warnings)}";
@@ -169,13 +166,13 @@ public sealed class Automation1DirectClient : IAsyncDisposable
                 taskState,
                 $"AeroScript compile succeeded and wrote {compiledControllerFileName}. {warningText}",
                 "",
-                _audit?.ControllerAuditFileName ?? "");
-            UpdateStatusAndAudit(compiled);
+                runtime.Audit.ControllerAuditFileName);
+            UpdateStatusAndAudit(runtime, compiled);
             return compiled;
         }
         catch (CompileException ex)
         {
-            _compiledAeroScript = null;
+            runtime.CompiledAeroScript = null;
             var details = FormatCompilerResults(ex.CompilerErrors);
             var failed = CreateStatus(
                 package,
@@ -183,8 +180,8 @@ public sealed class Automation1DirectClient : IAsyncDisposable
                 "CompileError",
                 "AeroScript compile failed. Review the file, line, column, and message below.",
                 details,
-                _audit?.ControllerAuditFileName ?? "");
-            UpdateStatusAndAudit(failed);
+                runtime.Audit.ControllerAuditFileName);
+            UpdateStatusAndAudit(runtime, failed);
             throw new InvalidOperationException(
                 $"AeroScript compile failed:{Environment.NewLine}{details}",
                 ex);
@@ -195,7 +192,8 @@ public sealed class Automation1DirectClient : IAsyncDisposable
         string jobId,
         Automation1HardwareReadiness hardwareReadiness)
     {
-        var package = EnsureActivePackage(jobId);
+        var runtime = EnsureJob(jobId);
+        var package = runtime.Package;
         var controller = EnsureRunningController();
         ValidateExecutionEnvironment(controller, package);
         ValidateHardwareReadiness(package, hardwareReadiness);
@@ -207,51 +205,52 @@ public sealed class Automation1DirectClient : IAsyncDisposable
                 $"Task {package.TaskIndex} is already busy: {before.TaskState}.");
         }
 
-        var compiledProgram = _compiledAeroScript;
+        var compiledProgram = runtime.CompiledAeroScript;
         if (compiledProgram is null)
         {
             CompileCore(jobId);
-            compiledProgram = _compiledAeroScript
+            compiledProgram = runtime.CompiledAeroScript
                               ?? throw new InvalidOperationException("AeroScript compilation did not produce a program.");
         }
 
-        _runRequestedAtUtc = DateTimeOffset.UtcNow;
+        runtime.RunRequestedAtUtc = DateTimeOffset.UtcNow;
         try
         {
             task.Program.Run(compiledProgram);
         }
         catch (Exception ex)
         {
-            _runRequestedAtUtc = null;
+            runtime.RunRequestedAtUtc = null;
             var failed = CreateStatus(
                 package,
                 Automation1DirectState.Failed,
                 task.Status.TaskState.ToString(),
                 $"Task {package.TaskIndex} failed to start the compiled AeroScript program.",
                 ex.Message,
-                _audit?.ControllerAuditFileName ?? "");
-            UpdateStatusAndAudit(failed);
+                runtime.Audit.ControllerAuditFileName);
+            UpdateStatusAndAudit(runtime, failed);
             throw;
         }
 
-        return RefreshTaskStatus(controller, package);
+        return RefreshTaskStatus(controller, runtime);
     }
 
     private Automation1DirectStatus GetStatusCore(string jobId)
     {
-        var package = EnsureActivePackage(jobId);
-        if (_runRequestedAtUtc is null)
+        var runtime = EnsureJob(jobId);
+        if (runtime.RunRequestedAtUtc is null)
         {
-            return _lastStatus
+            return runtime.LastStatus
                    ?? throw new InvalidOperationException("No uploaded script status is available.");
         }
 
-        return RefreshTaskStatus(EnsureRunningController(), package);
+        return RefreshTaskStatus(EnsureRunningController(), runtime);
     }
 
     private Automation1DirectStatus StopCore(string jobId)
     {
-        var package = EnsureActivePackage(jobId);
+        var runtime = EnsureJob(jobId);
+        var package = runtime.Package;
         var controller = EnsureRunningController();
         var task = controller.Runtime.Tasks[package.TaskIndex];
         if (IsBusyTaskState(task.Status.TaskState))
@@ -259,26 +258,27 @@ public sealed class Automation1DirectClient : IAsyncDisposable
             task.Program.Stop(5000);
         }
 
-        _runRequestedAtUtc = null;
+        runtime.RunRequestedAtUtc = null;
         var stopped = CreateStatus(
             package,
             Automation1DirectState.Stopped,
             task.Status.TaskState.ToString(),
             $"Task {package.TaskIndex} Program.Stop completed.",
             "",
-            _audit?.ControllerAuditFileName ?? "");
-        UpdateStatusAndAudit(stopped);
+            runtime.Audit.ControllerAuditFileName);
+        UpdateStatusAndAudit(runtime, stopped);
         return stopped;
     }
 
-    private Automation1DirectStatus RefreshTaskStatus(Controller controller, AeroScriptPackage package)
+    private Automation1DirectStatus RefreshTaskStatus(Controller controller, Automation1JobRuntime runtime)
     {
+        var package = runtime.Package;
         var snapshot = controller.Runtime.Tasks[package.TaskIndex].Status;
         var monitor = ReadProcessMonitor(controller);
         var taskState = snapshot.TaskState.ToString();
         var error = snapshot.Error?.ToString() ?? "";
-        var inRunTransition = _runRequestedAtUtc is not null &&
-                              DateTimeOffset.UtcNow - _runRequestedAtUtc.Value < TimeSpan.FromSeconds(2);
+        var inRunTransition = runtime.RunRequestedAtUtc is not null &&
+                              DateTimeOffset.UtcNow - runtime.RunRequestedAtUtc.Value < TimeSpan.FromSeconds(2);
         var state = snapshot.TaskState switch
         {
             TaskState.ProgramComplete => Automation1DirectState.Completed,
@@ -305,31 +305,31 @@ public sealed class Automation1DirectClient : IAsyncDisposable
             taskState,
             message,
             error,
-            _audit?.ControllerAuditFileName ?? "",
+            runtime.Audit.ControllerAuditFileName,
             monitor.StagePosition,
             monitor.CurrentSequence,
             monitor.TotalTargets);
-        UpdateStatusAndAudit(status);
+        UpdateStatusAndAudit(runtime, status);
         return status;
     }
 
-    private void UpdateStatusAndAudit(Automation1DirectStatus status)
+    private void UpdateStatusAndAudit(Automation1JobRuntime runtime, Automation1DirectStatus status)
     {
-        var changed = _lastStatus is null ||
-                      _lastStatus.State != status.State ||
-                      !_lastStatus.TaskState.Equals(status.TaskState, StringComparison.Ordinal) ||
-                      !_lastStatus.Message.Equals(status.Message, StringComparison.Ordinal);
-        _lastStatus = status;
+        var changed = runtime.LastStatus is null ||
+                      runtime.LastStatus.State != status.State ||
+                      !runtime.LastStatus.TaskState.Equals(status.TaskState, StringComparison.Ordinal) ||
+                      !runtime.LastStatus.Message.Equals(status.Message, StringComparison.Ordinal);
+        runtime.LastStatus = status;
         if (changed)
         {
-            AppendAuditEvent(status);
+            AppendAuditEvent(runtime, status);
         }
     }
 
-    private void AppendAuditEvent(Automation1DirectStatus status)
+    private void AppendAuditEvent(Automation1JobRuntime runtime, Automation1DirectStatus status)
     {
         var controller = _controller ?? throw new InvalidOperationException("Automation1 is not connected.");
-        var audit = _audit ?? throw new InvalidOperationException("The job audit has not been created.");
+        var audit = runtime.Audit;
         audit.UpdatedAtUtc = status.UpdatedAtUtc;
         audit.FinalState = status.State.ToString();
         audit.FinalTaskState = status.TaskState;
@@ -359,16 +359,11 @@ public sealed class Automation1DirectClient : IAsyncDisposable
         return controller;
     }
 
-    private AeroScriptPackage EnsureActivePackage(string jobId)
+    private Automation1JobRuntime EnsureJob(string jobId)
     {
-        var package = _activePackage
+        var runtime = _jobs.GetValueOrDefault(jobId)
                       ?? throw new InvalidOperationException("Write a script to the Controller File System first.");
-        if (!package.JobId.Equals(jobId, StringComparison.OrdinalIgnoreCase))
-        {
-            throw new InvalidOperationException("The requested job does not match the uploaded job.");
-        }
-
-        return package;
+        return runtime;
     }
 
     private static void ValidateTask(Controller controller, int taskIndex)
@@ -537,11 +532,7 @@ public sealed class Automation1DirectClient : IAsyncDisposable
         finally
         {
             _controller = null;
-            _compiledAeroScript = null;
-            _activePackage = null;
-            _lastStatus = null;
-            _audit = null;
-            _runRequestedAtUtc = null;
+            _jobs.Clear();
             LastConnectionInfo = null;
         }
     }
@@ -575,6 +566,21 @@ public sealed class Automation1DirectClient : IAsyncDisposable
     {
         WriteIndented = true
     };
+
+    private sealed class Automation1JobRuntime
+    {
+        public Automation1JobRuntime(AeroScriptPackage package, Automation1JobAudit audit)
+        {
+            Package = package;
+            Audit = audit;
+        }
+
+        public AeroScriptPackage Package { get; }
+        public Automation1JobAudit Audit { get; }
+        public CompiledAeroScript? CompiledAeroScript { get; set; }
+        public Automation1DirectStatus? LastStatus { get; set; }
+        public DateTimeOffset? RunRequestedAtUtc { get; set; }
+    }
 }
 
 public sealed class Automation1JobAudit

@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1320" height="860" viewBox="0 0 1320 860">
+  <rect width="1320" height="860" fill="#0f172a"/>
+  <text x="44" y="58" fill="#e5f2ff" font-family="Segoe UI, Arial" font-size="30" font-weight="700">Automation1 Field AUX MOF Multi-Task Flow</text>
+  <text x="44" y="92" fill="#93c5fd" font-family="Segoe UI, Arial" font-size="16">16,000 cts/mm external Stage encoder, 200 mm scanner follow region, one independent Automation1 Task per selected scanner head.</text>
+
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M2,2 L10,6 L2,10 Z" fill="#38bdf8"/>
+    </marker>
+    <style>
+      .box{fill:#111827;stroke:#38bdf8;stroke-width:2;rx:12}
+      .box2{fill:#172554;stroke:#60a5fa;stroke-width:2;rx:12}
+      .warn{fill:#2a1f0b;stroke:#f59e0b;stroke-width:2;rx:12}
+      .txt{fill:#e5e7eb;font-family:Segoe UI,Arial;font-size:17px}
+      .small{fill:#cbd5e1;font-family:Segoe UI,Arial;font-size:14px}
+      .head{fill:#bfdbfe;font-family:Segoe UI,Arial;font-size:19px;font-weight:700}
+      .code{fill:#a7f3d0;font-family:Consolas,monospace;font-size:14px}
+      .arrow{stroke:#38bdf8;stroke-width:2.4;fill:none;marker-end:url(#arrow)}
+    </style>
+  </defs>
+
+  <rect class="box" x="44" y="128" width="260" height="130"/>
+  <text class="head" x="66" y="164">1. WPF Coordinate Result</text>
+  <text class="small" x="66" y="197">Recipe / PPID / AK1 measurement</text>
+  <text class="small" x="66" y="222">generates process Gx/Gy targets</text>
+  <text class="small" x="66" y="247">with scanner head assignment.</text>
+
+  <rect class="box" x="370" y="128" width="285" height="130"/>
+  <text class="head" x="392" y="164">2. Split By Scanner Head</text>
+  <text class="small" x="392" y="197">H1, H3, H5 selected</text>
+  <text class="small" x="392" y="222">becomes 3 script packages.</text>
+  <text class="small" x="392" y="247">No mixed-head script is created.</text>
+
+  <rect class="box2" x="720" y="128" width="258" height="130"/>
+  <text class="head" x="742" y="164">3. Task Assignment</text>
+  <text class="small" x="742" y="197">Base Task = UI Task value</text>
+  <text class="small" x="742" y="222">H1 -> Task N</text>
+  <text class="small" x="742" y="247">H3 -> Task N+1 ...</text>
+
+  <rect class="box2" x="1034" y="128" width="240" height="130"/>
+  <text class="head" x="1056" y="164">4. Controller Files</text>
+  <text class="small" x="1056" y="197">mof_generated_H1.ascript</text>
+  <text class="small" x="1056" y="222">mof_generated_H3.ascript</text>
+  <text class="small" x="1056" y="247">mof_job_*.json audit</text>
+
+  <path class="arrow" d="M304 193 H370"/>
+  <path class="arrow" d="M655 193 H720"/>
+  <path class="arrow" d="M978 193 H1034"/>
+
+  <rect class="warn" x="44" y="312" width="390" height="180"/>
+  <text class="head" x="66" y="350">External Stage Is Not A1 Axis</text>
+  <text class="small" x="66" y="384">Third-party Stage controller moves Y.</text>
+  <text class="small" x="66" y="410">Automation1 does not generate Y axis commands.</text>
+  <text class="small" x="66" y="436">Stage encoder A/B is wired to scanner GY AUX.</text>
+  <text class="code" x="66" y="466">ExternalEncoderCountsPerUnit = 16000</text>
+
+  <rect class="box" x="496" y="312" width="362" height="180"/>
+  <text class="head" x="518" y="350">200 mm Follow Before Process</text>
+  <text class="small" x="518" y="384">Before drilling, scanner follows Stage motion.</text>
+  <text class="code" x="518" y="416">MoveRapid([GY,GX], [-10,0])</text>
+  <text class="code" x="518" y="440">wait(AuxFeedback > 160000)</text>
+  <text class="code" x="518" y="464">...</text>
+  <text class="code" x="518" y="488">MoveRapid([GY,GX], [-200,0])</text>
+
+  <rect class="box" x="920" y="312" width="354" height="180"/>
+  <text class="head" x="942" y="350">Process Point Execution</text>
+  <text class="small" x="942" y="384">Jump to generated scanner coordinate.</text>
+  <text class="code" x="942" y="416">MoveRapid([GY,GX], [Gy, Gx])</text>
+  <text class="code" x="942" y="440">wait(AuxFeedback > stageCount)</text>
+  <text class="code" x="942" y="464">GalvoLaserOutput(GY, On)</text>
+  <text class="code" x="942" y="488">MoveDelay([GY,GX], shotDelay)</text>
+
+  <path class="arrow" d="M434 402 H496"/>
+  <path class="arrow" d="M858 402 H920"/>
+
+  <rect class="box2" x="44" y="548" width="390" height="188"/>
+  <text class="head" x="66" y="586">Coordinate Meaning</text>
+  <text class="small" x="66" y="620">Gx/Gy: scanner process coordinate.</text>
+  <text class="small" x="66" y="646">Aux wait count: external Stage travel count.</text>
+  <text class="small" x="66" y="672">They are related by MOF timing,</text>
+  <text class="small" x="66" y="698">but are not the same coordinate system.</text>
+
+  <rect class="box2" x="496" y="548" width="362" height="188"/>
+  <text class="head" x="518" y="586">Parallel Runtime Concept</text>
+  <text class="small" x="518" y="620">The client sends Run to each Task.</text>
+  <text class="small" x="518" y="646">Run commands are requested one by one,</text>
+  <text class="small" x="518" y="672">then Automation1 Runtime executes</text>
+  <text class="small" x="518" y="698">the independent Tasks concurrently.</text>
+
+  <rect class="box2" x="920" y="548" width="354" height="188"/>
+  <text class="head" x="942" y="586">Status And Audit</text>
+  <text class="small" x="942" y="620">Each JobId keeps its own compiled program,</text>
+  <text class="small" x="942" y="646">Task state, audit JSON, and stop command.</text>
+  <text class="small" x="942" y="672">All Tasks must reach ProgramComplete</text>
+  <text class="small" x="942" y="698">before the workflow is complete.</text>
+</svg>

@@ -161,9 +161,10 @@ public sealed record AeroScriptGenerationOptions
     public int ExecuteNumLines { get; init; } = 110;
     public double SetupDwellSeconds { get; init; } = 0.2;
     public double MoveDelayMilliseconds { get; init; } = 0.1;
-    public double ExternalEncoderCountsPerUnit { get; init; } = 2000;
+    public double ExternalEncoderCountsPerUnit { get; init; } = 16000;
     public double ExternalEncoderDirectionSign { get; init; } = -1;
     public double AuxiliaryInitialWaitDistance { get; init; } = 0.1;
+    public double FollowDistanceBeforeProcessMm { get; init; } = 200;
     public double VirtualStageTickSeconds { get; init; } = 0.02;
     public double SoftwareLimitLow { get; init; } = -10_000;
     public double SoftwareLimitHigh { get; init; } = 10_000;

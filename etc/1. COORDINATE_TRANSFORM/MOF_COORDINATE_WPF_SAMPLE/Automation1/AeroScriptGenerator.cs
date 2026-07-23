@@ -11,7 +11,7 @@ namespace MofCoordinateDemo.Automation1;
 /// </summary>
 public sealed partial class AeroScriptGenerator
 {
-    public const string GeneratorRevision = "20260722-virtual-counter-monitor-v6";
+    public const string GeneratorRevision = "20260723-field-aux-multitask-v9";
 
     public const int MonitorStagePositionGlobalRealIndex = 0;
     public const int MonitorStageSpeedGlobalRealIndex = 1;
@@ -75,54 +75,34 @@ public sealed partial class AeroScriptGenerator
         AeroScriptGenerationOptions options)
     {
         var headNumbers = commands.Select(command => command.ScannerIndex).Distinct().OrderBy(index => index).ToArray();
-        if (headNumbers.Length > 1 &&
-            (!options.AxisXTemplate.Contains("{0}", StringComparison.Ordinal) ||
-             !options.AxisYTemplate.Contains("{0}", StringComparison.Ordinal)))
+        if (headNumbers.Length != 1)
         {
             throw new InvalidOperationException(
-                "External Stage AUX MOF mode requires {0} in both scanner axis templates when multiple heads are selected.");
+                "External Stage AUX MOF mode generates one scanner head per Automation1 Task. Split selected heads before generation.");
         }
 
-        var axesByHead = headNumbers.ToDictionary(
-            head => head,
-            head => (
-                X: ResolveAxisName(options.AxisXTemplate, head),
-                Y: ResolveAxisName(options.AxisYTemplate, head)));
-        var allAxes = axesByHead.Values
-            .SelectMany(pair => new[] { pair.X, pair.Y })
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToArray();
+        var head = headNumbers[0];
+        var axisX = ResolveAxisName(options.AxisXTemplate, head);
+        var axisY = ResolveAxisName(options.AxisYTemplate, head);
+        var allAxes = new[] { axisY, axisX }.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
         var orderedCommands = commands.OrderBy(command => command.MofSequence).ToArray();
-        var monitorSequenceByMof = orderedCommands
-            .Select((command, index) => (command.MofSequence, MonitorSequence: index + 1))
-            .ToDictionary(item => item.MofSequence, item => item.MonitorSequence);
         var firstLocalY = orderedCommands[0].LocalY;
-        var localYGroups = orderedCommands
-            .GroupBy(command => Math.Round(command.LocalY, 6))
-            .ToArray();
-        var requiredTravel = options.AuxiliaryInitialWaitDistance +
-                             Math.Max(0, orderedCommands[^1].LocalY - firstLocalY);
-        if (Math.Abs(options.StageTravelDistance) + 1e-9 < requiredTravel)
-        {
-            throw new InvalidOperationException(
-                $"External Stage travel must be at least the final AUX wait distance ({requiredTravel:0.###} mm).");
-        }
 
         var source = CreateHeader(input, commands, options);
         source.AppendLine("// MODE: Equipment - External Stage AUX MOF");
         source.AppendLine("// The third-party Stage is not an Automation1 axis and is never commanded by this script.");
-        source.AppendLine("// Stage encoder feedback enters each scanner GY auxiliary feedback input.");
-        source.AppendLine("// Laser/PSO output remains disabled; validate the AUX signal and MOF compensation before enabling laser output.");
+        source.AppendLine($"// Scanner head: H{head}, axes: [{axisY}, {axisX}]");
+        source.AppendLine("// Field concept: scanner follows the external Stage through AUX feedback until 200 mm before processing.");
+        source.AppendLine("// Once the AUX count reaches the generated process coordinate threshold, the scanner jumps to GY/GX and fires.");
+        source.AppendLine($"// External Stage encoder resolution: {Format(options.ExternalEncoderCountsPerUnit)} counts/mm");
         source.AppendLine();
         source.AppendLine("program");
+        source.AppendLine("    var $encoder as real");
         source.AppendLine("    var $StageEncoderCountsPerUnit as real");
-        foreach (var head in headNumbers)
-        {
-            source.AppendLine($"    var $EncoderScaleGYH{head} as real");
-        }
-
         source.AppendLine();
+        source.AppendLine("    IfovOff()");
         source.AppendLine($"    $StageEncoderCountsPerUnit = {Format(options.ExternalEncoderCountsPerUnit)}");
+        source.AppendLine("    $encoder = 0");
         source.AppendLine($"    $rglobal[{MonitorStagePositionGlobalRealIndex}] = 0");
         source.AppendLine($"    $rglobal[{MonitorStageSpeedGlobalRealIndex}] = 0");
         source.AppendLine($"    $rglobal[{MonitorStageTargetGlobalRealIndex}] = 0");
@@ -130,83 +110,91 @@ public sealed partial class AeroScriptGenerator
         source.AppendLine($"    $iglobal[{MonitorTotalTargetsGlobalIntegerIndex}] = {orderedCommands.Length}");
         source.AppendLine();
         AppendCommonMotionSetup(source, allAxes, options);
+        source.AppendLine("    VelocityBlendingOff()");
+        source.AppendLine();
         if (options.EnableAxes)
         {
-            foreach (var head in headNumbers)
-            {
-                var axes = axesByHead[head];
-                source.AppendLine($"    Enable([{axes.X}, {axes.Y}])");
-            }
-
+            source.AppendLine($"    Enable([{axisY}, {axisX}])");
             source.AppendLine();
         }
 
-        foreach (var head in headNumbers)
-        {
-            var axes = axesByHead[head];
-            source.AppendLine($"    WaitForInPosition([{axes.X}, {axes.Y}])");
-            source.AppendLine($"    GalvoEncoderScaleFactorSet({axes.Y}, 0)");
-            source.AppendLine($"    DriveSetAuxiliaryFeedback({axes.Y}, 0)");
-            source.AppendLine(
-                $"    $EncoderScaleGYH{head} = ParameterGetAxisValue({axes.Y}, AxisParameter.CountsPerUnit) / $StageEncoderCountsPerUnit");
-            source.AppendLine(
-                $"    GalvoEncoderScaleFactorSet({axes.Y}, {Format(options.ExternalEncoderDirectionSign)} * $EncoderScaleGYH{head})");
-            source.AppendLine($"    SetupAxisSpeed({axes.X}, {Format(options.ScannerRapidSpeed)})");
-            source.AppendLine($"    SetupAxisSpeed({axes.Y}, {Format(options.ScannerRapidSpeed)})");
-            source.AppendLine(
-                $"    MoveRapid([{axes.X}, {axes.Y}], [0, 0], " +
-                $"[{Format(options.ScannerRapidSpeed)}, {Format(options.ScannerRapidSpeed)}])");
-        }
-
+        source.AppendLine($"    GalvoConfigureLaserOutputPeriod({axisY}, 0)");
+        source.AppendLine($"    GalvoConfigureLaser1PulseWidth({axisY}, 0)");
+        source.AppendLine($"    GalvoConfigureLaserMode({axisY}, 0)");
+        source.AppendLine($"    PsoReset({axisY})");
+        source.AppendLine($"    MoveRapid([{axisY}, {axisX}], [0, 0])");
+        source.AppendLine(
+            $"    GalvoEncoderScaleFactorSet({axisY}, " +
+            $"{Format(options.ExternalEncoderDirectionSign)} * ParameterGetAxisValue({axisY}, AxisParameter.CountsPerUnit) / $StageEncoderCountsPerUnit)");
+        source.AppendLine($"    MoveRapid([{axisY}, {axisX}], [0, 0])");
+        source.AppendLine($"    WaitForInPosition([{axisY}, {axisX}])");
+        source.AppendLine($"    DriveSetAuxiliaryFeedback({axisY}, 0)");
+        source.AppendLine($"    DriveSetAuxiliaryFeedback({axisX}, 0)");
+        source.AppendLine($"    SetupAxisSpeed({axisY}, {Format(options.ScannerRapidSpeed)})");
+        source.AppendLine($"    SetupAxisSpeed({axisX}, {Format(options.ScannerRapidSpeed)})");
+        source.AppendLine($"    GalvoConfigureLaserOutputPeriod({axisY}, 20.00)");
+        source.AppendLine($"    AnalogOutputSet({axisY}, 0, {Format(input.Pp.LaserPower > 0 ? input.Pp.LaserPower : 10.0)})");
+        source.AppendLine($"    GalvoConfigureLaser1PulseWidth({axisY}, 10.00)");
+        source.AppendLine($"    GalvoConfigureLaserDelays({axisY}, 0.000, 0.000)");
+        source.AppendLine($"    GalvoConfigureLaserMode({axisY}, 0)");
         source.AppendLine();
         AppendSoftwareLimits(source, allAxes, options);
-        for (var groupIndex = 0; groupIndex < localYGroups.Length; groupIndex++)
+
+        AppendFollowRegion(source, axisY, axisX, options);
+        for (var commandIndex = 0; commandIndex < orderedCommands.Length; commandIndex++)
         {
-            var group = localYGroups[groupIndex];
-            var threshold = options.AuxiliaryInitialWaitDistance + Math.Max(0, group.Key - firstLocalY);
-            source.AppendLine($"    // AK1 -> AK2 AUX gate {groupIndex + 1}: external Stage travel > {Format(threshold)} mm");
-            foreach (var head in group.Select(command => command.ScannerIndex).Distinct().OrderBy(index => index))
-            {
-                source.AppendLine(
-                    $"    wait(Abs(StatusGetAxisItem({axesByHead[head].Y}, AxisStatusItem.AuxiliaryFeedback)) " +
-                    $"> $StageEncoderCountsPerUnit * {Format(threshold)})");
-            }
-
-            foreach (var command in group)
-            {
-                var axes = axesByHead[command.ScannerIndex];
-                source.AppendLine($"    $rglobal[{MonitorStagePositionGlobalRealIndex}] = {Format(threshold)}");
-                var monitorSequence = monitorSequenceByMof[command.MofSequence];
-                source.AppendLine($"    $iglobal[{MonitorCurrentSequenceGlobalIntegerIndex}] = {monitorSequence}");
-                source.AppendLine($"    $iglobal[{MonitorTotalTargetsGlobalIntegerIndex}] = {orderedCommands.Length}");
-                source.AppendLine(
-                    $"    MoveRapid([{axes.X}, {axes.Y}], [{Format(command.Gx)}, {Format(command.Gy)}], " +
-                    $"[{Format(options.ScannerRapidSpeed)}, {Format(options.ScannerRapidSpeed)}]) " +
-                    $"// {command.CellIndex}, H{command.ScannerIndex}, MOF #{command.MofSequence}");
-                source.AppendLine($"    MoveDelay([{axes.X}, {axes.Y}], {Format(options.MoveDelayMilliseconds)})");
-            }
-
-            source.AppendLine();
+            var command = orderedCommands[commandIndex];
+            var thresholdMm = options.FollowDistanceBeforeProcessMm +
+                              options.AuxiliaryInitialWaitDistance +
+                              Math.Max(0, command.LocalY - firstLocalY);
+            var thresholdCounts = thresholdMm * options.ExternalEncoderCountsPerUnit;
+            source.AppendLine(
+                $"    // Process {commandIndex + 1}: {command.CellIndex}, H{command.ScannerIndex}, " +
+                $"MOF #{command.MofSequence}, GY/GX=({Format(command.Gy)}, {Format(command.Gx)})");
+            source.AppendLine($"    MoveRapid([{axisY}, {axisX}], [{Format(command.Gy)}, {Format(command.Gx)}])");
+            source.AppendLine(
+                $"    wait(StatusGetAxisItem({axisY}, AxisStatusItem.AuxiliaryFeedback) > $encoder + ({Format(thresholdCounts)}))");
+            source.AppendLine($"    $rglobal[{MonitorStagePositionGlobalRealIndex}] = {Format(thresholdMm)}");
+            source.AppendLine($"    $iglobal[{MonitorCurrentSequenceGlobalIntegerIndex}] = {commandIndex + 1}");
+            source.AppendLine($"    GalvoLaserOutput({axisY}, GalvoLaser.On)");
+            source.AppendLine($"    MoveDelay([{axisY}, {axisX}], {Format(options.MoveDelayMilliseconds)})");
+            source.AppendLine($"    GalvoLaserOutput({axisY}, GalvoLaser.Off)");
         }
 
-        source.AppendLine($"    WaitForMotionDone([{string.Join(", ", allAxes)}])");
-        foreach (var head in headNumbers)
-        {
-            source.AppendLine($"    GalvoEncoderScaleFactorSet({axesByHead[head].Y}, 0)");
-        }
-
+        source.AppendLine($"    MoveDelay([{axisY}, {axisX}], {Format(Math.Max(0.1, options.SetupDwellSeconds))})");
+        source.AppendLine($"    WaitForMotionDone([{axisY}, {axisX}])");
+        source.AppendLine($"    GalvoLaserOutput({axisY}, GalvoLaser.Off)");
+        source.AppendLine($"    GalvoEncoderScaleFactorSet({axisX}, 0)");
+        source.AppendLine($"    GalvoEncoderScaleFactorSet({axisY}, 0)");
+        source.AppendLine($"    PsoWaveformOff({axisY})");
         source.AppendLine("    VelocityBlendingOff()");
         if (options.DisableAxesAtEnd)
         {
-            foreach (var head in headNumbers)
-            {
-                var axes = axesByHead[head];
-                source.AppendLine($"    Disable([{axes.X}, {axes.Y}])");
-            }
+            source.AppendLine($"    Disable([{axisY}, {axisX}])");
         }
 
         source.AppendLine("end");
         return source.ToString();
+    }
+
+    private static void AppendFollowRegion(
+        StringBuilder source,
+        string axisY,
+        string axisX,
+        AeroScriptGenerationOptions options)
+    {
+        var step = 10.0;
+        var followDistance = Math.Max(0, options.FollowDistanceBeforeProcessMm);
+        for (var distance = step; distance <= followDistance + 1e-9; distance += step)
+        {
+            var thresholdCounts = distance * options.ExternalEncoderCountsPerUnit;
+            source.AppendLine($"    MoveRapid([{axisY}, {axisX}], [{Format(-distance)}, 0])");
+            source.AppendLine(
+                $"    wait(StatusGetAxisItem({axisY}, AxisStatusItem.AuxiliaryFeedback) > $encoder + ({Format(thresholdCounts)}))");
+            source.AppendLine($"    $rglobal[{MonitorStagePositionGlobalRealIndex}] = {Format(distance)}");
+        }
+
+        source.AppendLine();
     }
 
     private static string GenerateHardwareCoordinateProgram(
@@ -311,6 +299,7 @@ public sealed partial class AeroScriptGenerator
         IReadOnlyCollection<string> scannerAxes,
         AeroScriptGenerationOptions options)
     {
+        source.AppendLine("    SetupTaskDistanceUnits(DistanceUnits.Primary)");
         source.AppendLine("    SetupTaskTimeUnits(TimeUnits.Seconds)");
         source.AppendLine("    SetupTaskTargetMode(TargetMode.Absolute)");
         source.AppendLine("    VelocityBlendingOn()");
@@ -389,7 +378,8 @@ public sealed partial class AeroScriptGenerator
             options.SoftwareLimitLow,
             options.SoftwareLimitHigh,
             options.ExternalEncoderDirectionSign,
-            options.AuxiliaryInitialWaitDistance
+            options.AuxiliaryInitialWaitDistance,
+            options.FollowDistanceBeforeProcessMm
         };
         if (finiteValues.Any(value => !double.IsFinite(value)) ||
             options.ExecuteNumLines <= 0 ||
@@ -410,10 +400,12 @@ public sealed partial class AeroScriptGenerator
             throw new InvalidOperationException("SoftwareLimitLow는 SoftwareLimitHigh보다 작아야 합니다.");
         }
 
-        if (options.ExternalEncoderDirectionSign is not (-1 or 1) || options.AuxiliaryInitialWaitDistance < 0)
+        if (options.ExternalEncoderDirectionSign is not (-1 or 1) ||
+            options.AuxiliaryInitialWaitDistance < 0 ||
+            options.FollowDistanceBeforeProcessMm < 0)
         {
             throw new InvalidOperationException(
-                "External encoder direction must be -1 or 1, and AUX initial wait distance must be zero or greater.");
+                "External encoder direction must be -1 or 1, and AUX wait/follow distances must be zero or greater.");
         }
     }
 

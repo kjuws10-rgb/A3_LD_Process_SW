@@ -1,0 +1,61 @@
+// Reference only. Generated scripts use actual recipe coordinates.
+// Field concept: external Stage encoder -> scanner GY AuxiliaryFeedback.
+// Resolution: 16000 counts/mm. Scanner follows until 200 mm before process.
+program
+    IfovOff()
+    SetupTaskDistanceUnits(DistanceUnits.Primary)
+    SetupTaskTimeUnits(TimeUnits.Seconds)
+    VelocityBlendingOff()
+    SetupTaskWaitMode(WaitMode.Auto)
+    SetupTaskTargetMode(TargetMode.Absolute)
+
+    var $encoder as real
+    var $StageEncoderCountsPerUnit as real
+    $encoder = 0
+    $StageEncoderCountsPerUnit = 16000
+
+    GalvoConfigureLaserOutputPeriod(GY, 0)
+    GalvoConfigureLaser1PulseWidth(GY, 0)
+    GalvoConfigureLaserMode(GY, 0)
+    PsoReset(GY)
+
+    MoveRapid([GY,GX], [0,0])
+    GalvoEncoderScaleFactorSet(GY, -1 * ParameterGetAxisValue(GY, AxisParameter.CountsPerUnit) / $StageEncoderCountsPerUnit)
+    MoveRapid([GY,GX], [0,0])
+
+    SetupCoordinatedAccelLimit(100000, 100000)
+    SetupAxisRampType([GY,GX], RampType.Sine)
+    SetupAxisRampValue([GY,GX], RampMode.Rate, 30000)
+    SetupCoordinatedRampType(RampType.Sine)
+    SetupCoordinatedRampValue(RampMode.Rate, 30000)
+    SetupCoordinatedSpeed(100.0)
+
+    DriveSetAuxiliaryFeedback(GY, 0)
+    DriveSetAuxiliaryFeedback(GX, 0)
+    GalvoConfigureLaserOutputPeriod(GY, 20.00)
+    AnalogOutputSet(GY, 0, 10.00)
+    GalvoConfigureLaser1PulseWidth(GY, 10.00)
+    SetupAxisSpeed(GY, 30000.0)
+    SetupAxisSpeed(GX, 30000.0)
+    GalvoConfigureLaserDelays(GY, 0.000, 0.000)
+    GalvoConfigureLaserMode(GY, 0)
+
+    MoveRapid([GY,GX], [-10,0])
+    wait(StatusGetAxisItem(GY, AxisStatusItem.AuxiliaryFeedback) > $encoder + (160000))
+    MoveRapid([GY,GX], [-20,0])
+    wait(StatusGetAxisItem(GY, AxisStatusItem.AuxiliaryFeedback) > $encoder + (320000))
+    // ... generated script repeats 10 mm follow gates up to 200 mm.
+    MoveRapid([GY,GX], [-200,0])
+    wait(StatusGetAxisItem(GY, AxisStatusItem.AuxiliaryFeedback) > $encoder + (3200000))
+
+    // Process points: GY/GX are scanner coordinates, wait count is external Stage travel.
+    MoveRapid([GY,GX], [-209.216,0])
+    wait(StatusGetAxisItem(GY, AxisStatusItem.AuxiliaryFeedback) > $encoder + (3347456))
+    GalvoLaserOutput(GY, GalvoLaser.On)
+    MoveDelay([GY,GX], 0.080)
+    GalvoLaserOutput(GY, GalvoLaser.Off)
+
+    MoveDelay([GY,GX], 20.000)
+    GalvoEncoderScaleFactorSet(GX, 0)
+    GalvoEncoderScaleFactorSet(GY, 0)
+end

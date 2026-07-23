@@ -305,9 +305,10 @@
                     <StackPanel Margin="0,0,0,8"><TextBlock Text="Setup Dwell sec"/><TextBox x:Name="SetupDwellSecondsBox" Text="0.2" ToolTip="동적 Parameter 적용 뒤 다른 controller 작업에 시간을 주는 초기 Dwell 시간입니다."/></StackPanel>
 
                     <StackPanel Margin="0,0,8,8"><TextBlock Text="MoveDelay ms"/><TextBox x:Name="MoveDelayMillisecondsBox" Text="0.1" ToolTip="각 GY drill point 사이 MoveDelay 값이며 단위는 밀리초입니다."/></StackPanel>
-                    <StackPanel Margin="0,0,8,8"><TextBlock Text="External Encoder cnt/mm"/><TextBox x:Name="ExternalEncoderCountsPerUnitBox" Text="2000" ToolTip="타사 Stage 엔코더가 1 mm 이동할 때 Scanner AUX 입력에 들어오는 count입니다. 실제 엔코더 분해능과 배선 설정값을 입력합니다."/></StackPanel>
+                    <StackPanel Margin="0,0,8,8"><TextBlock Text="External Encoder cnt/mm"/><TextBox x:Name="ExternalEncoderCountsPerUnitBox" Text="16000" ToolTip="타사 Stage 엔코더가 1 mm 이동할 때 Scanner AUX 입력에 들어오는 count입니다. 현장 설비 기준값은 16,000 cts/mm입니다."/></StackPanel>
                     <StackPanel Margin="0,0,8,8"><TextBlock Text="Encoder Direction"/><TextBox x:Name="ExternalEncoderDirectionSignBox" Text="-1" ToolTip="Scanner 보정 방향과 외부 Stage 엔코더 방향이 반대이면 -1, 같으면 1을 입력합니다."/></StackPanel>
                     <StackPanel Margin="0,0,8,8"><TextBlock Text="AUX Initial Wait mm"/><TextBox x:Name="AuxiliaryInitialWaitDistanceBox" Text="0.1" ToolTip="AUX 피드백을 0점화한 뒤 첫 가공 구간을 허용할 최소 외부 Stage 이동 거리입니다."/></StackPanel>
+                    <StackPanel Margin="0,0,8,8"><TextBlock Text="Follow Before Process mm"/><TextBox x:Name="FollowDistanceBeforeProcessBox" Text="200" ToolTip="가공 시작 전까지 Scanner가 외부 Stage를 따라가는 거리입니다. 현장 컨셉은 200 mm 전까지 추종 후 가공 좌표로 점프합니다."/></StackPanel>
                     <StackPanel Margin="0,0,8,8"><TextBlock Text="Virtual Counter Tick sec"/><TextBox x:Name="VirtualStageTickSecondsBox" Text="0.02" ToolTip="Virtual Stage 카운터가 한 번 갱신될 때의 시간 간격입니다. 위치 변화량은 Stage Speed × Tick으로 계산됩니다."/></StackPanel>
                     <StackPanel Margin="0,0,8,8"><TextBlock Text="Software Limit Low"/><TextBox x:Name="SoftwareLimitLowBox" Text="-10000" ToolTip="GX/GY active software lower limit입니다. 실제 장비 유효 범위를 사용해야 합니다."/></StackPanel>
                     <StackPanel Margin="0,0,8,8"><TextBlock Text="Software Limit High"/><TextBox x:Name="SoftwareLimitHighBox" Text="10000" ToolTip="GX/GY active software upper limit입니다. 실제 장비 유효 범위를 사용해야 합니다."/></StackPanel>
