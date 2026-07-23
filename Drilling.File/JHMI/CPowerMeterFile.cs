@@ -2,7 +2,7 @@ using System.Globalization;
 using Drilling.Common.Interface;
 using Drilling.File.Parser;
 
-namespace Drilling.File.IPS;
+namespace Drilling.File.JHMI;
 
 public sealed class CPowerMeterFile(string configRoot) : IPowerMeterFile
 {
@@ -188,13 +188,15 @@ public sealed class CPowerMeterFile(string configRoot) : IPowerMeterFile
             new(3, "PWM_CHECK_HEAD03", true, "W", 23.50, 1.000, 20.0, 3, 1000, 100, 500, 300, 0.0000, 1.0068, "WAIT"),
             new(4, "PWM_CHECK_HEAD04", true, "W", 23.50, 1.000, 20.0, 3, 1000, 100, 500, 300, 0.0000, 1.0034, "WAIT"),
             new(5, "PWM_CHECK_HEAD05", true, "W", 23.50, 0.800, 20.0, 2, 800, 100, 300, 200, 0.0000, 0.8020, "WAIT"),
-            new(6, "PWM_CHECK_HEAD06", false, "W", 23.50, 0.800, 20.0, 2, 800, 100, 300, 200, 0.0000, null, "SKIP")
+            new(6, "PWM_CHECK_HEAD06", true, "W", 23.50, 0.800, 20.0, 2, 800, 100, 300, 200, 0.0000, 0.8015, "WAIT"),
+            new(7, "PWM_CHECK_HEAD07", true, "W", 23.50, 0.800, 20.0, 2, 800, 100, 300, 200, 0.0000, 0.8008, "WAIT"),
+            new(8, "PWM_CHECK_HEAD08", true, "W", 23.50, 0.800, 20.0, 2, 800, 100, 300, 200, 0.0000, 0.8024, "WAIT")
         ];
     }
 
     private string GetFormPath()
     {
-        return Path.Combine(configRoot, "IPS_POWERMETER.csv");
+        return Path.Combine(configRoot, "JHMI_POWERMETER.csv");
     }
 
     private string GetProcessPath(string processFile)

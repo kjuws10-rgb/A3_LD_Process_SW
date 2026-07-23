@@ -9,7 +9,7 @@
         Height="1080"
         MinWidth="1500"
         MinHeight="820"
-        Background="#05070B">
+        Background="{DynamicResource WindowBackgroundBrush}">
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
 
@@ -17,10 +17,10 @@
             <Setter Property="Width" Value="22" />
             <Setter Property="Height" Value="16" />
             <Setter Property="Padding" Value="0" />
-            <Setter Property="Background" Value="#101923" />
-            <Setter Property="BorderBrush" Value="#263847" />
+            <Setter Property="Background" Value="{DynamicResource ButtonSecondaryBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ButtonSecondaryBorderBrush}" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="Foreground" Value="#DDE6EF" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
             <Setter Property="FontSize" Value="9" />
             <Setter Property="FontWeight" Value="SemiBold" />
             <Setter Property="Template">
@@ -34,11 +34,46 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#0C2C44" />
-                                <Setter Property="BorderBrush" Value="#00D8FF" />
+                                <Setter Property="Background" Value="{DynamicResource HeaderNavHoverBackgroundBrush}" />
+                                <Setter Property="BorderBrush" Value="{DynamicResource MenuItemSelectedBorderBrush}" />
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter Property="Background" Value="#0759C8" />
+                                <Setter Property="Background" Value="{DynamicResource HeaderNavPressedBackgroundBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ThemeToggleButton" TargetType="Button">
+            <Setter Property="MinWidth" Value="84" />
+            <Setter Property="Height" Value="24" />
+            <Setter Property="Padding" Value="10,0" />
+            <Setter Property="Background" Value="{DynamicResource ButtonSecondaryBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ButtonSecondaryBorderBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="4">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="{DynamicResource HeaderNavHoverBackgroundBrush}" />
+                                <Setter Property="BorderBrush" Value="{DynamicResource MenuItemSelectedBorderBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter Property="Background" Value="{DynamicResource HeaderNavPressedBackgroundBrush}" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -47,7 +82,7 @@
         </Style>
     </Window.Resources>
 
-    <Grid>
+    <Grid Background="{DynamicResource ShellBackgroundBrush}">
         <Grid.RowDefinitions>
             <RowDefinition Height="88" />
             <RowDefinition Height="*" />
@@ -55,10 +90,10 @@
         </Grid.RowDefinitions>
 
         <Border Grid.Row="0"
-                Background="#05070B"
-                BorderBrush="#142434"
+                Background="{DynamicResource HeaderBackgroundBrush}"
+                BorderBrush="{DynamicResource HeaderBorderBrush}"
                 BorderThickness="0,0,0,1"
-                Padding="20,8">
+                Padding="20,6">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="300" />
@@ -68,12 +103,12 @@
 
                 <StackPanel VerticalAlignment="Center">
                     <TextBlock Text="Laser Drilling"
-                               Foreground="#F3F6FA"
+                               Foreground="{DynamicResource TextPrimaryBrush}"
                                FontSize="30"
                                FontWeight="SemiBold" />
                     <TextBlock Text="SYS &amp; J / Drilling"
                                Margin="0,4,0,0"
-                               Foreground="#DDE6EF"
+                               Foreground="{DynamicResource TextSecondaryBrush}"
                                FontSize="15" />
                 </StackPanel>
 
@@ -89,8 +124,8 @@
                         <DataTemplate>
                             <Border Margin="4,2"
                                     Padding="8,5,8,0"
-                                    Background="#0B1119"
-                                    BorderBrush="#263847"
+                                    Background="{DynamicResource HeaderCardBackgroundBrush}"
+                                    BorderBrush="{DynamicResource HeaderCardBorderBrush}"
                                     BorderThickness="1">
                                 <Border.InputBindings>
                                     <MouseBinding MouseAction="LeftClick"
@@ -104,7 +139,7 @@
                                         <RowDefinition Height="4" />
                                     </Grid.RowDefinitions>
                                     <TextBlock Text="{Binding Name}"
-                                               Foreground="#C9D6E2"
+                                               Foreground="{DynamicResource TextSecondaryBrush}"
                                                FontSize="11"
                                                FontWeight="SemiBold"
                                                TextWrapping="NoWrap" />
@@ -126,18 +161,18 @@
 
                                         <Button Style="{StaticResource HeaderStatusNavButton}"
                                                 Command="{Binding Previous}"
-                                                Content="◀" />
+                                                Content="&lt;" />
                                         <TextBlock Grid.Column="1"
                                                    Text="{Binding PageText}"
                                                    HorizontalAlignment="Center"
                                                    VerticalAlignment="Center"
-                                                   Foreground="#DDE6EF"
+                                                   Foreground="{DynamicResource TextSecondaryBrush}"
                                                    FontSize="10"
                                                    FontWeight="SemiBold" />
                                         <Button Grid.Column="2"
                                                 Style="{StaticResource HeaderStatusNavButton}"
                                                 Command="{Binding Next}"
-                                                Content="▶" />
+                                                Content="&gt;" />
                                     </Grid>
                                     <Border Grid.Row="3"
                                             Background="{Binding AccentBrush}"
@@ -153,17 +188,17 @@
                             VerticalAlignment="Center">
                     <TextBlock Text="{Binding CurrentDateText}"
                                HorizontalAlignment="Right"
-                               Foreground="#E6EDF3"
-                               FontSize="18" />
+                               Foreground="{DynamicResource TextPrimaryBrush}"
+                               FontSize="16" />
                     <TextBlock Text="{Binding CurrentTimeText}"
                                HorizontalAlignment="Right"
-                               Foreground="#E6EDF3"
-                               FontSize="16" />
-                    <TextBlock Text="{Binding CurrentUserText}"
-                               Margin="0,8,0,0"
-                               HorizontalAlignment="Right"
-                               Foreground="#8B98A8"
-                               FontSize="12" />
+                               Foreground="{DynamicResource TextPrimaryBrush}"
+                               FontSize="15" />
+                    <Button Content="{Binding ThemeToggleText}"
+                            Command="{Binding ToggleThemeCommand}"
+                            Style="{StaticResource ThemeToggleButton}"
+                            HorizontalAlignment="Right"
+                            Margin="0,2,0,0" />
                 </StackPanel>
             </Grid>
         </Border>
@@ -175,29 +210,29 @@
             </Grid.ColumnDefinitions>
 
             <Border Grid.Column="0"
-                    Background="#07101A"
-                    BorderBrush="#142434"
+                    Background="{DynamicResource SideBarBackgroundBrush}"
+                    BorderBrush="{DynamicResource HeaderBorderBrush}"
                     BorderThickness="0,0,1,0"
                     Padding="12,12,12,18">
                 <DockPanel>
                     <Border DockPanel.Dock="Bottom"
                             Height="84"
-                            Background="#0B1119"
-                            BorderBrush="#263847"
+                            Background="{DynamicResource PanelBackgroundBrush}"
+                            BorderBrush="{DynamicResource PanelBorderBrush}"
                             BorderThickness="1"
                             Padding="12"
                             Margin="0,14,0,0">
                         <StackPanel>
                             <TextBlock Text="SIM MODE"
-                                       Foreground="#F3F6FA"
+                                       Foreground="{DynamicResource TextPrimaryBrush}"
                                        FontSize="13"
                                        FontWeight="SemiBold" />
                             <TextBlock Text="Device-free"
                                        Margin="0,8,0,0"
-                                       Foreground="#8B98A8"
+                                       Foreground="{DynamicResource TextMutedBrush}"
                                        FontSize="12" />
                             <TextBlock Text="UI + Logic"
-                                       Foreground="#8B98A8"
+                                       Foreground="{DynamicResource TextMutedBrush}"
                                        FontSize="12" />
                         </StackPanel>
                     </Border>
@@ -211,14 +246,14 @@
                             <Style TargetType="ListBoxItem">
                                 <Setter Property="Padding" Value="0" />
                                 <Setter Property="Margin" Value="0,0,0,9" />
-                                <Setter Property="Foreground" Value="#DDE6EF" />
+                                <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
                                 <Setter Property="Background" Value="Transparent" />
                                 <Setter Property="HorizontalContentAlignment" Value="Stretch" />
                                 <Setter Property="VerticalContentAlignment" Value="Stretch" />
                                 <Style.Triggers>
                                     <Trigger Property="IsSelected" Value="True">
-                                        <Setter Property="Background" Value="#082B38" />
-                                        <Setter Property="Foreground" Value="#27C7F7" />
+                                        <Setter Property="Background" Value="{DynamicResource MenuItemSelectedBackgroundBrush}" />
+                                        <Setter Property="Foreground" Value="{DynamicResource MenuItemSelectedTextBrush}" />
                                     </Trigger>
                                 </Style.Triggers>
                             </Style>
@@ -231,10 +266,10 @@
                                         BorderThickness="1">
                                     <Border.Style>
                                         <Style TargetType="Border">
-                                            <Setter Property="BorderBrush" Value="#263847" />
+                                            <Setter Property="BorderBrush" Value="{DynamicResource PanelBorderBrush}" />
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}, Path=IsSelected}" Value="True">
-                                                    <Setter Property="BorderBrush" Value="#00D8FF" />
+                                                    <Setter Property="BorderBrush" Value="{DynamicResource MenuItemSelectedBorderBrush}" />
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
@@ -251,7 +286,7 @@
                                                     <Setter Property="Background" Value="Transparent" />
                                                     <Style.Triggers>
                                                         <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}, Path=IsSelected}" Value="True">
-                                                            <Setter Property="Background" Value="#FF2F6D" />
+                                                            <Setter Property="Background" Value="{DynamicResource MenuAccentBrush}" />
                                                         </DataTrigger>
                                                     </Style.Triggers>
                                                 </Style>
@@ -282,10 +317,10 @@
                                                        FontSize="11">
                                                 <TextBlock.Style>
                                                     <Style TargetType="TextBlock">
-                                                        <Setter Property="Foreground" Value="#8B98A8" />
+                                                        <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
                                                         <Style.Triggers>
                                                             <DataTrigger Binding="{Binding RelativeSource={RelativeSource AncestorType=ListBoxItem}, Path=IsSelected}" Value="True">
-                                                                <Setter Property="Foreground" Value="#27C7F7" />
+                                                                <Setter Property="Foreground" Value="{DynamicResource MenuItemSelectedTextBrush}" />
                                                             </DataTrigger>
                                                         </Style.Triggers>
                                                     </Style>
@@ -307,14 +342,16 @@
                 <views:CSettingView Visibility="{Binding CurrentScreen.IsSettingLayout, Converter={StaticResource BooleanToVisibilityConverter}}" />
                 <views:CAlarmView Visibility="{Binding CurrentScreen.IsAlarmLayout, Converter={StaticResource BooleanToVisibilityConverter}}" />
                 <views:CMonitorView Visibility="{Binding CurrentScreen.IsMonitorLayout, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                <views:CReviewView Visibility="{Binding CurrentScreen.IsReviewLayout, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                <views:CCorrectionView Visibility="{Binding CurrentScreen.IsCorrectionLayout, Converter={StaticResource BooleanToVisibilityConverter}}" />
                 <views:CPmView Visibility="{Binding CurrentScreen.IsPmLayout, Converter={StaticResource BooleanToVisibilityConverter}}" />
                 <views:CExitView Visibility="{Binding CurrentScreen.IsGenericLayout, Converter={StaticResource BooleanToVisibilityConverter}}" />
             </Grid>
         </Grid>
 
         <Border Grid.Row="2"
-                Background="#05070B"
-                BorderBrush="#142434"
+                Background="{DynamicResource FooterBackgroundBrush}"
+                BorderBrush="{DynamicResource HeaderBorderBrush}"
                 BorderThickness="0,1,0,0"
                 Padding="18,0">
             <Grid>
@@ -325,10 +362,10 @@
                 </Grid.ColumnDefinitions>
 
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <Ellipse Width="16" Height="16" Fill="#12D466" />
+                    <Ellipse Width="16" Height="16" Fill="{DynamicResource StatusReadyBrush}" />
                     <TextBlock Text="Ready"
                                Margin="10,0,0,0"
-                               Foreground="#12D466"
+                               Foreground="{DynamicResource StatusReadyBrush}"
                                FontSize="15"
                                FontWeight="SemiBold" />
                 </StackPanel>
@@ -355,7 +392,7 @@
                 <TextBlock Grid.Column="2"
                            Text="X 123.590     Y 21.484     Theta 0.002     |     Script PASS     |     User: Engineer"
                            VerticalAlignment="Center"
-                           Foreground="#8B98A8"
+                           Foreground="{DynamicResource TextMutedBrush}"
                            FontSize="13" />
             </Grid>
         </Border>

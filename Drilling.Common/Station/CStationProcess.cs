@@ -724,7 +724,7 @@ public sealed class CStationProcess
         var parameters = new Dictionary<string, string>(
             processPlan.Parameters,
             StringComparer.OrdinalIgnoreCase);
-        var headCount = Math.Clamp(ReadIntAny(parameters, 12, "HeadCount", "HEAD_COUNT", "SCANNER_COUNT"), 1, 64);
+        var headCount = Math.Clamp(ReadIntAny(parameters, 8, "HeadCount", "HEAD_COUNT", "SCANNER_COUNT"), 1, 64);
         var defaultLaserPower = ReadDoubleAny(parameters, 1.0, "LaserPower", "LASER_POWER");
         var defaultFrequency = ReadDoubleAny(parameters, 20.0, "LaserFrequency", "LASER_FREQUENCY");
         var defaultMarkSpeed = ReadDoubleAny(parameters, 900.0, "MarkSpeed", "MARK_SPEED", "STAGE_SPEED");

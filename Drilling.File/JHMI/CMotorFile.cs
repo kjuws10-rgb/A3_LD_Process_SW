@@ -7,7 +7,7 @@ using Drilling.Common.InterLock;
 using Drilling.Common.Station;
 using Drilling.File.Parser;
 
-namespace Drilling.File.IPS;
+namespace Drilling.File.JHMI;
 
 public sealed class CMotorFile(string configRoot) : IMotorFile
 {
@@ -72,7 +72,7 @@ public sealed class CMotorFile(string configRoot) : IMotorFile
     {
         cancellationToken.ThrowIfCancellationRequested();
         EnsureFile();
-        CCsvParser.ValidateRequiredHeaders(GetMotorPath(), "IPS_MOTOR", RequiredHeaderGroups);
+        CCsvParser.ValidateRequiredHeaders(GetMotorPath(), "JHMI_MOTOR", RequiredHeaderGroups);
 
         var rows = CCsvParser.Read(GetMotorPath())
             .Select((row, index) => Parse(row, index + 2))
@@ -153,7 +153,7 @@ public sealed class CMotorFile(string configRoot) : IMotorFile
 
     private string GetMotorPath()
     {
-        return Path.Combine(configRoot, "IPS_MOTOR.csv");
+        return Path.Combine(configRoot, "JHMI_MOTOR.csv");
     }
 
     private static void Validate(IReadOnlyList<ST_MOTOR_DATA> motors)
@@ -165,39 +165,39 @@ public sealed class CMotorFile(string configRoot) : IMotorFile
         {
             if (string.IsNullOrWhiteSpace(axis.Name))
             {
-                throw new InvalidDataException("IPS_MOTOR validation failed. NAME cannot be empty.");
+                throw new InvalidDataException("JHMI_MOTOR validation failed. NAME cannot be empty.");
             }
 
             if (!usedNames.Add(axis.Name))
             {
-                throw new InvalidDataException($"IPS_MOTOR validation failed. Duplicated NAME: {axis.Name}");
+                throw new InvalidDataException($"JHMI_MOTOR validation failed. Duplicated NAME: {axis.Name}");
             }
 
             if (axis.Axis < 0)
             {
-                throw new InvalidDataException($"IPS_MOTOR validation failed. AXIS cannot be negative: {axis.Name}");
+                throw new InvalidDataException($"JHMI_MOTOR validation failed. AXIS cannot be negative: {axis.Name}");
             }
 
             if (axis.DevNo < 0)
             {
-                throw new InvalidDataException($"IPS_MOTOR validation failed. DEV NO cannot be negative: {axis.Name}");
+                throw new InvalidDataException($"JHMI_MOTOR validation failed. DEV NO cannot be negative: {axis.Name}");
             }
 
             if (string.IsNullOrWhiteSpace(axis.DevType))
             {
-                throw new InvalidDataException($"IPS_MOTOR validation failed. DEV TYPE cannot be empty: {axis.Name}");
+                throw new InvalidDataException($"JHMI_MOTOR validation failed. DEV TYPE cannot be empty: {axis.Name}");
             }
 
             var controllerAxisKey = $"{axis.DevType}:{axis.DevNo}:{axis.Axis}";
             if (!usedControllerAxes.Add(controllerAxisKey))
             {
                 throw new InvalidDataException(
-                    $"IPS_MOTOR validation failed. Duplicated controller axis: {axis.DevType}[{axis.DevNo}] AXIS {axis.Axis}");
+                    $"JHMI_MOTOR validation failed. Duplicated controller axis: {axis.DevType}[{axis.DevNo}] AXIS {axis.Axis}");
             }
 
             if (axis.Scale <= 0.0)
             {
-                throw new InvalidDataException($"IPS_MOTOR validation failed. SCALE must be positive: {axis.Name}");
+                throw new InvalidDataException($"JHMI_MOTOR validation failed. SCALE must be positive: {axis.Name}");
             }
         }
     }
@@ -300,7 +300,7 @@ public sealed class CMotorFile(string configRoot) : IMotorFile
         string fieldName,
         int defaultValue)
     {
-        return CCsvParser.ReadInt(value, "IPS_MOTOR", rowNo, fieldName, defaultValue);
+        return CCsvParser.ReadInt(value, "JHMI_MOTOR", rowNo, fieldName, defaultValue);
     }
 
     private static double ReadDouble(
@@ -309,7 +309,7 @@ public sealed class CMotorFile(string configRoot) : IMotorFile
         string fieldName,
         double defaultValue)
     {
-        return CCsvParser.ReadDouble(value, "IPS_MOTOR", rowNo, fieldName, defaultValue);
+        return CCsvParser.ReadDouble(value, "JHMI_MOTOR", rowNo, fieldName, defaultValue);
     }
 
     private static string Normalize(string value)

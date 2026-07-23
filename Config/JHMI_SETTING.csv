@@ -14,5 +14,8 @@ MOTOR,AXIS,MoveTimeout,Move Timeout,INT,ms,1,1,10000,100,120000,Axis movement ti
 POSITION,STAGE,CenterX,Center X,DOUBLE,mm,1,1,0.000,-500,500,Center position X,10
 POSITION,STAGE,CenterY,Center Y,DOUBLE,mm,1,1,0.000,-500,500,Center position Y,11
 POSITION,STAGE,SafeZ,Safe Z,DOUBLE,mm,1,1,5.000,0,100,Safe height before movement,20
+POSITION,SCANNER,H1PositionX,H1 Position X,DOUBLE,mm,1,1,0,-10000,10000,Temporary H1 center X in Glass preview coordinates,30
+POSITION,SCANNER,HeadPitchX,Head Pitch X,DOUBLE,mm,1,1,200,0,10000,Temporary fixed X pitch between Head centers,31
+POSITION,SCANNER,ScanFieldHalfX,Scan Field Half X,DOUBLE,mm,1,1,110,0,10000,Temporary X half width of each Head scan field,32
 ALARM,ALARM,ResetTimeout,Reset Timeout,INT,ms,1,1,5000,100,60000,Alarm reset timeout,10
 ALARM,BUZZER,BuzzerAutoOff,Buzzer Auto Off,BOOL,,1,1,false,0,1,Use automatic buzzer off,20

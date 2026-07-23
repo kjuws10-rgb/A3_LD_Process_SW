@@ -1,4 +1,4 @@
-<Window x:Class="Drilling.UI.Popup.CRecipeNameDialog"
+﻿<Window x:Class="Drilling.UI.Popup.CRecipeNameDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Recipe Name"
@@ -7,13 +7,13 @@
         SizeToContent="Height"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize"
-        Background="#07111B"
-        Foreground="#F3F6FA"
+        Background="{DynamicResource GridBackgroundBrush}"
+        Foreground="{DynamicResource TextPrimaryBrush}"
         FontFamily="Segoe UI">
     <Window.Resources>
         <Style x:Key="DialogButton" TargetType="Button">
             <Setter Property="Height" Value="44" />
-            <Setter Property="Foreground" Value="#F3F6FA" />
+            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
             <Setter Property="FontSize" Value="15" />
             <Setter Property="FontWeight" Value="SemiBold" />
             <Setter Property="BorderThickness" Value="1" />
@@ -39,8 +39,8 @@
         </Style>
     </Window.Resources>
 
-    <Border Background="#101923"
-            BorderBrush="#344251"
+    <Border Background="{DynamicResource ButtonSecondaryBrush}"
+            BorderBrush="{DynamicResource ButtonSecondaryBorderBrush}"
             BorderThickness="1"
             Padding="22">
         <Grid>
@@ -57,24 +57,24 @@
                        Grid.Row="0"
                        FontSize="23"
                        FontWeight="SemiBold"
-                       Foreground="#F3F6FA" />
+                       Foreground="{DynamicResource TextPrimaryBrush}" />
 
             <TextBlock x:Name="MessageText"
                        Grid.Row="1"
                        Margin="0,8,0,0"
                        FontSize="14"
-                       Foreground="#B6C2CF" />
+                       Foreground="{DynamicResource TextSecondaryBrush}" />
 
             <TextBox x:Name="RecipeNameTextBox"
                      Grid.Row="2"
                      Margin="0,22,0,0"
                      Height="42"
                      Padding="12,8"
-                     Background="#07111B"
-                     BorderBrush="#2F81F7"
+                     Background="{DynamicResource GridBackgroundBrush}"
+                     BorderBrush="{DynamicResource ButtonPrimaryBorderBrush}"
                      BorderThickness="1"
-                     Foreground="#F3F6FA"
-                     CaretBrush="#F3F6FA"
+                     Foreground="{DynamicResource TextPrimaryBrush}"
+                     CaretBrush="{DynamicResource TextPrimaryBrush}"
                      FontSize="16"
                      FontWeight="SemiBold"
                      TextChanged="OnRecipeNameTextChanged"
@@ -84,14 +84,14 @@
                        Grid.Row="3"
                        Margin="0,8,0,0"
                        FontSize="12"
-                       Foreground="#FF3B5F"
+                       Foreground="{DynamicResource ButtonDangerBorderBrush}"
                        Visibility="Collapsed" />
 
             <TextBlock Grid.Row="4"
                        Margin="0,8,0,0"
                        Text="File extension is added automatically."
                        FontSize="12"
-                       Foreground="#6F7B8A" />
+                       Foreground="{DynamicResource TextMutedBrush}" />
 
             <Grid Grid.Row="5" Margin="0,18,0,0">
                 <Grid.ColumnDefinitions>
@@ -102,18 +102,20 @@
 
                 <Button x:Name="OkButton"
                         Style="{StaticResource DialogButton}"
-                        Background="#0759C8"
-                        BorderBrush="#2F81F7"
+                        Background="{DynamicResource ButtonPrimaryBrush}"
+                        BorderBrush="{DynamicResource ButtonPrimaryBorderBrush}"
                         Content="OK"
                         Click="OnOkClicked" />
 
                 <Button Grid.Column="2"
                         Style="{StaticResource DialogButton}"
-                        Background="#101923"
-                        BorderBrush="#344251"
+                        Background="{DynamicResource ButtonSecondaryBrush}"
+                        BorderBrush="{DynamicResource ButtonSecondaryBorderBrush}"
                         Content="CANCEL"
                         Click="OnCancelClicked" />
             </Grid>
         </Grid>
     </Border>
 </Window>
+
+

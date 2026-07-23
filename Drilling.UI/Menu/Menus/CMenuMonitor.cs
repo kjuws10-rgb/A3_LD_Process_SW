@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.IO;
 using Drilling.Common.Managers;
 using Drilling.Common.Interface;
 using Drilling.Common.Motion;
@@ -23,6 +24,7 @@ public sealed class CMenuMonitor : IMenu
     private readonly Func<Task> _refreshCurrentScreen;
     private string _selectedAxisId = "GX";
     private string _selectedPowerMeterProcessName = "";
+    private string _selectedMelsecGroup = "ALL";
 
     private static readonly string[] MonitorTabs =
     [
@@ -34,6 +36,7 @@ public sealed class CMenuMonitor : IMenu
         "BET",
         "POWER METER",
         "PRODUCT",
+        "MELSEC",
         "ETC"
     ];
 
@@ -62,6 +65,9 @@ public sealed class CMenuMonitor : IMenu
         ExecuteOperationCommand = new CButtonCommand(async parameter => await ExecuteOperation(parameter));
         SetOutputOnCommand = new CButtonCommand(async parameter => await SetOutput(parameter, true));
         SetOutputOffCommand = new CButtonCommand(async parameter => await SetOutput(parameter, false));
+        SelectMelsecGroupCommand = new CButtonCommand(async parameter => await SelectMelsecGroup(parameter));
+        ReadMelsecCommand = new CButtonCommand(async parameter => await ReadMelsec(parameter));
+        WriteMelsecCommand = new CButtonCommand(async parameter => await WriteMelsec(parameter));
     }
 
     public EN_MENU Menu => EN_MENU.Monitor;
@@ -116,6 +122,10 @@ public sealed class CMenuMonitor : IMenu
 
     public IReadOnlyList<ST_MONITOR_PRODUCT_HISTORY_ROW> ProductHistoryRows { get; private set; } = [];
 
+    public IReadOnlyList<ST_MONITOR_MELSEC_GROUP> MelsecGroups { get; private set; } = [];
+
+    public IReadOnlyList<ST_MONITOR_MELSEC_ROW> MelsecRows { get; private set; } = [];
+
     public IReadOnlyList<ST_PWM_PROCESS_ROW> PwmProcessRows { get; private set; } = [];
 
     public IReadOnlyList<ST_PWM_STEP_ROW> PwmStepRows { get; private set; } = [];
@@ -137,6 +147,12 @@ public sealed class CMenuMonitor : IMenu
     public CButtonCommand SetOutputOnCommand { get; }
 
     public CButtonCommand SetOutputOffCommand { get; }
+
+    public CButtonCommand SelectMelsecGroupCommand { get; }
+
+    public CButtonCommand ReadMelsecCommand { get; }
+
+    public CButtonCommand WriteMelsecCommand { get; }
 
     public string SelectedAxisId => _selectedAxisId;
 
@@ -168,9 +184,11 @@ public sealed class CMenuMonitor : IMenu
 
     public bool IsProduct => SelectedTab == "PRODUCT";
 
+    public bool IsMelsec => SelectedTab == "MELSEC";
+
     public bool IsControlDevice => IsLaser || IsChiller;
 
-    public bool IsGenericDevice => !IsIo && !IsMotor && !IsLaser && !IsChiller && !IsAttenuator && !IsBet && !IsPowerMeter && !IsProduct;
+    public bool IsGenericDevice => !IsIo && !IsMotor && !IsLaser && !IsChiller && !IsAttenuator && !IsBet && !IsPowerMeter && !IsProduct && !IsMelsec;
 
     public async Task<CScreenViewModel> Build(CancellationToken cancellationToken = default)
     {
@@ -200,6 +218,8 @@ public sealed class CMenuMonitor : IMenu
         var tabs = MonitorTabs
             .Select(tab => new ST_MONITOR_TAB(tab, tab == selectedTab))
             .ToArray();
+        var melsecGroups = CreateMelsecGroups(selectedTab);
+        var melsecRows = CreateMelsecRows(selectedTab);
 
         var axisRows = CreateAxisRows(snapshot, _selectedAxisId);
 
@@ -242,6 +262,8 @@ public sealed class CMenuMonitor : IMenu
             CreatePwmProcessButtons(selectedTab),
             CreatePwmStepButtons(selectedTab),
             CreatePwmRunButtons(selectedTab));
+        MelsecGroups = melsecGroups;
+        MelsecRows = melsecRows;
 
         return new CScreenViewModel(
             EN_MENU.Monitor,
@@ -336,6 +358,110 @@ public sealed class CMenuMonitor : IMenu
         _setStatusMessage(result.Message);
         _refreshShellStatus();
         await _refreshCurrentScreen();
+    }
+
+    private async Task SelectMelsecGroup(object? parameter)
+    {
+        if (parameter is ST_MONITOR_MELSEC_GROUP group)
+        {
+            _selectedMelsecGroup = group.Name;
+        }
+        else if (parameter is string groupName && !string.IsNullOrWhiteSpace(groupName))
+        {
+            _selectedMelsecGroup = groupName.Trim().ToUpperInvariant();
+        }
+        else
+        {
+            return;
+        }
+
+        _setStatusMessage($"MELSEC group {_selectedMelsecGroup} selected.");
+        await _refreshCurrentScreen();
+    }
+
+    private async Task ReadMelsec(object? parameter)
+    {
+        if (parameter is not ST_MONITOR_MELSEC_ROW row)
+        {
+            return;
+        }
+
+        var result = await ExecuteMelsecRead(row);
+        _setStatusMessage(result.Message);
+        _refreshShellStatus();
+    }
+
+    private async Task WriteMelsec(object? parameter)
+    {
+        if (parameter is not ST_MONITOR_MELSEC_ROW row)
+        {
+            return;
+        }
+
+        var result = await ExecuteMelsecWrite(row);
+        _setStatusMessage(result.Message);
+        _refreshShellStatus();
+    }
+
+    private async Task<ST_DEVICE_COMMAND_RESULT> ExecuteMelsecRead(ST_MONITOR_MELSEC_ROW row)
+    {
+        try
+        {
+            var value = row.DataType switch
+            {
+                "BIT" => (await _interfaceManager.Melsec.ReadBit(row.Id)).ToString().ToUpperInvariant(),
+                "WORD" or "DWORD" => (await _interfaceManager.Melsec.ReadWord(row.Id)).ToString(CultureInfo.InvariantCulture),
+                "DOUBLE" or "FLOAT" => (await _interfaceManager.Melsec.ReadDouble(row.Id)).ToString("F3", CultureInfo.InvariantCulture),
+                "STRING" => await _interfaceManager.Melsec.ReadString(row.Id),
+                _ => throw new InvalidOperationException($"Unsupported MELSEC read type: {row.DataType}")
+            };
+
+            row.ReadValue = value;
+            return new ST_DEVICE_COMMAND_RESULT(true, $"MELSEC READ {row.Id}({row.Address}) = {value}");
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or NotSupportedException or TimeoutException or IOException)
+        {
+            return new ST_DEVICE_COMMAND_RESULT(false, $"MELSEC READ {row.Id} failed. {ex.Message}");
+        }
+    }
+
+    private async Task<ST_DEVICE_COMMAND_RESULT> ExecuteMelsecWrite(ST_MONITOR_MELSEC_ROW row)
+    {
+        try
+        {
+            if (!row.CanWrite)
+            {
+                return new ST_DEVICE_COMMAND_RESULT(false, $"MELSEC WRITE is blocked by ACCESS={row.Access}: {row.Id}");
+            }
+
+            var value = row.WriteValue.Trim();
+
+            switch (row.DataType)
+            {
+                case "BIT":
+                    await _interfaceManager.Melsec.WriteBit(row.Id, ParseMelsecBit(value));
+                    break;
+                case "WORD":
+                case "DWORD":
+                    await _interfaceManager.Melsec.WriteWord(row.Id, int.Parse(value, NumberStyles.Integer, CultureInfo.InvariantCulture));
+                    break;
+                case "DOUBLE":
+                case "FLOAT":
+                    await _interfaceManager.Melsec.WriteDouble(row.Id, double.Parse(value, NumberStyles.Float, CultureInfo.InvariantCulture));
+                    break;
+                case "STRING":
+                    await _interfaceManager.Melsec.WriteString(row.Id, value);
+                    break;
+                default:
+                    throw new InvalidOperationException($"Unsupported MELSEC write type: {row.DataType}");
+            }
+
+            return new ST_DEVICE_COMMAND_RESULT(true, $"MELSEC WRITE {row.Id}({row.Address}) = {value}");
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or NotSupportedException or TimeoutException or IOException or FormatException)
+        {
+            return new ST_DEVICE_COMMAND_RESULT(false, $"MELSEC WRITE {row.Id} failed. {ex.Message}");
+        }
     }
 
     private async Task<ST_DEVICE_COMMAND_RESULT> ExecuteMotorOperation(string label)
@@ -828,7 +954,7 @@ public sealed class CMenuMonitor : IMenu
         {
             "ATT" => "ATTENUATOR",
             "POWER" or "POWERMETER" or "POWER_METER" => "POWER METER",
-            "IO" or "MOTOR" or "LASER" or "CHILLER" or "ATTENUATOR" or "BET" or "POWER METER" or "PRODUCT" or "ETC" => normalized,
+            "IO" or "MOTOR" or "LASER" or "CHILLER" or "ATTENUATOR" or "BET" or "POWER METER" or "PRODUCT" or "MELSEC" or "ETC" => normalized,
             _ => "IO"
         };
     }
@@ -845,6 +971,7 @@ public sealed class CMenuMonitor : IMenu
             "BET" => "Beam expander magnification and divergence monitor",
             "POWER METER" => "Power meter measurement monitor and Stage PC measurement-position command",
             "PRODUCT" => "Active product status, head result, and product history monitor",
+            "MELSEC" => "PLC MELSEC map monitor and direct read/write operation",
             _ => "Auxiliary monitor status and service information"
         };
     }
@@ -859,6 +986,7 @@ public sealed class CMenuMonitor : IMenu
             "BET" => "BET Status",
             "POWER METER" => "PowerMeter Status",
             "PRODUCT" => "Product Status",
+            "MELSEC" => "MELSEC Status",
             _ => "ETC Status"
         };
     }
@@ -873,6 +1001,7 @@ public sealed class CMenuMonitor : IMenu
             "ATTENUATOR" => "Attenuator Operation",
             "BET" => "BET Operation",
             "POWER METER" => "PowerMeter Operation",
+            "MELSEC" => "MELSEC Read / Write",
             _ => "ETC Operation"
         };
     }
@@ -888,6 +1017,7 @@ public sealed class CMenuMonitor : IMenu
             "BET" => "BET Table",
             "POWER METER" => "PowerMeter Parameter",
             "PRODUCT" => "Head Result",
+            "MELSEC" => "MELSEC Map",
             _ => "ETC Parameter"
         };
     }
@@ -901,6 +1031,7 @@ public sealed class CMenuMonitor : IMenu
             "ATTENUATOR" => "Current Position",
             "BET" => "Beam Expander Position",
             "POWER METER" => "Power Trend",
+            "MELSEC" => "MELSEC Signal",
             _ => "Signal Trend"
         };
     }
@@ -916,6 +1047,7 @@ public sealed class CMenuMonitor : IMenu
             "BET" => "BET Command History",
             "POWER METER" => "PowerMeter Command History",
             "PRODUCT" => "Product History",
+            "MELSEC" => "MELSEC Command History",
             _ => "Command History"
         };
     }
@@ -1060,6 +1192,14 @@ public sealed class CMenuMonitor : IMenu
                 new("Measure State", snapshot.PowerMeter.IsMeasuring ? "RUN" : "IDLE", snapshot.PowerMeter.IsMeasuring ? "RUN" : "IDLE", "-", "Measurement state"),
                 new("Last Command", string.IsNullOrWhiteSpace(snapshot.PowerMeter.LastCommand) ? "-" : snapshot.PowerMeter.LastCommand, snapshot.PowerMeter.LastError == EN_POWER_METER_ERROR.Ok ? "OK" : "ERROR", "-", "Last command name")
             ],
+            "MELSEC" =>
+            [
+                new("Connection", communicationText, communicationText, "-", "MELSEC PLC connection"),
+                new("Device", "MELSEC_0", communicationText, "-", "Selected MELSEC device"),
+                new("Map Source", "JHMI_MELSEC_MAP.csv", "OK", "-", "MELSEC map file"),
+                new("Read", "ID based", "READY", "-", "Read by map ID"),
+                new("Write", "ACCESS W/RW", "READY", "-", "Write is enabled only for writable rows")
+            ],
             _ =>
             [
                 new("System Mode", "SIM", "SIM", "-", "Device-free monitor mode"),
@@ -1080,6 +1220,7 @@ public sealed class CMenuMonitor : IMenu
             "ATTENUATOR" => EN_EQP_MODULE.Attenuator,
             "BET" => EN_EQP_MODULE.Bet,
             "POWER METER" => EN_EQP_MODULE.PowerMeter,
+            "MELSEC" => EN_EQP_MODULE.Melsec,
             _ => null
         };
     }
@@ -1247,6 +1388,17 @@ public sealed class CMenuMonitor : IMenu
                 new("Stage Z Target", "0.000", "mm"),
                 new("Read Command", "pw?", "-"),
                 new("Position Command", "pos", "-")
+            ],
+            "MELSEC" =>
+            [
+                new("Map File", "JHMI_MELSEC_MAP.csv", "-"),
+                new("Call Rule", "ID", "-", "Accent"),
+                new("Bit Write", "ON/OFF or 1/0", "-"),
+                new("Numeric Write", "Invariant Number", "-"),
+                new("Read Access", "R / RW", "-"),
+                new("Write Access", "W / RW", "-"),
+                new("Scale", "CSV SCALE", "-"),
+                new("Device No", "MELSEC instance number", "-")
             ],
             _ =>
             [
@@ -1433,6 +1585,13 @@ public sealed class CMenuMonitor : IMenu
                 new("10:22:32.009", "ENG1", "START", "POWER_CHECK.PWM", "-", "OK"),
                 new("10:22:01.678", "ENG1", "STOP", "POWER_CHECK.PWM", "-", "OK")
             ],
+            "MELSEC" =>
+            [
+                new("10:24:12.345", "ENG1", "MELSEC_0", "READ BIT", "PROCESS_ALIVE", "OK"),
+                new("10:23:58.112", "ENG1", "MELSEC_0", "WRITE BIT", "REVIEW_START_REQ=ON", "OK"),
+                new("10:23:35.876", "ENG1", "MELSEC_0", "WRITE DOUBLE", "STAGE_Y_TARGET_POS=0.000", "OK"),
+                new("10:23:18.552", "ENG1", "MELSEC_0", "READ STRING", "GLASS_ID", "OK")
+            ],
             _ =>
             [
                 new("10:24:12.345", "ENG1", tab, "REFRESH", "-", "OK"),
@@ -1575,6 +1734,71 @@ public sealed class CMenuMonitor : IMenu
             new("Moving", snapshot.Attenuator.CommandState, "", "Ok"),
             new("Last Update", DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"), "")
         ];
+    }
+
+    private IReadOnlyList<ST_MONITOR_MELSEC_GROUP> CreateMelsecGroups(string tab)
+    {
+        if (tab != "MELSEC")
+        {
+            return [];
+        }
+
+        var mapGroups = _interfaceManager.Melsec.Map
+            .Select(data => data.Group)
+            .Where(group => !string.IsNullOrWhiteSpace(group))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(group => group, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        if (!_selectedMelsecGroup.Equals("ALL", StringComparison.OrdinalIgnoreCase) &&
+            !mapGroups.Contains(_selectedMelsecGroup, StringComparer.OrdinalIgnoreCase))
+        {
+            _selectedMelsecGroup = "ALL";
+        }
+
+        return new[] { "ALL" }
+            .Concat(mapGroups)
+            .Select(group => new ST_MONITOR_MELSEC_GROUP(
+                group,
+                group.Equals(_selectedMelsecGroup, StringComparison.OrdinalIgnoreCase),
+                group.Equals("ALL", StringComparison.OrdinalIgnoreCase)
+                    ? _interfaceManager.Melsec.Map.Count
+                    : _interfaceManager.Melsec.GetMapList(group).Count))
+            .ToArray();
+    }
+
+    private IReadOnlyList<ST_MONITOR_MELSEC_ROW> CreateMelsecRows(string tab)
+    {
+        if (tab != "MELSEC")
+        {
+            return [];
+        }
+
+        var rows = _selectedMelsecGroup.Equals("ALL", StringComparison.OrdinalIgnoreCase)
+            ? _interfaceManager.Melsec.Map
+            : _interfaceManager.Melsec.GetMapList(_selectedMelsecGroup);
+
+        return rows
+            .OrderBy(data => data.Group, StringComparer.OrdinalIgnoreCase)
+            .ThenBy(data => data.DeviceNo)
+            .ThenBy(data => data.Id, StringComparer.OrdinalIgnoreCase)
+            .Select(data => new ST_MONITOR_MELSEC_ROW(
+                data.Id,
+                data.Group,
+                data.Name,
+                data.DeviceNo.ToString(CultureInfo.InvariantCulture),
+                data.Address,
+                data.DataType.ToString().ToUpperInvariant(),
+                data.Direction.ToString().ToUpperInvariant(),
+                MelsecAccessText(data.Access),
+                data.Scale.ToString("G", CultureInfo.InvariantCulture),
+                data.Length.ToString(CultureInfo.InvariantCulture),
+                data.PollMs <= 0 ? "-" : data.PollMs.ToString(CultureInfo.InvariantCulture),
+                "-",
+                DefaultMelsecWriteValue(data),
+                MelsecRowState(data),
+                data.Description))
+            .ToArray();
     }
 
     private async Task<(ST_PRODUCT_DATA? Product, IReadOnlyList<ST_PRODUCT_HISTORY> History, string Error)> LoadProductDisplay(
@@ -1870,6 +2094,57 @@ public sealed class CMenuMonitor : IMenu
         return value ? "ON" : "OFF";
     }
 
+    private static bool ParseMelsecBit(string value)
+    {
+        return value.Trim().ToUpperInvariant() switch
+        {
+            "1" or "TRUE" or "ON" or "YES" => true,
+            "0" or "FALSE" or "OFF" or "NO" => false,
+            _ => throw new FormatException($"MELSEC BIT value must be ON/OFF or 1/0: {value}")
+        };
+    }
+
+    private static string MelsecAccessText(EN_MELSEC_ACCESS access)
+    {
+        return access switch
+        {
+            EN_MELSEC_ACCESS.Read => "R",
+            EN_MELSEC_ACCESS.Write => "W",
+            EN_MELSEC_ACCESS.ReadWrite => "RW",
+            _ => access.ToString().ToUpperInvariant()
+        };
+    }
+
+    private static string DefaultMelsecWriteValue(ST_MELSEC_MAP_DATA data)
+    {
+        if (data.Access == EN_MELSEC_ACCESS.Read)
+        {
+            return "";
+        }
+
+        return data.DataType switch
+        {
+            EN_MELSEC_DATA_TYPE.Bit => "ON",
+            EN_MELSEC_DATA_TYPE.String => "",
+            _ => "0"
+        };
+    }
+
+    private static string MelsecRowState(ST_MELSEC_MAP_DATA data)
+    {
+        if (!data.Use)
+        {
+            return "DISABLED";
+        }
+
+        return data.Access switch
+        {
+            EN_MELSEC_ACCESS.Read => "READ",
+            EN_MELSEC_ACCESS.Write => "WRITE",
+            _ => "READY"
+        };
+    }
+
     private static string FormatAxisPosition(string axisId, double value)
     {
         return axisId.StartsWith("BET_", StringComparison.OrdinalIgnoreCase)
@@ -1942,6 +2217,94 @@ public sealed record ST_MONITOR_PRODUCT_HISTORY_ROW(
         "NG" => CStatusBrush.Offline,
         _ => CStatusBrush.Wait
     };
+}
+
+public sealed record ST_MONITOR_MELSEC_GROUP(
+    string Name,
+    bool IsSelected,
+    int Count);
+
+public sealed class ST_MONITOR_MELSEC_ROW
+{
+    public ST_MONITOR_MELSEC_ROW(
+        string id,
+        string group,
+        string name,
+        string deviceNo,
+        string address,
+        string dataType,
+        string direction,
+        string access,
+        string scale,
+        string length,
+        string pollMs,
+        string readValue,
+        string writeValue,
+        string state,
+        string description)
+    {
+        Id = id;
+        Group = group;
+        Name = name;
+        DeviceNo = deviceNo;
+        Address = address;
+        DataType = dataType;
+        Direction = direction;
+        Access = access;
+        Scale = scale;
+        Length = length;
+        PollMs = pollMs;
+        ReadValue = readValue;
+        WriteValue = writeValue;
+        State = state;
+        Description = description;
+    }
+
+    public string Id { get; }
+
+    public string Group { get; }
+
+    public string Name { get; }
+
+    public string DeviceNo { get; }
+
+    public string Address { get; }
+
+    public string DataType { get; }
+
+    public string Direction { get; }
+
+    public string Access { get; }
+
+    public string Scale { get; }
+
+    public string Length { get; }
+
+    public string PollMs { get; }
+
+    public string ReadValue { get; set; }
+
+    public string WriteValue { get; set; }
+
+    public string State { get; }
+
+    public string Description { get; }
+
+    public bool CanRead => Access is "R" or "RW";
+
+    public bool CanWrite => Access is "W" or "RW";
+
+    public Brush StateBrush => State.Trim().ToUpperInvariant() switch
+    {
+        "READY" or "READ" => CStatusBrush.Online,
+        "WRITE" => CStatusBrush.Wait,
+        "ERROR" => CStatusBrush.Offline,
+        _ => CStatusBrush.Muted
+    };
+
+    public Brush ValueBrush => string.IsNullOrWhiteSpace(ReadValue) || ReadValue == "-"
+        ? CStatusBrush.Muted
+        : CStatusBrush.Simul;
 }
 
 public sealed record ST_MONITOR_IO_ROW(

@@ -2,8 +2,9 @@ using Drilling.Common.Log;
 using System.IO;
 using System.Text;
 using Drilling.Common.Managers;
-using Drilling.File.IPS;
+using Drilling.File.JHMI;
 using Drilling.File.Product;
+using Drilling.File.ReviewResult;
 using Drilling.File.Script;
 
 namespace Drilling.UI;
@@ -15,7 +16,7 @@ public static class CAppStartup
         var configRoot = GetConfigRoot();
         var manager = new CManager(
             configRoot,
-            new CIpsRecipeFile(configRoot),
+            new CJhmiRecipeFile(configRoot),
             new CSettingFile(configRoot),
             new CManualScanFile(configRoot),
             new CInterfaceFile(configRoot),
@@ -23,7 +24,10 @@ public static class CAppStartup
             new CPowerMeterFile(configRoot),
             new CMotorFile(configRoot),
             new CIoFile(configRoot),
+            new CMelsecMapFile(configRoot),
             new CProductFile(configRoot),
+            new CReviewResultFile(configRoot),
+            new CReviewRuleFile(configRoot),
             new CLogManager(configRoot),
             new CAutomation1ScriptFile(GetScriptDirectory(configRoot)),
             configStructureFile: new CConfigStructureFile(configRoot));
@@ -62,7 +66,9 @@ public static class CAppStartup
             manager.ManualScanFile(),
             manager.Recipe(),
             manager.Setting(),
-            manager.Product());
+            manager.Product(),
+            manager.Review(),
+            manager.ReviewRuleFile());
     }
 
     private static int WriteManagerStartupStatus(
@@ -81,6 +87,7 @@ public static class CAppStartup
         builder.AppendLine($"InterfaceCount={status.InterfaceCount}");
         builder.AppendLine($"MotorCount={status.MotorCount}");
         builder.AppendLine($"IoCount={status.IoCount}");
+        builder.AppendLine($"MelsecMapCount={status.MelsecMapCount}");
         builder.AppendLine($"ActiveProductLoaded={status.ActiveProductLoaded}");
 
         if (steps.Length == 0)

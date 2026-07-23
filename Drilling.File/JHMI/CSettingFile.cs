@@ -8,7 +8,7 @@ using Drilling.Common.InterLock;
 using Drilling.Common.Station;
 using Drilling.File.Parser;
 
-namespace Drilling.File.IPS;
+namespace Drilling.File.JHMI;
 
 public sealed class CSettingFile(string configRoot) : ISettingFile
 {
@@ -154,7 +154,7 @@ public sealed class CSettingFile(string configRoot) : ISettingFile
     {
         CCsvParser.ValidateRequiredHeaders(
             GetFormPath(),
-            "IPS_SETTING",
+            "JHMI_SETTING",
             FormHeaders.Select(header => new[] { header }));
 
         return CCsvParser.Read(GetFormPath())
@@ -336,7 +336,7 @@ public sealed class CSettingFile(string configRoot) : ISettingFile
 
     private string GetFormPath()
     {
-        return Path.Combine(configRoot, "IPS_SETTING.csv");
+        return Path.Combine(configRoot, "JHMI_SETTING.csv");
     }
 
     private string GetValuePath()

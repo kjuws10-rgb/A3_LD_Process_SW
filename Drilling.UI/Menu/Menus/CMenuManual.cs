@@ -90,7 +90,7 @@ public sealed class CMenuManual : IMenu
         var settingNames = await _scanFile.List(cancellationToken);
         var selectedSettingName = ResolveSelectedSettingName(settingNames, _selectedSettingNameProvider());
         var settings = await _scanFile.Load(selectedSettingName, cancellationToken);
-        var selectedHeadNo = Math.Clamp(_selectedHeadNoProvider(), 1, 12);
+        var selectedHeadNo = Math.Clamp(_selectedHeadNoProvider(), 1, 8);
         var headCards = BuildHeadCards(selectedHeadNo);
         var selectedHead = headCards.First(head => head.IsSelected);
         var selectedHeadItems = new ST_DISPLAY_ITEM[]
@@ -355,11 +355,7 @@ public sealed class CMenuManual : IMenu
             Head(5, "-25.100", "30.250", "Idle", selectedHeadNo),
             Head(6, "-22.010", "11.250", "Ready", selectedHeadNo),
             Head(7, "18.750", "-18.430", "Ready", selectedHeadNo),
-            Head(8, "-15.630", "15.400", "Idle", selectedHeadNo),
-            Head(9, "-15.620", "5.400", "Ready", selectedHeadNo),
-            Head(10, "-30.220", "41.210", "Idle", selectedHeadNo),
-            Head(11, "3.120", "-32.770", "Ready", selectedHeadNo),
-            Head(12, "0.000", "0.000", "Idle", selectedHeadNo)
+            Head(8, "-15.630", "15.400", "Idle", selectedHeadNo)
         ];
     }
 
