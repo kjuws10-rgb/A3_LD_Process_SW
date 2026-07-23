@@ -87,6 +87,7 @@ public partial class MainWindow : Window
             _layoutRenderTimer.Start();
         };
         PreviewMouseLeftButtonUp += (_, _) => CompleteMatrixDragSelection();
+        LayoutCanvas.ContextMenuOpening += LayoutCanvas_ContextMenuOpening;
         Closing += (_, _) =>
         {
             _scriptWorkflowCancellation?.Cancel();
@@ -1335,6 +1336,7 @@ public partial class MainWindow : Window
             var fill = isActiveScanner
                 ? new SolidColorBrush(Color.FromRgb(37, 99, 235))
                 : new SolidColorBrush(Color.FromRgb(15, 23, 42));
+            var contextMenu = BuildScannerContextMenu(scanner);
 
             var hit = new Rectangle
             {
@@ -1343,7 +1345,8 @@ public partial class MainWindow : Window
                 Fill = new SolidColorBrush(Color.FromArgb(1, 0, 0, 0)),
                 StrokeThickness = 0,
                 Tag = scanner,
-                Cursor = Cursors.Hand
+                Cursor = Cursors.Hand,
+                ContextMenu = contextMenu
             };
             hit.MouseLeftButtonDown += ScannerRect_MouseLeftButtonDown;
             Canvas.SetLeft(hit, x - 14);
@@ -1360,7 +1363,8 @@ public partial class MainWindow : Window
                     : new SolidColorBrush(Color.FromRgb(71, 85, 105)),
                 StrokeThickness = isActiveScanner ? 2.8 : 1.6,
                 Tag = scanner,
-                Cursor = Cursors.Hand
+                Cursor = Cursors.Hand,
+                ContextMenu = BuildScannerContextMenu(scanner)
             };
             box.MouseLeftButtonDown += ScannerRect_MouseLeftButtonDown;
             Canvas.SetLeft(box, x);
@@ -1410,6 +1414,255 @@ public partial class MainWindow : Window
             LayoutCanvas.Children.Add(area);
         }
     }
+
+    private void LayoutCanvas_ContextMenuOpening(object sender, ContextMenuEventArgs e)
+    {
+        LayoutCanvas.ContextMenu = BuildAllScannerContextMenu();
+    }
+
+    private ContextMenu BuildScannerContextMenu(ScannerModel scanner)
+    {
+        var axisX = ResolveScannerAxisName(AxisXTemplateBox.Text, scanner.Index);
+        var axisY = ResolveScannerAxisName(AxisYTemplateBox.Text, scanner.Index);
+        var menu = new ContextMenu
+        {
+            Background = new SolidColorBrush(Color.FromRgb(15, 23, 42)),
+            Foreground = new SolidColorBrush(Color.FromRgb(226, 232, 240))
+        };
+
+        menu.Items.Add(new MenuItem
+        {
+            Header = $"Scanner #{scanner.Index}  Task {scanner.Index}",
+            IsEnabled = false
+        });
+        menu.Items.Add(CreateMenuItem(
+            $"Enable GX/GY ({axisX}, {axisY})",
+            () => ExecuteScannerAxisCommandAsync(
+                $"H{scanner.Index} Enable GX/GY",
+                scanner.Index,
+                new[] { axisX, axisY },
+                $"Enable([{axisX}, {axisY}])")));
+        menu.Items.Add(CreateMenuItem(
+            $"Disable GX/GY ({axisX}, {axisY})",
+            () => ExecuteScannerAxisCommandAsync(
+                $"H{scanner.Index} Disable GX/GY",
+                scanner.Index,
+                new[] { axisX, axisY },
+                $"Disable([{axisX}, {axisY}])")));
+        menu.Items.Add(CreateMenuItem(
+            $"Home GX/GY ({axisX}, {axisY})",
+            () => ExecuteScannerAxisCommandAsync(
+                $"H{scanner.Index} Home GX/GY",
+                scanner.Index,
+                new[] { axisX, axisY },
+                $"Home([{axisX}, {axisY}])")));
+        menu.Items.Add(CreateMenuItem(
+            "Motion Parameter Setting GX/GY",
+            () => ExecuteMotionParameterSettingAsync(scanner.Index, new[] { axisX, axisY })));
+        menu.Items.Add(new Separator());
+        menu.Items.Add(BuildAxisSubMenu(scanner.Index, "GX", axisX));
+        menu.Items.Add(BuildAxisSubMenu(scanner.Index, "GY", axisY));
+
+        return menu;
+    }
+
+    private ContextMenu BuildAllScannerContextMenu()
+    {
+        var scannerCount = Math.Max(1, ReadInt(ScannerCountBox, _input.ScannerCount));
+        var menu = new ContextMenu
+        {
+            Background = new SolidColorBrush(Color.FromRgb(15, 23, 42)),
+            Foreground = new SolidColorBrush(Color.FromRgb(226, 232, 240))
+        };
+        menu.Items.Add(new MenuItem
+        {
+            Header = $"All Scanner Axes H1~H{scannerCount}",
+            IsEnabled = false
+        });
+        menu.Items.Add(CreateMenuItem(
+            "All Enable",
+            () => ExecuteAllScannerAxisCommandAsync("All Scanner Enable", scannerCount, "Enable")));
+        menu.Items.Add(CreateMenuItem(
+            "All Disable",
+            () => ExecuteAllScannerAxisCommandAsync("All Scanner Disable", scannerCount, "Disable")));
+        menu.Items.Add(CreateMenuItem(
+            "All Home",
+            () => ExecuteAllScannerAxisCommandAsync("All Scanner Home", scannerCount, "Home")));
+        menu.Items.Add(CreateMenuItem(
+            "All Motion Parameter Setting",
+            () => ExecuteAllMotionParameterSettingAsync(scannerCount)));
+        return menu;
+    }
+
+    private MenuItem BuildAxisSubMenu(int scannerIndex, string axisLabel, string axisName)
+    {
+        var menu = new MenuItem { Header = $"{axisLabel} Axis ({axisName})" };
+        menu.Items.Add(CreateMenuItem(
+            "Enable",
+            () => ExecuteScannerAxisCommandAsync(
+                $"H{scannerIndex} {axisName} Enable",
+                scannerIndex,
+                new[] { axisName },
+                $"Enable({axisName})")));
+        menu.Items.Add(CreateMenuItem(
+            "Disable",
+            () => ExecuteScannerAxisCommandAsync(
+                $"H{scannerIndex} {axisName} Disable",
+                scannerIndex,
+                new[] { axisName },
+                $"Disable({axisName})")));
+        menu.Items.Add(CreateMenuItem(
+            "Home",
+            () => ExecuteScannerAxisCommandAsync(
+                $"H{scannerIndex} {axisName} Home",
+                scannerIndex,
+                new[] { axisName },
+                $"Home({axisName})")));
+
+        var jogMenu = new MenuItem { Header = "Jog Move" };
+        foreach (var distance in new[] { 1.0, -1.0, 10.0, -10.0 })
+        {
+            var label = distance > 0 ? $"+{distance:0.###} mm" : $"{distance:0.###} mm";
+            jogMenu.Items.Add(CreateMenuItem(
+                label,
+                () => ExecuteJogMoveAsync(scannerIndex, axisName, distance)));
+        }
+
+        menu.Items.Add(jogMenu);
+        menu.Items.Add(CreateMenuItem(
+            "Motion Parameter Setting",
+            () => ExecuteMotionParameterSettingAsync(scannerIndex, new[] { axisName })));
+        return menu;
+    }
+
+    private static MenuItem CreateMenuItem(string header, Func<Task> action)
+    {
+        var item = new MenuItem { Header = header };
+        item.Click += async (_, _) => await action();
+        return item;
+    }
+
+    private async Task ExecuteScannerAxisCommandAsync(
+        string description,
+        int taskIndex,
+        IReadOnlyList<string> axes,
+        string aeroScript)
+    {
+        await RunScriptUiOperationAsync(async cancellationToken =>
+        {
+            var client = await GetAutomation1DirectClientAsync(cancellationToken);
+            var result = await client.ExecuteAxisCommandAsync(description, axes, aeroScript, taskIndex, cancellationToken);
+            AppendDeploymentLog($"[Axis Command] {result}");
+            AppendDeploymentLog($"[Axis Command Script] {aeroScript.Replace(Environment.NewLine, " | ")}");
+            ScriptJobText.Text = result;
+        }, TimeSpan.FromSeconds(30));
+    }
+
+    private async Task ExecuteAllScannerAxisCommandAsync(string description, int scannerCount, string commandName)
+    {
+        await RunScriptUiOperationAsync(async cancellationToken =>
+        {
+            var client = await GetAutomation1DirectClientAsync(cancellationToken);
+            for (var head = 1; head <= scannerCount; head++)
+            {
+                var axes = ResolveScannerAxes(head);
+                var axisList = $"[{axes.X}, {axes.Y}]";
+                var script = $"{commandName}({axisList})";
+                var result = await client.ExecuteAxisCommandAsync(
+                    $"{description} H{head}",
+                    new[] { axes.X, axes.Y },
+                    script,
+                    head,
+                    cancellationToken);
+                AppendDeploymentLog($"[Axis Command] {result}");
+            }
+
+            ScriptJobText.Text = $"{description} completed for H1~H{scannerCount}.";
+        }, TimeSpan.FromSeconds(Math.Max(30, scannerCount * 10)));
+    }
+
+    private async Task ExecuteJogMoveAsync(int scannerIndex, string axisName, double distance)
+    {
+        var speed = Math.Max(0.001, ReadDouble(ScannerRapidSpeedBox, 1000));
+        var script =
+            $"SetupAxisSpeed({axisName}, {FormatAeroScriptNumber(speed)}){Environment.NewLine}" +
+            $"MoveIncremental({axisName}, {FormatAeroScriptNumber(distance)}, {FormatAeroScriptNumber(speed)}){Environment.NewLine}" +
+            $"WaitForMotionDone({axisName})";
+        await ExecuteScannerAxisCommandAsync(
+            $"H{scannerIndex} {axisName} Jog {distance:0.###} mm",
+            scannerIndex,
+            new[] { axisName },
+            script);
+    }
+
+    private async Task ExecuteMotionParameterSettingAsync(int scannerIndex, IReadOnlyList<string> axes)
+    {
+        var speed = Math.Max(0.001, ReadDouble(ScannerRapidSpeedBox, 1000));
+        var rampRate = Math.Max(0.001, ReadDouble(RampRateBox, 3_000_000));
+        var lines = axes.SelectMany(axis => new[]
+        {
+            $"SetupAxisSpeed({axis}, {FormatAeroScriptNumber(speed)})",
+            $"SetupAxisRampType({axis}, RampType.Sine)",
+            $"SetupAxisRampValue({axis}, RampMode.Rate, {FormatAeroScriptNumber(rampRate)})"
+        });
+        await ExecuteScannerAxisCommandAsync(
+            $"H{scannerIndex} Motion Parameter Setting",
+            scannerIndex,
+            axes,
+            string.Join(Environment.NewLine, lines));
+    }
+
+    private async Task ExecuteAllMotionParameterSettingAsync(int scannerCount)
+    {
+        await RunScriptUiOperationAsync(async cancellationToken =>
+        {
+            var client = await GetAutomation1DirectClientAsync(cancellationToken);
+            for (var head = 1; head <= scannerCount; head++)
+            {
+                var axes = ResolveScannerAxes(head);
+                var speed = Math.Max(0.001, ReadDouble(ScannerRapidSpeedBox, 1000));
+                var rampRate = Math.Max(0.001, ReadDouble(RampRateBox, 3_000_000));
+                var script = string.Join(Environment.NewLine, new[]
+                {
+                    $"SetupAxisSpeed({axes.X}, {FormatAeroScriptNumber(speed)})",
+                    $"SetupAxisRampType({axes.X}, RampType.Sine)",
+                    $"SetupAxisRampValue({axes.X}, RampMode.Rate, {FormatAeroScriptNumber(rampRate)})",
+                    $"SetupAxisSpeed({axes.Y}, {FormatAeroScriptNumber(speed)})",
+                    $"SetupAxisRampType({axes.Y}, RampType.Sine)",
+                    $"SetupAxisRampValue({axes.Y}, RampMode.Rate, {FormatAeroScriptNumber(rampRate)})"
+                });
+                var result = await client.ExecuteAxisCommandAsync(
+                    $"All Motion Parameter Setting H{head}",
+                    new[] { axes.X, axes.Y },
+                    script,
+                    head,
+                    cancellationToken);
+                AppendDeploymentLog($"[Axis Command] {result}");
+            }
+
+            ScriptJobText.Text = $"All Motion Parameter Setting completed for H1~H{scannerCount}.";
+        }, TimeSpan.FromSeconds(Math.Max(30, scannerCount * 10)));
+    }
+
+    private (string X, string Y) ResolveScannerAxes(int scannerIndex) =>
+        (ResolveScannerAxisName(AxisXTemplateBox.Text, scannerIndex),
+            ResolveScannerAxisName(AxisYTemplateBox.Text, scannerIndex));
+
+    private static string ResolveScannerAxisName(string template, int scannerIndex)
+    {
+        var axisName = (template ?? "").Replace("{0}", scannerIndex.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal);
+        if (string.IsNullOrWhiteSpace(axisName) ||
+            !char.IsLetter(axisName[0]) && axisName[0] != '_' ||
+            axisName.Any(ch => !char.IsLetterOrDigit(ch) && ch != '_'))
+        {
+            throw new InvalidOperationException($"Axis name '{axisName}' is not a valid AeroScript identifier.");
+        }
+
+        return axisName;
+    }
+
+    private static string FormatAeroScriptNumber(double value) =>
+        value.ToString("0.######", CultureInfo.InvariantCulture);
 
     private void DrawScannerBandLabels(double boardLeft, double labelTop, double boardWidth, double boardHeight)
     {

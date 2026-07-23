@@ -52,6 +52,20 @@ public sealed class Automation1DirectClient : IAsyncDisposable
     public Task<Automation1DirectStatus> StopAsync(string jobId, CancellationToken cancellationToken) =>
         ExecuteLockedAsync(() => StopCore(jobId), cancellationToken);
 
+    public Task<string> ExecuteAxisCommandAsync(
+        string description,
+        IReadOnlyList<string> requiredAxisNames,
+        string aeroScript,
+        int taskIndex,
+        CancellationToken cancellationToken)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(description);
+        ArgumentException.ThrowIfNullOrWhiteSpace(aeroScript);
+        return ExecuteLockedAsync(
+            () => ExecuteAxisCommandCore(description, requiredAxisNames, aeroScript, taskIndex),
+            cancellationToken);
+    }
+
     private async Task<T> ExecuteLockedAsync<T>(Func<T> operation, CancellationToken cancellationToken)
     {
         await _operationGate.WaitAsync(cancellationToken);
@@ -270,6 +284,26 @@ public sealed class Automation1DirectClient : IAsyncDisposable
         return stopped;
     }
 
+    private string ExecuteAxisCommandCore(
+        string description,
+        IReadOnlyList<string> requiredAxisNames,
+        string aeroScript,
+        int taskIndex)
+    {
+        var controller = EnsureRunningController();
+        ValidateTask(controller, taskIndex);
+        ValidateAxisNames(controller, requiredAxisNames);
+        var task = controller.Runtime.Tasks[taskIndex];
+        if (IsBusyTaskState(task.Status.TaskState))
+        {
+            throw new InvalidOperationException(
+                $"Task {taskIndex} is already busy: {task.Status.TaskState}. Axis command '{description}' was not executed.");
+        }
+
+        controller.Runtime.Commands.Execute(aeroScript, taskIndex);
+        return $"Axis command completed on Task {taskIndex}: {description}";
+    }
+
     private Automation1DirectStatus RefreshTaskStatus(Controller controller, Automation1JobRuntime runtime)
     {
         var package = runtime.Package;
@@ -387,24 +421,13 @@ public sealed class Automation1DirectClient : IAsyncDisposable
 
     private static void ValidateExecutionEnvironment(Controller controller, AeroScriptPackage package)
     {
-        var configuredAxes = controller.Runtime.Axes
-            .GroupBy(axis => axis.AxisName, StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
-        var missingAxes = package.RequiredAxisNames
-            .Where(axisName => !configuredAxes.ContainsKey(axisName))
-            .ToArray();
-        if (missingAxes.Length > 0)
-        {
-            throw new InvalidOperationException(
-                $"The controller MCD does not contain required axes: {string.Join(", ", missingAxes)}. " +
-                $"Configured axes: {string.Join(", ", configuredAxes.Keys.OrderBy(name => name))}.");
-        }
-
+        ValidateAxisNames(controller, package.RequiredAxisNames);
         if (package.ExecutionEnvironment != Automation1ExecutionEnvironment.Simulation)
         {
             return;
         }
 
+        var configuredAxes = GetConfiguredAxes(controller);
         var physicalAxes = package.RequiredAxisNames
             .Where(axisName => configuredAxes[axisName].HyperWireDevice is not null)
             .ToArray();
@@ -415,6 +438,25 @@ public sealed class Automation1DirectClient : IAsyncDisposable
                 $"{string.Join(", ", physicalAxes)}. Use virtual axes or explicitly select Equipment mode.");
         }
     }
+
+    private static void ValidateAxisNames(Controller controller, IReadOnlyCollection<string> requiredAxisNames)
+    {
+        var configuredAxes = GetConfiguredAxes(controller);
+        var missingAxes = requiredAxisNames
+            .Where(axisName => !configuredAxes.ContainsKey(axisName))
+            .ToArray();
+        if (missingAxes.Length > 0)
+        {
+            throw new InvalidOperationException(
+                $"The controller MCD does not contain required axes: {string.Join(", ", missingAxes)}. " +
+                $"Configured axes: {string.Join(", ", configuredAxes.Keys.OrderBy(name => name))}.");
+        }
+    }
+
+    private static Dictionary<string, Axis> GetConfiguredAxes(Controller controller) =>
+        controller.Runtime.Axes
+            .GroupBy(axis => axis.AxisName, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(group => group.Key, group => group.First(), StringComparer.OrdinalIgnoreCase);
 
     private static void ValidateHardwareReadiness(
         AeroScriptPackage package,

@@ -1,5 +1,12 @@
 # MOF Coordinate WPF Sample
 
+## 2026-07-23 Scanner Axis Context Menu Update
+
+- Scanner icon right-click opens an axis control context menu for that head.
+- The head menu exposes `GXn` and `GYn` submenus with `Enable`, `Disable`, `Home`, `Jog Move`, and `Motion Parameter Setting`.
+- Right-clicking an empty area of the board layout opens an all-scanner menu for `All Enable`, `All Disable`, `All Home`, and `All Motion Parameter Setting`.
+- Manual axis commands run on the same fixed task as the scanner number. H3 axis commands run on Automation1 Task 3.
+
 ## 2026-07-23 Scanner Axis Naming And Live Process Marking Update
 
 이번 버전은 A1 Studio 축 네이밍을 현장 설정과 맞췄다.
