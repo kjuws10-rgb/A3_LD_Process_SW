@@ -150,8 +150,8 @@ public sealed record AeroScriptPackage(
 public sealed record AeroScriptGenerationOptions
 {
     public AeroScriptGenerationMode Mode { get; init; } = AeroScriptGenerationMode.VirtualWaitSimulation;
-    public string AxisXTemplate { get; init; } = "GX";
-    public string AxisYTemplate { get; init; } = "GY";
+    public string AxisXTemplate { get; init; } = "GX{0}";
+    public string AxisYTemplate { get; init; } = "GY{0}";
     public double StartYPosition { get; init; } = 500;
     public double StageTravelDistance { get; init; } = 40;
     public double StageSpeed { get; init; } = 20;

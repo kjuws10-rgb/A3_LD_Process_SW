@@ -1,5 +1,19 @@
 # MOF Coordinate WPF Sample
 
+## 2026-07-23 Scanner Axis Naming And Live Process Marking Update
+
+이번 버전은 A1 Studio 축 네이밍을 현장 설정과 맞췄다.
+
+- 기본 `GX Axis Template`은 `GX{0}`이다.
+- 기본 `GY Axis Template`은 `GY{0}`이다.
+- Scanner 1번은 `GX1`, `GY1`로 생성된다.
+- Scanner 2번은 `GX2`, `GY2`로 생성된다.
+- 여러 scanner를 선택하면 기존과 동일하게 scanner별 독립 파일을 만든다. 예: `mof_generated_H1.ascript`, `mof_generated_H2.ascript`.
+- 같은 파일명으로 반복 생성할 때 `_H1_H1.ascript`처럼 suffix가 중복되지 않도록 기존 `_H숫자` suffix를 제거하고 새 head suffix를 붙인다.
+- Controller compile 전 필수 축 검증도 생성된 축명 기준으로 수행된다. 따라서 A1 Studio MCD에 `GX1/GY1`, `GX2/GY2`가 존재해야 H1/H2 script가 정상 compile 대상이 된다.
+- 가공 모니터링 UI는 현재 가공 중인 위치를 cyan 외곽선으로 표시하고, 이미 지나간 가공 완료 위치는 emerald 색상으로 누적 표시한다.
+- 복수 Task 실행 중에는 각 Task의 진행 상태를 순회 조회하여 scanner별 완료 위치가 UI에 계속 누적된다.
+
 ## 2026-07-23 Simulation-Safe Galvo Substitute Update
 
 Automation1 공식 문서 기준으로 `GalvoLaserOutput`, `GalvoConfigureLaserMode`, `PsoReset` 같은 Galvo/PSO 함수는 GI4/GL4 galvo hardware 및 laser output 제어 영역이다. 따라서 Virtual Controller 시뮬레이션에서는 실제 하드웨어 함수를 그대로 호출하지 않는다.

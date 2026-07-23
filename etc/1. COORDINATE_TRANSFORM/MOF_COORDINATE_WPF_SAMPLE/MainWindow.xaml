@@ -280,8 +280,8 @@
 
                   <StackPanel Margin="0,0,8,8"><TextBlock Text="Controller File"/><TextBox x:Name="ControllerFileNameBox" Text="programs/mof_generated.ascript" ToolTip="Controller.Files.WriteText로 기록하고 Task.Program.Run에 전달하는 Automation1 Controller File System 내부 경로입니다."/></StackPanel>
                   <StackPanel Margin="0,0,8,8"><TextBlock Text="Local Script File"/><TextBox x:Name="LocalScriptPathBox" Text="mof_generated.ascript" ToolTip="Script 생성 버튼을 누를 때 Client PC에 실제로 저장할 파일입니다. 상대 경로는 실행 파일 폴더를 기준으로 계산합니다."/></StackPanel>
-                  <StackPanel Margin="0,0,8,8"><TextBlock Text="GX Axis Template"/><TextBox x:Name="AxisXTemplateBox" Text="GX" ToolTip="Scanner X축 이름입니다. {0}을 넣으면 선택 Head 번호로 치환됩니다."/></StackPanel>
-                  <StackPanel Margin="0,0,8,8"><TextBlock Text="GY Axis Template"/><TextBox x:Name="AxisYTemplateBox" Text="GY" ToolTip="Scanner Y축 이름입니다. {0}을 넣으면 선택 Head 번호로 치환됩니다."/></StackPanel>
+                  <StackPanel Margin="0,0,8,8"><TextBlock Text="GX Axis Template"/><TextBox x:Name="AxisXTemplateBox" Text="GX{0}" ToolTip="Scanner X축 이름 템플릿입니다. H1은 GX1, H2는 GX2로 생성하려면 GX{0}을 사용합니다."/></StackPanel>
+                  <StackPanel Margin="0,0,8,8"><TextBlock Text="GY Axis Template"/><TextBox x:Name="AxisYTemplateBox" Text="GY{0}" ToolTip="Scanner Y축 이름 템플릿입니다. H1은 GY1, H2는 GY2로 생성하려면 GY{0}을 사용합니다."/></StackPanel>
                   <StackPanel Margin="0,0,0,8"><TextBlock Text="Laser Library"/><TextBox x:Name="LaserLibraryNameBox" Text="LaserOnLibrary.a1lib" ToolTip="Hardware 모드에서 import 문만 생성할 검증된 Library 이름입니다. 함수 호출은 장비 Interlock 확정 후 구현해야 합니다."/></StackPanel>
                 </UniformGrid>
 

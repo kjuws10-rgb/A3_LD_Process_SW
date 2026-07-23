@@ -43,6 +43,7 @@ public partial class MainWindow : Window
     private readonly DispatcherTimer _processMonitorTimer;
     private IReadOnlyList<CellCommand> _activeScriptCommands = Array.Empty<CellCommand>();
     private readonly Dictionary<string, IReadOnlyList<CellCommand>> _activeScriptCommandsByJobId = new(StringComparer.OrdinalIgnoreCase);
+    private readonly HashSet<int> _completedMonitorSequences = new();
     private int _lastMonitorSequence;
     private bool _isProcessMonitorPolling;
     private Automation1DirectStatus? _lastMonitorStatus;
@@ -557,9 +558,17 @@ public partial class MainWindow : Window
     {
         var slashIndex = Math.Max(path.LastIndexOf('/'), path.LastIndexOf('\\'));
         var dotIndex = path.LastIndexOf('.');
+        var suffixStart = dotIndex > slashIndex ? dotIndex : path.Length;
+        var stem = path[..suffixStart];
+        var extension = dotIndex > slashIndex ? path[dotIndex..] : ".ascript";
+        stem = System.Text.RegularExpressions.Regex.Replace(
+            stem,
+            @"_H\d+$",
+            "",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase);
         return dotIndex > slashIndex
-            ? path.Insert(dotIndex, $"_H{head}")
-            : $"{path}_H{head}.ascript";
+            ? $"{stem}_H{head}{extension}"
+            : $"{stem}_H{head}{extension}";
     }
 
     private static void ValidateControllerFileNameForClient(string controllerFile)
@@ -738,6 +747,7 @@ public partial class MainWindow : Window
         _lastMonitorSequence = 0;
         _lastMonitorStatus = null;
         _activeScriptCommandsByJobId.Clear();
+        _completedMonitorSequences.Clear();
         ProcessProgressBar.Value = 0;
         ProcessMonitorText.Text = totalTargets > 0 ? $"가공 모니터: 0 / {totalTargets}" : "가공 모니터: 대기";
         VirtualStagePositionText.Text = "Virtual Stage Y: -";
@@ -766,14 +776,19 @@ public partial class MainWindow : Window
             ? $"가공 모니터 {current} / {total}{laserText}"
             : $"가공 중 #{current} {command.CellIndex} / {command.ScannerName}{laserText}";
 
+        ProcessMonitorText.Text = command is null
+            ? $"가공 모니터: {current} / {total}{laserText}"
+            : $"가공 중: #{current} {command.CellIndex} / {command.ScannerName}{laserText}";
+
+        MarkCompletedProcessVisuals(commandSource, current, status.State == Automation1DirectState.Completed);
+
         var boardSequence = command?.MofSequence ?? 0;
         if (_lastMonitorSequence != boardSequence)
         {
             RestoreBoardMonitorStroke(_lastMonitorSequence);
             if (boardSequence > 0 && _boardProcessVisuals.TryGetValue(boardSequence, out var active))
             {
-                active.Stroke = new SolidColorBrush(Color.FromRgb(34, 211, 238));
-                active.StrokeThickness = 4;
+                ApplyActiveProcessStyle(active);
             }
 
             _lastMonitorSequence = boardSequence;
@@ -802,8 +817,10 @@ public partial class MainWindow : Window
                 statuses.Add(await _automation1Client.GetStatusAsync(package.JobId, CancellationToken.None));
             }
 
-            var displayStatus = statuses.OrderByDescending(status => status.CurrentMofSequence).First();
-            UpdateProcessMonitor(displayStatus);
+            foreach (var status in statuses)
+            {
+                UpdateProcessMonitor(status);
+            }
             if (statuses.All(status => status.State is Automation1DirectState.Completed or Automation1DirectState.Failed or Automation1DirectState.Stopped))
             {
                 _processMonitorTimer.Stop();
@@ -828,10 +845,53 @@ public partial class MainWindow : Window
             return;
         }
 
+        ApplyProcessVisualStyle(visual, command);
+    }
+
+    private void MarkCompletedProcessVisuals(IReadOnlyList<CellCommand> commandSource, long current, bool isCompleted)
+    {
+        var completedCount = isCompleted ? current : Math.Max(0, current - 1);
+        for (var index = 0; index < completedCount && index < commandSource.Count; index++)
+        {
+            var sequence = commandSource[index].MofSequence;
+            if (sequence <= 0 || !_completedMonitorSequences.Add(sequence) ||
+                !_boardProcessVisuals.TryGetValue(sequence, out var visual))
+            {
+                continue;
+            }
+
+            ApplyCompletedProcessStyle(visual);
+        }
+    }
+
+    private static void ApplyCompletedProcessStyle(Rectangle visual)
+    {
+        visual.Fill = new SolidColorBrush(Color.FromRgb(6, 95, 70));
+        visual.Stroke = new SolidColorBrush(Color.FromRgb(52, 211, 153));
+        visual.StrokeThickness = 2.4;
+        visual.Opacity = 0.98;
+    }
+
+    private static void ApplyActiveProcessStyle(Rectangle visual)
+    {
+        visual.Stroke = new SolidColorBrush(Color.FromRgb(34, 211, 238));
+        visual.StrokeThickness = 4;
+        visual.Opacity = 1.0;
+    }
+
+    private void ApplyProcessVisualStyle(Rectangle visual, CellCommand command)
+    {
+        if (_completedMonitorSequences.Contains(command.MofSequence))
+        {
+            ApplyCompletedProcessStyle(visual);
+            return;
+        }
+
         visual.Stroke = command.ScannerIndex % 2 == 1
             ? new SolidColorBrush(Color.FromRgb(250, 204, 21))
             : new SolidColorBrush(Color.FromRgb(167, 139, 250));
         visual.StrokeThickness = IsPointSelected(command) ? 2.6 : 1.0;
+        visual.Opacity = 1.0;
     }
 
     private static void EnsureAutomation1Success(string operation, Automation1ConnectionInfo response)
@@ -1144,6 +1204,10 @@ public partial class MainWindow : Window
             if (isSelected)
             {
                 fill = new SolidColorBrush(Color.FromRgb(245, 158, 11));
+            }
+            if (_completedMonitorSequences.Contains(command.MofSequence))
+            {
+                fill = new SolidColorBrush(Color.FromRgb(6, 95, 70));
             }
 
             var stroke = command.ScannerIndex % 2 == 1

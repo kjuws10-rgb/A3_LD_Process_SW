@@ -20,8 +20,8 @@ program
     var $ScannerYAxis as axis
     var $VirtualStageDirection as real
 
-    $ScannerXAxisName = "GX"
-    $ScannerYAxisName = "GY"
+    $ScannerXAxisName = "GX1"
+    $ScannerYAxisName = "GY1"
     $ScannerXAxis = @$ScannerXAxisName
     $ScannerYAxis = @$ScannerYAxisName
     $VirtualStageDirection = 1

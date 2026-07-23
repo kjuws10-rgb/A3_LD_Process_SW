@@ -27,20 +27,20 @@
 
   <rect class="box" x="370" y="128" width="285" height="130"/>
   <text class="head" x="392" y="164">2. Split By Scanner Head</text>
-  <text class="small" x="392" y="197">H1, H3, H5 selected</text>
+  <text class="small" x="392" y="197">H1, H2, H3 selected</text>
   <text class="small" x="392" y="222">becomes 3 script packages.</text>
   <text class="small" x="392" y="247">No mixed-head script is created.</text>
 
   <rect class="box2" x="720" y="128" width="258" height="130"/>
   <text class="head" x="742" y="164">3. Task Assignment</text>
   <text class="small" x="742" y="197">Base Task = UI Task value</text>
-  <text class="small" x="742" y="222">H1 -> Task N</text>
-  <text class="small" x="742" y="247">H3 -> Task N+1 ...</text>
+  <text class="small" x="742" y="222">H1 -> Task N / GX1,GY1</text>
+  <text class="small" x="742" y="247">H2 -> Task N+1 / GX2,GY2</text>
 
   <rect class="box2" x="1034" y="128" width="240" height="130"/>
   <text class="head" x="1056" y="164">4. Controller Files</text>
   <text class="small" x="1056" y="197">mof_generated_H1.ascript</text>
-  <text class="small" x="1056" y="222">mof_generated_H3.ascript</text>
+  <text class="small" x="1056" y="222">mof_generated_H2.ascript</text>
   <text class="small" x="1056" y="247">mof_job_*.json audit</text>
 
   <path class="arrow" d="M304 193 H370"/>
