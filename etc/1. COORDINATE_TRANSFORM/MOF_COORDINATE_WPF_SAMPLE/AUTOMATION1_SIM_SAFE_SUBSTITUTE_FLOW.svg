@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1220" height="720" viewBox="0 0 1220 720">
+  <rect width="1220" height="720" fill="#0f172a"/>
+  <text x="44" y="58" fill="#e5f2ff" font-family="Segoe UI, Arial" font-size="30" font-weight="700">Simulation-Safe Galvo / PSO Substitute Flow</text>
+  <text x="44" y="92" fill="#93c5fd" font-family="Segoe UI, Arial" font-size="16">Virtual Controller verifies coordinate order and shot timing without calling hardware-only GalvoLaserOutput / PSO functions.</text>
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto"><path d="M2,2 L10,6 L2,10 Z" fill="#38bdf8"/></marker>
+    <style>
+      .box{fill:#111827;stroke:#38bdf8;stroke-width:2;rx:12}
+      .safe{fill:#052e2b;stroke:#2dd4bf;stroke-width:2;rx:12}
+      .hard{fill:#2a1f0b;stroke:#f59e0b;stroke-width:2;rx:12}
+      .txt{fill:#e5e7eb;font-family:Segoe UI,Arial;font-size:17px}
+      .small{fill:#cbd5e1;font-family:Segoe UI,Arial;font-size:14px}
+      .head{fill:#bfdbfe;font-family:Segoe UI,Arial;font-size:19px;font-weight:700}
+      .code{fill:#a7f3d0;font-family:Consolas,monospace;font-size:14px}
+      .arrow{stroke:#38bdf8;stroke-width:2.4;fill:none;marker-end:url(#arrow)}
+    </style>
+  </defs>
+
+  <rect class="box" x="44" y="132" width="318" height="145"/>
+  <text class="head" x="66" y="170">1. User Selects Simulation</text>
+  <text class="small" x="66" y="205">Mode = Simulation - Virtual Wait</text>
+  <text class="small" x="66" y="231">Controller axes are virtual GX/GY.</text>
+  <text class="small" x="66" y="257">No real Stage Y axis is required.</text>
+
+  <rect class="hard" x="452" y="132" width="318" height="145"/>
+  <text class="head" x="474" y="170">2. Hardware Calls Blocked</text>
+  <text class="small" x="474" y="205">Do not emit GalvoLaserOutput()</text>
+  <text class="small" x="474" y="231">Do not emit PSO / AUX hardware setup</text>
+  <text class="small" x="474" y="257">Do not emit Galvo calibration calls</text>
+
+  <rect class="safe" x="860" y="132" width="318" height="145"/>
+  <text class="head" x="882" y="170">3. Substitute Function</text>
+  <text class="code" x="882" y="208">SimulatedGalvoLaserOutput(1)</text>
+  <text class="code" x="882" y="234">MoveDelay([GX,GY], shotDelay)</text>
+  <text class="code" x="882" y="260">SimulatedGalvoLaserOutput(0)</text>
+
+  <path class="arrow" d="M362 204 H452"/>
+  <path class="arrow" d="M770 204 H860"/>
+
+  <rect class="box" x="44" y="356" width="318" height="176"/>
+  <text class="head" x="66" y="394">Virtual Stage Counter</text>
+  <text class="small" x="66" y="428">AdvanceVirtualStageCounter()</text>
+  <text class="small" x="66" y="454">updates $rglobal[0].</text>
+  <text class="small" x="66" y="480">This simulates board movement</text>
+  <text class="small" x="66" y="506">without reading AUX feedback.</text>
+
+  <rect class="safe" x="452" y="356" width="318" height="176"/>
+  <text class="head" x="474" y="394">Simulation Globals</text>
+  <text class="code" x="474" y="428">$iglobal[0] = current target</text>
+  <text class="code" x="474" y="454">$iglobal[1] = total targets</text>
+  <text class="code" x="474" y="480">$iglobal[2] = laser state</text>
+  <text class="code" x="474" y="506">$iglobal[3] = laser pulse count</text>
+
+  <rect class="box" x="860" y="356" width="318" height="176"/>
+  <text class="head" x="882" y="394">WPF Monitor</text>
+  <text class="small" x="882" y="428">Reads globals through Automation1 API.</text>
+  <text class="small" x="882" y="454">Displays current cell and scanner.</text>
+  <text class="small" x="882" y="480">Shows SIM Laser ON/OFF and</text>
+  <text class="small" x="882" y="506">simulated pulse count.</text>
+
+  <path class="arrow" d="M362 444 H452"/>
+  <path class="arrow" d="M770 444 H860"/>
+
+  <text x="44" y="630" fill="#fde68a" font-family="Segoe UI, Arial" font-size="16">Equipment mode still keeps real Galvo/PSO functions and requires hardware readiness, interlock, laser/beam path, and operator confirmation.</text>
+</svg>

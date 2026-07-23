@@ -82,7 +82,9 @@ public sealed record Automation1DirectStatus(
     DateTimeOffset UpdatedAtUtc,
     double VirtualStagePosition,
     long CurrentMofSequence,
-    long TotalMofTargets);
+    long TotalMofTargets,
+    long SimulatedLaserState = 0,
+    long SimulatedLaserPulseCount = 0);
 
 public sealed record AeroScriptPackage(
     string JobId,

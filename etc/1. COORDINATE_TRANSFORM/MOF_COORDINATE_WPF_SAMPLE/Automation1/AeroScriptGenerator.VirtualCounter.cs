@@ -27,8 +27,10 @@ public sealed partial class AeroScriptGenerator
         var source = CreateHeader(input, commands, options);
         source.AppendLine("// MODE: Automation1 software Stage counter simulation");
         source.AppendLine("// No Stage axis is created or required. Hardware AUX, Laser, PSO and Galvo calibration are excluded.");
+        source.AppendLine("// Simulation-safe substitutes are used instead of hardware-only calls such as GalvoLaserOutput().");
         source.AppendLine("// $rglobal[0]=simulated Stage Y, $rglobal[1]=speed, $rglobal[2]=next target Y");
         source.AppendLine("// $iglobal[0]=current MOF sequence, $iglobal[1]=total MOF targets");
+        source.AppendLine("// $iglobal[2]=simulated laser state, $iglobal[3]=simulated laser pulse count");
         source.AppendLine("// Processing order follows board-local AK1 -> AK2 during reverse transport.");
         source.AppendLine();
         source.AppendLine("program");
@@ -48,6 +50,8 @@ public sealed partial class AeroScriptGenerator
         source.AppendLine($"    $rglobal[{MonitorStageTargetGlobalRealIndex}] = {Format(options.StartYPosition)}");
         source.AppendLine($"    $iglobal[{MonitorCurrentSequenceGlobalIntegerIndex}] = 0");
         source.AppendLine($"    $iglobal[{MonitorTotalTargetsGlobalIntegerIndex}] = {orderedCommands.Length}");
+        source.AppendLine($"    $iglobal[{MonitorLaserStateGlobalIntegerIndex}] = 0");
+        source.AppendLine($"    $iglobal[{MonitorLaserPulseCountGlobalIntegerIndex}] = 0");
         source.AppendLine();
         AppendCommonMotionSetup(source, new[] { "$ScannerXAxis", "$ScannerYAxis" }, options);
 
@@ -82,7 +86,9 @@ public sealed partial class AeroScriptGenerator
                 $"    MoveRapid([$ScannerXAxis, $ScannerYAxis], [{Format(command.Gx)}, {Format(command.Gy)}], " +
                 $"[{Format(options.ScannerRapidSpeed)}, {Format(options.ScannerRapidSpeed)}]) " +
                 $"// Process Gx/Gy, LocalY={Format(command.LocalY)}");
+            source.AppendLine("    SimulatedGalvoLaserOutput(1)");
             source.AppendLine($"    MoveDelay([$ScannerXAxis, $ScannerYAxis], {Format(options.MoveDelayMilliseconds)})");
+            source.AppendLine("    SimulatedGalvoLaserOutput(0)");
             source.AppendLine();
         }
 
@@ -96,6 +102,8 @@ public sealed partial class AeroScriptGenerator
         source.AppendLine("end");
         source.AppendLine();
         AppendVirtualStageCounterFunction(source);
+        source.AppendLine();
+        AppendSimulatedGalvoLaserFunction(source);
         return source.ToString();
     }
 
@@ -118,6 +126,16 @@ public sealed partial class AeroScriptGenerator
         source.AppendLine($"                $rglobal[{MonitorStagePositionGlobalRealIndex}] = $targetY");
         source.AppendLine("            end");
         source.AppendLine("        end");
+        source.AppendLine("    end");
+        source.AppendLine("end");
+    }
+
+    private static void AppendSimulatedGalvoLaserFunction(StringBuilder source)
+    {
+        source.AppendLine("function SimulatedGalvoLaserOutput($state as real)");
+        source.AppendLine($"    $iglobal[{MonitorLaserStateGlobalIntegerIndex}] = $state");
+        source.AppendLine("    if $state > 0");
+        source.AppendLine($"        $iglobal[{MonitorLaserPulseCountGlobalIntegerIndex}] = $iglobal[{MonitorLaserPulseCountGlobalIntegerIndex}] + 1");
         source.AppendLine("    end");
         source.AppendLine("end");
     }

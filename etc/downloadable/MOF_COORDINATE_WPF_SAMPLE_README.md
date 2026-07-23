@@ -1,5 +1,18 @@
 # MOF Coordinate WPF Sample
 
+## 2026-07-23 Simulation-Safe Galvo Substitute Update
+
+Automation1 공식 문서 기준으로 `GalvoLaserOutput`, `GalvoConfigureLaserMode`, `PsoReset` 같은 Galvo/PSO 함수는 GI4/GL4 galvo hardware 및 laser output 제어 영역이다. 따라서 Virtual Controller 시뮬레이션에서는 실제 하드웨어 함수를 그대로 호출하지 않는다.
+
+이번 버전의 분리 기준:
+
+- `Simulation - Virtual Wait` 모드에서는 `GalvoLaserOutput()`을 생성하지 않는다.
+- 대신 `SimulatedGalvoLaserOutput(state)` 함수를 생성한다.
+- 이 대체 함수는 실제 laser output을 내보내지 않고 `$iglobal[2]`에 laser state, `$iglobal[3]`에 simulated pulse count만 기록한다.
+- WPF 모니터는 `$iglobal[2]`, `$iglobal[3]`을 읽어 `SIM Laser=ON/OFF Pulse=N`으로 표시한다.
+- `External Stage AUX MOF`와 실제 `Hardware Coordinate` 계열은 장비 모드이므로 hardware readiness/interlock 확인 후 실제 Galvo/PSO 함수를 유지한다.
+- 이렇게 하면 동일한 좌표/순서/shot timing을 Virtual 환경에서 검증하면서도, 하드웨어 전용 함수로 인한 compile/run 실패를 피할 수 있다.
+
 ## 2026-07-23 Field AUX MOF Multi-Task Update
 
 이번 버전은 현장 설비에서 사용하는 Automation1 AeroScript 구조를 기준으로 External Stage AUX MOF 생성을 다시 맞췄다.

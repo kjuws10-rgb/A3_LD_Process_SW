@@ -759,6 +759,13 @@ public partial class MainWindow : Window
             ? $"가공 모니터: {current} / {total}"
             : $"가공 중: #{current} {command.CellIndex} / {command.ScannerName}";
 
+        var laserText = status.SimulatedLaserPulseCount > 0
+            ? $" / SIM Laser={(status.SimulatedLaserState > 0 ? "ON" : "OFF")} Pulse={status.SimulatedLaserPulseCount}"
+            : "";
+        ProcessMonitorText.Text = command is null
+            ? $"가공 모니터 {current} / {total}{laserText}"
+            : $"가공 중 #{current} {command.CellIndex} / {command.ScannerName}{laserText}";
+
         var boardSequence = command?.MofSequence ?? 0;
         if (_lastMonitorSequence != boardSequence)
         {

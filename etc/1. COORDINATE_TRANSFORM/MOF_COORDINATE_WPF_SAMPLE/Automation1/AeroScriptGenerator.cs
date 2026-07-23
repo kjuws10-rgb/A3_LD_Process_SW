@@ -11,13 +11,15 @@ namespace MofCoordinateDemo.Automation1;
 /// </summary>
 public sealed partial class AeroScriptGenerator
 {
-    public const string GeneratorRevision = "20260723-field-aux-multitask-v9";
+    public const string GeneratorRevision = "20260723-sim-safe-galvo-substitute-v10";
 
     public const int MonitorStagePositionGlobalRealIndex = 0;
     public const int MonitorStageSpeedGlobalRealIndex = 1;
     public const int MonitorStageTargetGlobalRealIndex = 2;
     public const int MonitorCurrentSequenceGlobalIntegerIndex = 0;
     public const int MonitorTotalTargetsGlobalIntegerIndex = 1;
+    public const int MonitorLaserStateGlobalIntegerIndex = 2;
+    public const int MonitorLaserPulseCountGlobalIntegerIndex = 3;
 
     public static IReadOnlyList<string> ResolveRequiredAxisNames(
         IReadOnlyList<CellCommand> commands,

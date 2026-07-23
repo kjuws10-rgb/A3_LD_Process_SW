@@ -308,7 +308,9 @@ public sealed class Automation1DirectClient : IAsyncDisposable
             runtime.Audit.ControllerAuditFileName,
             monitor.StagePosition,
             monitor.CurrentSequence,
-            monitor.TotalTargets);
+            monitor.TotalTargets,
+            monitor.LaserState,
+            monitor.LaserPulseCount);
         UpdateStatusAndAudit(runtime, status);
         return status;
     }
@@ -462,7 +464,9 @@ public sealed class Automation1DirectClient : IAsyncDisposable
         string auditFile,
         double virtualStagePosition = 0,
         long currentMofSequence = 0,
-        long totalMofTargets = 0) =>
+        long totalMofTargets = 0,
+        long simulatedLaserState = 0,
+        long simulatedLaserPulseCount = 0) =>
         new(
             package.JobId,
             state,
@@ -475,7 +479,9 @@ public sealed class Automation1DirectClient : IAsyncDisposable
             DateTimeOffset.UtcNow,
             virtualStagePosition,
             currentMofSequence,
-            totalMofTargets);
+            totalMofTargets,
+            simulatedLaserState,
+            simulatedLaserPulseCount);
 
     private static ProcessMonitorSnapshot ReadProcessMonitor(Controller controller)
     {
@@ -485,15 +491,22 @@ public sealed class Automation1DirectClient : IAsyncDisposable
             return new ProcessMonitorSnapshot(
                 globals.GetReal(AeroScriptGenerator.MonitorStagePositionGlobalRealIndex),
                 globals.GetInteger(AeroScriptGenerator.MonitorCurrentSequenceGlobalIntegerIndex),
-                globals.GetInteger(AeroScriptGenerator.MonitorTotalTargetsGlobalIntegerIndex));
+                globals.GetInteger(AeroScriptGenerator.MonitorTotalTargetsGlobalIntegerIndex),
+                globals.GetInteger(AeroScriptGenerator.MonitorLaserStateGlobalIntegerIndex),
+                globals.GetInteger(AeroScriptGenerator.MonitorLaserPulseCountGlobalIntegerIndex));
         }
         catch
         {
-            return new ProcessMonitorSnapshot(0, 0, 0);
+            return new ProcessMonitorSnapshot(0, 0, 0, 0, 0);
         }
     }
 
-    private sealed record ProcessMonitorSnapshot(double StagePosition, long CurrentSequence, long TotalTargets);
+    private sealed record ProcessMonitorSnapshot(
+        double StagePosition,
+        long CurrentSequence,
+        long TotalTargets,
+        long LaserState,
+        long LaserPulseCount);
 
     private static void ValidateOptions(Automation1ConnectionOptions options)
     {
