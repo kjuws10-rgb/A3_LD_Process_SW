@@ -33,9 +33,9 @@
 
   <rect class="box2" x="720" y="128" width="258" height="130"/>
   <text class="head" x="742" y="164">3. Task Assignment</text>
-  <text class="small" x="742" y="197">Base Task = UI Task value</text>
-  <text class="small" x="742" y="222">H1 -> Task N / GX1,GY1</text>
-  <text class="small" x="742" y="247">H2 -> Task N+1 / GX2,GY2</text>
+  <text class="small" x="742" y="197">Fixed Task = Scanner#</text>
+  <text class="small" x="742" y="222">H1 -> Task 1 / GX1,GY1</text>
+  <text class="small" x="742" y="247">H2 -> Task 2 / GX2,GY2</text>
 
   <rect class="box2" x="1034" y="128" width="240" height="130"/>
   <text class="head" x="1056" y="164">4. Controller Files</text>

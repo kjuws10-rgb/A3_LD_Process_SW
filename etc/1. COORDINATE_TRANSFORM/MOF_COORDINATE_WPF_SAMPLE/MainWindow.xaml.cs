@@ -480,7 +480,6 @@ public partial class MainWindow : Window
         _activeScriptCommands = commandList;
         ResetProcessMonitor(commandList.Length);
 
-        var baseTaskIndex = Math.Max(1, ReadInt(Automation1TaskIndexBox, 1));
         var controllerFile = ControllerFileNameBox.Text.Trim();
         ValidateControllerFileNameForClient(controllerFile);
         var baseLocalScriptPath = LocalScriptPathBox.Text;
@@ -493,9 +492,9 @@ public partial class MainWindow : Window
         string? firstLocalScriptPath = null;
         _activeScriptCommandsByJobId.Clear();
 
-        for (var groupIndex = 0; groupIndex < groups.Length; groupIndex++)
+        foreach (var group in groups)
         {
-            var group = groups[groupIndex];
+            var taskIndex = Math.Max(1, group.Key);
             var headCommands = group.OrderBy(command => command.MofSequence).ToArray();
             var source = _aeroScriptGenerator.Generate(_input, headCommands, options);
             var localScriptPath = AeroScriptLocalFileStore.Save(
@@ -507,7 +506,7 @@ public partial class MainWindow : Window
             var package = AeroScriptPackage.Create(
                 AddHeadSuffix(controllerFile, group.Key),
                 source,
-                baseTaskIndex + groupIndex,
+                taskIndex,
                 headCommands.Length,
                 options.Mode,
                 AeroScriptGenerator.ResolveRequiredAxisNames(headCommands, options),
@@ -526,9 +525,10 @@ public partial class MainWindow : Window
         _currentScriptPackage = packages.First();
         LocalScriptPathBox.Text = firstLocalScriptPath ?? ResolveLocalScriptPath();
         ScriptPreviewBox.Text = preview.ToString();
+        var taskMapText = string.Join(", ", groups.Select(group => $"H{group.Key}->T{group.Key}"));
         ScriptJobText.Text =
             $"생성 완료: Scanner Task={packages.Count}, 좌표={commandList.Length}, " +
-            $"Mode={options.Mode}, Task={baseTaskIndex}~{baseTaskIndex + packages.Count - 1}";
+            $"Mode={options.Mode}, TaskMap={taskMapText}";
         AppendDeploymentLog(
             $"[생성] Client PC에서 {options.Mode}, {packages.Count}개 Scanner Task, {commandList.Length}개 좌표로 로컬 파일 저장 완료");
         AppendDeploymentLog(

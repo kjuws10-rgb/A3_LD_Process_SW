@@ -37,7 +37,8 @@ Automation1 공식 문서 기준으로 `GalvoLaserOutput`, `GalvoConfigureLaserM
 - External Stage AUX MOF script는 현장 코드처럼 `MoveRapid([GY,GX], [gy,gx])`, `wait(StatusGetAxisItem(GY, AxisStatusItem.AuxiliaryFeedback) > count)`, `GalvoLaserOutput(GY, GalvoLaser.On/Off)` 순서로 생성한다.
 - wait threshold는 `200 mm 추종거리 + AUX Initial Wait + AK1->AK2 방향 LocalY 진행량`에 `External Encoder cnt/mm`를 곱해 count로 만든다.
 - scanner `GY/GX` 좌표는 가공 위치 명령이고, AUX wait count는 외부 Stage 이동량이다. 두 값은 같은 좌표계가 아니므로 숫자가 다를 수 있다.
-- 여러 scanner를 선택하면 scanner head별로 독립 `.ascript`를 생성한다. `Automation1 Task`가 1이고 H1/H3/H5를 선택하면 H1은 Task 1, H3은 Task 2, H5는 Task 3에 배정된다.
+- 여러 scanner를 선택하면 scanner head별로 독립 `.ascript`를 생성한다. Task는 선택 순서가 아니라 scanner 번호와 동일하게 고정 배정된다. 예를 들어 H1/H3/H5를 선택하면 H1은 Task 1, H3은 Task 3, H5는 Task 5에서 실행된다.
+- 따라서 H8까지 사용할 경우 Automation1 Controller에는 최소 Task 1~8이 준비되어 있어야 하며, 각 Task는 해당 head script `mof_generated_H{head}.ascript`를 실행한다.
 - Controller file과 local file은 `_H{head}` suffix가 붙는다. 예: `programs/mof_generated_H3.ascript`.
 - Controller upload, compile, run, status, stop, 전체 실행은 생성된 모든 scanner Task를 대상으로 처리한다.
 - 상태 모니터는 실행 중인 Task들의 진행 상태를 조회하고 가장 진행된 좌표를 기준으로 UI를 갱신한다.
