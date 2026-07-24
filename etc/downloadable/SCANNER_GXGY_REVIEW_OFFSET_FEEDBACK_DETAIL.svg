@@ -1,0 +1,170 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1180" viewBox="0 0 1800 1180">
+  <defs>
+    <style>
+      .bg{fill:#07111f}
+      .title{font-family:Segoe UI,Arial,sans-serif;font-size:32px;font-weight:800;fill:#eff6ff}
+      .subtitle{font-family:Segoe UI,Arial,sans-serif;font-size:16px;fill:#b8c7dc}
+      .h{font-family:Segoe UI,Arial,sans-serif;font-size:19px;font-weight:800;fill:#f8fbff}
+      .t{font-family:Segoe UI,Arial,sans-serif;font-size:14px;fill:#dbeafe}
+      .tiny{font-family:Segoe UI,Arial,sans-serif;font-size:12px;fill:#b7c7da}
+      .formula{font-family:Consolas,Menlo,monospace;font-size:14px;fill:#e0f2fe}
+      .panel{fill:#0f172a;stroke:#334155;stroke-width:1.5;rx:16}
+      .camera{fill:#172554;stroke:#60a5fa;stroke-width:2;rx:14}
+      .scanner{fill:#301a0a;stroke:#f59e0b;stroke-width:2;rx:14}
+      .command{fill:#12323d;stroke:#22d3ee;stroke-width:2;rx:14}
+      .review{fill:#3b1632;stroke:#f472b6;stroke-width:2;rx:14}
+      .feedback{fill:#3a1d08;stroke:#fb923c;stroke-width:2;rx:14}
+      .board{fill:#08111f;stroke:#64748b;stroke-width:2;rx:10}
+      .stageGrid{stroke:#223044;stroke-width:1}
+      .axis{stroke:#94a3b8;stroke-width:2.2;marker-end:url(#arrow)}
+      .arrow{stroke:#93a4b8;stroke-width:2.8;fill:none;marker-end:url(#arrow)}
+      .arrowC{stroke:#22d3ee;stroke-width:3;fill:none;marker-end:url(#arrowC)}
+      .arrowP{stroke:#f472b6;stroke-width:3;fill:none;marker-end:url(#arrowP)}
+      .arrowO{stroke:#fb923c;stroke-width:3;fill:none;marker-end:url(#arrowO)}
+      .dash{stroke:#f59e0b;stroke-width:2.4;fill:none;stroke-dasharray:9 6;marker-end:url(#arrowO)}
+      .point{fill:#22d3ee;stroke:#ecfeff;stroke-width:2}
+      .camPoint{fill:#60a5fa;stroke:#dbeafe;stroke-width:2}
+      .scanPoint{fill:#f59e0b;stroke:#fff7ed;stroke-width:2}
+      .reviewPoint{fill:#f472b6;stroke:#fdf2f8;stroke-width:2}
+      .errorPoint{fill:#fb923c;stroke:#fff7ed;stroke-width:2}
+      .badge{fill:#082f49;stroke:#38bdf8;stroke-width:1.3;rx:7}
+      .chip{fill:#1e293b;stroke:#475569;stroke-width:1.2;rx:8}
+      .odd{fill:#1d4ed8;stroke:#7dd3fc;stroke-width:2;rx:8}
+      .even{fill:#581c87;stroke:#c084fc;stroke-width:2;rx:8}
+      .dim{fill:#94a3b8}
+    </style>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 Z" fill="#93a4b8"/>
+    </marker>
+    <marker id="arrowC" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 Z" fill="#22d3ee"/>
+    </marker>
+    <marker id="arrowP" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 Z" fill="#f472b6"/>
+    </marker>
+    <marker id="arrowO" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M0,0 L12,6 L0,12 Z" fill="#fb923c"/>
+    </marker>
+  </defs>
+
+  <rect width="1800" height="1180" class="bg"/>
+  <text x="42" y="54" class="title">Scanner 상대좌표 → MOF Gx/Gy → DOE Review → Offset Feedback 상세 그림</text>
+  <text x="44" y="84" class="subtitle">ProcessStage 좌표 하나가 실제 Scanner command와 Review 보정값으로 바뀌는 과정을 그림으로 풀어쓴 자료</text>
+
+  <rect x="34" y="116" width="1732" height="132" class="panel"/>
+  <text x="58" y="151" class="h">한 줄 요약</text>
+  <text x="58" y="182" class="t">가공점 P는 먼저 Review Camera 중심 기준 상대좌표로 표현되고, Scanner와 Camera 사이의 물리 Offset을 빼면 Scanner 중심 기준 상대좌표가 된다.</text>
+  <text x="58" y="209" class="t">그 상대좌표에 Odd/Even 스캐너 장착 방향 부호를 적용하면 실제 MOF Gx/Gy command가 되고, 가공 후 Review 측정 오차는 다음 ProcessOffset으로 되돌아간다.</text>
+
+  <rect x="54" y="285" width="360" height="165" class="camera"/>
+  <text x="78" y="320" class="h">1. Camera → Scanner Physical Offset</text>
+  <text x="78" y="354" class="formula">CameraRelative = P_process - C_review</text>
+  <text x="78" y="381" class="formula">ScannerRelative = CameraRelative - O_RS</text>
+  <text x="78" y="415" class="tiny">O_RS는 Review Camera 중심에서 Scanner 중심까지의 고정 설비 치수</text>
+
+  <rect x="470" y="285" width="300" height="165" class="scanner"/>
+  <text x="494" y="320" class="h">2. Odd / Even 좌표 부호</text>
+  <text x="494" y="354" class="formula">Odd  : Gx = -Dx, Gy = +Dy</text>
+  <text x="494" y="381" class="formula">Even : Gx = +Dx, Gy = -Dy</text>
+  <text x="494" y="415" class="tiny">Zigzag 장착으로 서로 뒤집힌 Scanner 축 방향을 보정</text>
+
+  <rect x="826" y="285" width="280" height="165" class="command"/>
+  <text x="850" y="320" class="h">3. MOF Command</text>
+  <text x="850" y="354" class="formula">Command = (Gx, Gy)</text>
+  <text x="850" y="381" class="formula">MoveRapid([GYi,GXi], [Gy,Gx])</text>
+  <text x="850" y="415" class="tiny">AeroScript에서는 Head별 축 이름이 GX1/GY1, GX2/GY2처럼 분리</text>
+
+  <rect x="1162" y="285" width="300" height="165" class="review"/>
+  <text x="1186" y="320" class="h">4. DOE Review Camera 좌표</text>
+  <text x="1186" y="354" class="formula">Review = ScannerRelative</text>
+  <text x="1186" y="381" class="formula">       + O_RS + DOE_stage</text>
+  <text x="1186" y="415" class="tiny">선택된 DOE beam 위치 기준으로 리뷰 좌표계를 다시 표현</text>
+
+  <rect x="1518" y="285" width="250" height="165" class="feedback"/>
+  <text x="1542" y="320" class="h">5. Dynamic Review Correction</text>
+  <text x="1542" y="354" class="formula">Error = Measured - Target</text>
+  <text x="1542" y="381" class="formula">NextOffset += Error</text>
+  <text x="1542" y="415" class="tiny">다음 ProcessOffsetGlobalX/Y에 반영</text>
+
+  <path class="arrow" d="M414 367 H470"/>
+  <path class="arrowC" d="M770 367 H826"/>
+  <path class="arrowP" d="M1106 367 H1162"/>
+  <path class="arrowO" d="M1462 367 H1518"/>
+  <path class="dash" d="M1644 285 C1644 210, 250 210, 235 285"/>
+  <text x="690" y="223" class="tiny">가공 후 Review 측정값은 다음 가공 좌표의 ProcessOffset으로 피드백된다.</text>
+
+  <rect x="54" y="505" width="836" height="560" class="panel"/>
+  <text x="82" y="542" class="h">좌표를 그림으로 보면</text>
+  <text x="82" y="572" class="t">파란 점은 Review Camera 중심, 노란 점은 Scanner 중심, 청록 점은 실제 가공 목표 P_process이다.</text>
+
+  <rect x="120" y="620" width="680" height="360" class="board"/>
+  <line x1="160" y1="920" x2="760" y2="920" class="axis"/>
+  <line x1="160" y1="920" x2="160" y2="660" class="axis"/>
+  <text x="740" y="946" class="tiny">Stage Global X+</text>
+  <text x="100" y="670" class="tiny">Stage Global Y+</text>
+  <line x1="220" y1="640" x2="220" y2="960" class="stageGrid"/>
+  <line x1="320" y1="640" x2="320" y2="960" class="stageGrid"/>
+  <line x1="420" y1="640" x2="420" y2="960" class="stageGrid"/>
+  <line x1="520" y1="640" x2="520" y2="960" class="stageGrid"/>
+  <line x1="620" y1="640" x2="620" y2="960" class="stageGrid"/>
+  <line x1="720" y1="640" x2="720" y2="960" class="stageGrid"/>
+  <line x1="140" y1="860" x2="780" y2="860" class="stageGrid"/>
+  <line x1="140" y1="800" x2="780" y2="800" class="stageGrid"/>
+  <line x1="140" y1="740" x2="780" y2="740" class="stageGrid"/>
+  <line x1="140" y1="680" x2="780" y2="680" class="stageGrid"/>
+
+  <circle cx="265" cy="820" r="12" class="camPoint"/>
+  <text x="285" y="823" class="t">C_review</text>
+  <circle cx="570" cy="760" r="13" class="scanPoint"/>
+  <text x="590" y="763" class="t">C_scanner</text>
+  <circle cx="650" cy="835" r="11" class="point"/>
+  <text x="668" y="839" class="t">P_process</text>
+
+  <path class="arrowC" d="M265 820 L650 835"/>
+  <text x="392" y="812" class="tiny">CameraRelative = P_process - C_review</text>
+  <path class="arrowO" d="M265 820 L570 760"/>
+  <text x="368" y="755" class="tiny">O_RS = C_scanner - C_review</text>
+  <path class="arrowP" d="M570 760 L650 835"/>
+  <text x="586" y="812" class="tiny">ScannerRelative = P_process - C_scanner</text>
+
+  <rect x="110" y="1002" width="720" height="38" class="badge"/>
+  <text x="132" y="1026" class="tiny">결국 Scanner가 움직여야 하는 양은 Stage 전체 좌표가 아니라 Scanner 중심에서 목표점까지의 상대벡터 Dx,Dy이다.</text>
+
+  <rect x="935" y="505" width="833" height="560" class="panel"/>
+  <text x="965" y="542" class="h">Odd / Even 부호가 왜 필요한가?</text>
+  <text x="965" y="572" class="t">Zigzag 배치에서는 홀수 Head와 짝수 Head의 Scanner 장착 방향이 서로 반대가 될 수 있다. 그래서 같은 Stage 상대벡터도 Head 종류에 따라 Gx/Gy 부호가 달라진다.</text>
+
+  <rect x="980" y="625" width="330" height="180" class="odd"/>
+  <text x="1006" y="660" class="h">Odd Head 예: H1, H3, H5</text>
+  <line x1="1060" y1="740" x2="1220" y2="740" class="axis"/>
+  <line x1="1060" y1="740" x2="1060" y2="660" class="axis"/>
+  <text x="1210" y="768" class="tiny">Stage +X</text>
+  <text x="1015" y="668" class="tiny">Stage +Y</text>
+  <circle cx="1060" cy="740" r="9" class="scanPoint"/>
+  <circle cx="1160" cy="700" r="9" class="point"/>
+  <path class="arrowP" d="M1060 740 L1160 700"/>
+  <text x="1006" y="786" class="formula">Dx = +100, Dy = -40</text>
+  <text x="1006" y="812" class="formula">Odd → Gx=-100, Gy=-40</text>
+
+  <rect x="1385" y="625" width="330" height="180" class="even"/>
+  <text x="1411" y="660" class="h">Even Head 예: H2, H4, H6</text>
+  <line x1="1465" y1="740" x2="1625" y2="740" class="axis"/>
+  <line x1="1465" y1="740" x2="1465" y2="660" class="axis"/>
+  <text x="1615" y="768" class="tiny">Stage +X</text>
+  <text x="1420" y="668" class="tiny">Stage +Y</text>
+  <circle cx="1465" cy="740" r="9" class="scanPoint"/>
+  <circle cx="1565" cy="700" r="9" class="point"/>
+  <path class="arrowP" d="M1465 740 L1565 700"/>
+  <text x="1411" y="786" class="formula">Dx = +100, Dy = -40</text>
+  <text x="1411" y="812" class="formula">Even → Gx=+100, Gy=+40</text>
+
+  <rect x="980" y="850" width="735" height="102" class="chip"/>
+  <text x="1004" y="884" class="h">현재 WPF Sample 코드 기준 공식</text>
+  <text x="1004" y="915" class="formula">relativeX = processStageX - selected.CenterX</text>
+  <text x="1004" y="941" class="formula">relativeY = processStageY - selected.CenterY</text>
+  <text x="1004" y="970" class="tiny">Odd/Even 부호 적용 후 CellCommand.Gx, CellCommand.Gy에 저장되고 Process 2D Matrix와 AeroScript 생성에 사용된다.</text>
+
+  <rect x="54" y="1095" width="1714" height="56" class="panel"/>
+  <text x="82" y="1126" class="h">실무적으로 기억할 문장</text>
+  <text x="330" y="1127" class="t">Physical Offset은 Review Camera와 Scanner 사이의 고정 설비 치수이고, Dynamic Review Correction은 실제 가공 후 측정오차를 다음 좌표에 되돌리는 보정값이다.</text>
+</svg>
